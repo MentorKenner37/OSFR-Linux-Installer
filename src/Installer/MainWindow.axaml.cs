@@ -28,7 +28,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         ApplyBranding();
-        InstallPathBox.Text = InstallService.DefaultInstallRoot;
+        InstallPathBox.Text = InstallerState.GetInitialInstallRoot();
         RefreshState();
         UpdateStepUi();
     }
@@ -68,17 +68,19 @@ public partial class MainWindow : Window
     {
         var previousProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         _state = SystemDetector.Detect();
+        var compatibleCandidates = _state.ProtonCandidates?.Where(candidate => candidate.Compatible).ToList() ?? [];
 
         _updatingProtonSelection = true;
         try
         {
-            ProtonComboBox.ItemsSource = _state.ProtonCandidates;
-            var selected = _state.ProtonCandidates?.FirstOrDefault(p => p.Path == previousProton)
-                           ?? _state.ProtonCandidates?.FirstOrDefault();
+            ProtonComboBox.ItemsSource = compatibleCandidates;
+            var selected = compatibleCandidates.FirstOrDefault(candidate => candidate.Path == previousProton)
+                           ?? compatibleCandidates.FirstOrDefault(candidate => candidate.Recommended)
+                           ?? compatibleCandidates.FirstOrDefault();
             ProtonComboBox.SelectedItem = selected;
-            ProtonComboBox.IsEnabled = !_busy && (_state.ProtonCandidates?.Count ?? 0) > 0;
+            ProtonComboBox.IsEnabled = !_busy && compatibleCandidates.Count > 0;
             if (selected is not null)
-                _state = _state.WithProton(selected.Path);
+                _state = _state.WithProton(selected);
         }
         finally
         {
@@ -88,11 +90,11 @@ public partial class MainWindow : Window
         SetCheck(LinuxStatus, _state.IsLinux, _state.IsLinux ? "SUPPORTED" : "REQUIRED");
         SetCheck(CpuStatus, _state.IsX64, _state.IsX64 ? "SUPPORTED" : "REQUIRED");
         SetCheck(SteamStatus, _state.SteamRoot is not null, _state.SteamRoot is not null ? "DETECTED" : "NOT FOUND");
-        SetCheck(ProtonStatus, _state.ProtonPath is not null, _state.ProtonPath is not null ? "DETECTED" : "NOT FOUND");
+        SetCheck(ProtonStatus, _state.ProtonCompatible, _state.ProtonCompatible ? "COMPATIBLE" : "NOT FOUND / INCOMPATIBLE");
 
         DetailText.Text = _state.Ready
-            ? $"Steam: {_state.SteamRoot}\nProton: {_state.ProtonPath}"
-            : "A supported x86_64 Linux environment, Steam, and an installed Proton build are required before installation can continue.";
+            ? $"Steam: {_state.SteamRoot}\nProton: {_state.ProtonPath}\n{_state.ProtonCompatibilityMessage}"
+            : "A supported x86_64 Linux environment, Steam, and a compatible installed Proton build are required before installation can continue.";
 
         RefreshInstallUi();
     }
@@ -219,7 +221,7 @@ public partial class MainWindow : Window
         {
             1 => _state.Ready,
             2 => pathError is null,
-            3 => _state.ProtonPath is not null,
+            3 => _state.ProtonPath is not null && _state.ProtonCompatible,
             4 => SummaryAcceptCheck.IsChecked == true,
             _ => false
         };
@@ -236,7 +238,7 @@ public partial class MainWindow : Window
             return;
         if (_step == 2 && InstallService.GetInstallDestinationError(InstallPathBox.Text ?? string.Empty) is not null)
             return;
-        if (_step == 3 && _state.ProtonPath is null)
+        if (_step == 3 && (_state.ProtonPath is null || !_state.ProtonCompatible))
             return;
         if (_step == 4 && SummaryAcceptCheck.IsChecked != true)
             return;
@@ -261,9 +263,9 @@ public partial class MainWindow : Window
         if (_updatingProtonSelection || ProtonComboBox.SelectedItem is not ProtonCandidate selected)
             return;
 
-        _state = _state.WithProton(selected.Path);
-        DetailText.Text = $"Steam: {_state.SteamRoot}\nProton: {selected.Path}";
-        InstallerLog.Info($"User selected Proton: {selected.Path}");
+        _state = _state.WithProton(selected);
+        DetailText.Text = $"Steam: {_state.SteamRoot}\nProton: {selected.Path}\n{selected.CompatibilityMessage}";
+        InstallerLog.Info($"User selected Proton: {selected.Path} ({selected.RuntimeArchitecture}, compatible={selected.Compatible})");
         RefreshInstallUi();
     }
 
@@ -312,12 +314,12 @@ public partial class MainWindow : Window
         var selectedProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         RefreshState();
         ReapplyWindowIcon();
-        if (selectedProton is not null && _state.ProtonCandidates?.Any(p => p.Path == selectedProton) == true)
-            _state = _state.WithProton(selectedProton);
+        if (selectedProton is not null && _state.ProtonCandidates?.FirstOrDefault(candidate => candidate.Path == selectedProton && candidate.Compatible) is { } selected)
+            _state = _state.WithProton(selected);
 
         if (!_state.Ready)
         {
-            await ShowMessageAsync("Requirements not met", "A supported x86_64 Linux environment, Steam, and Proton must be available before Sanctuary can be installed.");
+            await ShowMessageAsync("Requirements not met", "A supported x86_64 Linux environment, Steam, and a compatible Proton build must be available before Sanctuary can be installed.");
             return;
         }
 
@@ -373,6 +375,7 @@ public partial class MainWindow : Window
         try
         {
             await _installService.UninstallAsync(InstallRoot, progress);
+            InstallPathBox.Text = InstallerState.GetInitialInstallRoot();
             await ShowMessageAsync("Uninstall complete", "Sanctuary and its downloaded Open Source Free Realms data have been removed.");
         }
         catch (Exception ex)
@@ -401,7 +404,7 @@ public partial class MainWindow : Window
         InstallPathBox.IsEnabled = !busy;
         CloseAfterInstallCheck.IsEnabled = !busy;
         SummaryAcceptCheck.IsEnabled = !busy;
-        ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Count ?? 0) > 0;
+        ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Any(candidate => candidate.Compatible) ?? false);
         UpdateStepUi();
     }
 

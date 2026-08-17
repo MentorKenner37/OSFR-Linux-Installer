@@ -7,6 +7,34 @@ static void Assert(bool condition, string message)
         throw new InvalidOperationException(message);
 }
 
+static async Task CreateFakeProtonAsync(string directory, ushort elfMachine)
+{
+    Directory.CreateDirectory(directory);
+    var proton = Path.Combine(directory, "proton");
+    await File.WriteAllTextAsync(proton, "#!/usr/bin/env python3\n");
+    if (OperatingSystem.IsLinux())
+    {
+        File.SetUnixFileMode(
+            proton,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+            UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+            UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+    }
+
+    var wineDirectory = Path.Combine(directory, "files", "bin");
+    Directory.CreateDirectory(wineDirectory);
+    var header = new byte[20];
+    header[0] = 0x7F;
+    header[1] = (byte)'E';
+    header[2] = (byte)'L';
+    header[3] = (byte)'F';
+    header[4] = 2;
+    header[5] = 1;
+    header[18] = (byte)(elfMachine & 0xFF);
+    header[19] = (byte)(elfMachine >> 8);
+    await File.WriteAllBytesAsync(Path.Combine(wineDirectory, "wine64"), header);
+}
+
 var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 var normalized = InstallService.NormalizeInstallRoot("~/OSFR-Smoke-Test");
 Assert(normalized == Path.GetFullPath(Path.Combine(home, "OSFR-Smoke-Test")), "Tilde install paths must resolve under the user home directory.");
@@ -38,10 +66,12 @@ Assert(parsedLibraries[1] == "/mnt/games/SteamLibrary", "Steam VDF parsing must 
 var legacyVdf = "\"1\" \"/mnt/legacy\"\n\"path\" \"/mnt/current\"";
 Assert(SystemDetector.ParseSteamLibraryPaths(legacyVdf).Single() == "/mnt/current", "Steam path parsing must ignore unrelated legacy numeric entries safely.");
 
-var ready = new SystemState(true, true, "/tmp/fake-steam", "/tmp/fake-proton");
-Assert(ready.Ready, "A complete Linux x64 Steam/Proton state should be ready.");
-var notReady = new SystemState(true, true, null, "/tmp/fake-proton");
+var ready = new SystemState(true, true, "/tmp/fake-steam", "/tmp/fake-proton", ProtonCompatible: true);
+Assert(ready.Ready, "A complete Linux x64 Steam/compatible-Proton state should be ready.");
+var notReady = new SystemState(true, true, null, "/tmp/fake-proton", ProtonCompatible: true);
 Assert(!notReady.Ready, "Steam is required for readiness.");
+var incompatible = new SystemState(true, true, "/tmp/fake-steam", "/tmp/fake-proton", ProtonCompatible: false);
+Assert(!incompatible.Ready, "An incompatible Proton runtime must never make the installer ready.");
 
 var protonLibrary = Path.Combine(Path.GetTempPath(), $"osfr-proton-ranking-{Guid.NewGuid():N}");
 try
@@ -49,20 +79,28 @@ try
     foreach (var name in new[] { "Proton 9.0", "Proton 10.0", "Proton Experimental", "Custom-Proton-Build" })
     {
         var dir = Path.Combine(protonLibrary, "steamapps", "common", name);
-        Directory.CreateDirectory(dir);
-        await File.WriteAllTextAsync(Path.Combine(dir, "proton"), string.Empty);
+        await CreateFakeProtonAsync(dir, 62); // ELF EM_X86_64
     }
 
     var toolsDir = Path.Combine(protonLibrary, "compatibilitytools.d", "GE-Proton10-30");
-    Directory.CreateDirectory(toolsDir);
-    await File.WriteAllTextAsync(Path.Combine(toolsDir, "proton"), string.Empty);
+    await CreateFakeProtonAsync(toolsDir, 62);
+
+    var armToolsDir = Path.Combine(protonLibrary, "compatibilitytools.d", "GE-Proton11-5-aarch64");
+    await CreateFakeProtonAsync(armToolsDir, 183); // ELF EM_AARCH64
 
     var candidates = SystemDetector.FindProtonCandidates([protonLibrary]);
-    Assert(candidates.Count >= 5, "Proton discovery must find standard, custom-named, and compatibility-tool builds.");
-    Assert(candidates[0].Name.Contains("Experimental", StringComparison.OrdinalIgnoreCase), "Proton Experimental must remain the default recommendation when installed.");
-    Assert(candidates.Any(p => p.Name == "Proton 10.0"), "Proton 10.0 must be exposed as a selectable candidate.");
-    Assert(candidates.Any(p => p.Name == "Custom-Proton-Build"), "Custom-named Steam compatibility tools with a proton launcher must be exposed.");
-    Assert(candidates.Any(p => p.Name == "GE-Proton10-30"), "GE-Proton compatibility tools must be exposed.");
+    Assert(candidates.Count >= 6, "Proton discovery must find standard, custom-named, GE, and architecture-mismatched builds.");
+    Assert(candidates.First(p => p.Recommended).Name.Contains("Experimental", StringComparison.OrdinalIgnoreCase), "Compatible Proton Experimental must remain the default recommendation when installed.");
+    Assert(candidates.Any(p => p.Name == "Proton 10.0" && p.Compatible), "Proton 10.0 must be exposed as a compatible selectable candidate.");
+    Assert(candidates.Any(p => p.Name == "Custom-Proton-Build" && p.Compatible), "Custom-named Steam compatibility tools with a valid x86_64 runtime must be exposed.");
+    Assert(candidates.Any(p => p.Name == "GE-Proton10-30" && p.Compatible), "x86_64 GE-Proton compatibility tools must be exposed.");
+
+    var armCandidate = candidates.Single(p => p.Name == "GE-Proton11-5-aarch64");
+    if (System.Runtime.InteropServices.RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.X64)
+    {
+        Assert(!armCandidate.Compatible, "ARM64 Proton must be rejected on an x86_64 host.");
+        Assert(!armCandidate.Recommended, "An incompatible ARM64 Proton build must never be recommended on x86_64.");
+    }
 }
 finally
 {
@@ -79,7 +117,7 @@ await File.WriteAllTextAsync(sentinel, "unrelated user data");
 try
 {
     Assert(InstallService.GetInstallDestinationError(tempRoot) is not null, "Live validation must reject a non-empty unrelated directory.");
-    Assert(!service.IsInstalled(tempRoot), "An unrelated directory must never be reported as an OSFR installation.");
+    Assert(!service.IsInstalled(tempRoot), "An unrelated directory must never be reported as a Sanctuary installation.");
 
     var installRejected = false;
     try { await service.InstallAsync(tempRoot, ready, new Progress<InstallProgress>()); }
@@ -97,6 +135,33 @@ finally
 {
     if (Directory.Exists(tempRoot))
         Directory.Delete(tempRoot, true);
+}
+
+var ownershipRoot = Path.Combine(Path.GetTempPath(), $"sanctuary-owned-{Guid.NewGuid():N}");
+var copiedRoot = Path.Combine(Path.GetTempPath(), $"sanctuary-copied-marker-{Guid.NewGuid():N}");
+try
+{
+    var launcherDirectory = Path.Combine(ownershipRoot, "Launcher");
+    Directory.CreateDirectory(launcherDirectory);
+    await File.WriteAllTextAsync(Path.Combine(launcherDirectory, "OSFRLauncher"), "launcher");
+    await File.WriteAllTextAsync(Path.Combine(ownershipRoot, InstallationOwnership.LegacyInstallInfoFileName), "Sanctuary Linux Installation");
+    InstallationOwnership.Write(ownershipRoot);
+    Assert(service.IsInstalled(ownershipRoot), "A structured ownership marker bound to its canonical install root must be recognized.");
+
+    var copiedLauncherDirectory = Path.Combine(copiedRoot, "Launcher");
+    Directory.CreateDirectory(copiedLauncherDirectory);
+    await File.WriteAllTextAsync(Path.Combine(copiedLauncherDirectory, "OSFRLauncher"), "launcher");
+    File.Copy(
+        Path.Combine(ownershipRoot, InstallationOwnership.MarkerFileName),
+        Path.Combine(copiedRoot, InstallationOwnership.MarkerFileName));
+    Assert(!service.IsInstalled(copiedRoot), "Copying an ownership marker to another directory must not authorize recursive uninstall there.");
+}
+finally
+{
+    if (Directory.Exists(ownershipRoot))
+        Directory.Delete(ownershipRoot, true);
+    if (Directory.Exists(copiedRoot))
+        Directory.Delete(copiedRoot, true);
 }
 
 if (OperatingSystem.IsLinux())
