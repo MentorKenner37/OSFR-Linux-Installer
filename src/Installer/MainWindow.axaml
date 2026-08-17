@@ -66,7 +66,7 @@
                     <TextBlock Text="• 64-bit x86_64 Linux operating system" Foreground="#B6B6B6" TextWrapping="Wrap"/>
                     <TextBlock Text="• Steam installed and available for your user account" Foreground="#B6B6B6" TextWrapping="Wrap"/>
                     <TextBlock Text="• At least one installed Steam Proton compatibility tool" Foreground="#B6B6B6" TextWrapping="Wrap"/>
-                    <TextBlock Text="• Working graphics drivers with 32-bit Vulkan support" Foreground="#B6B6B6" TextWrapping="Wrap"/>
+                    <TextBlock Text="• Working graphics drivers; Vulkan is recommended and an OpenGL fallback is available" Foreground="#B6B6B6" TextWrapping="Wrap"/>
                     <TextBlock Text="• A dedicated empty installation folder or an existing Sanctuary installation" Foreground="#B6B6B6" TextWrapping="Wrap"/>
                   </StackPanel>
                 </ScrollViewer>
@@ -82,15 +82,23 @@
             <TextBlock Text="Select a dedicated empty folder or an existing Sanctuary installation. Unsafe locations and unrelated non-empty directories are rejected automatically." Foreground="#777777" FontSize="12" TextWrapping="Wrap"/>
           </StackPanel>
 
-          <StackPanel x:Name="ProtonPanel" IsVisible="False" Spacing="18">
-            <StackPanel Spacing="6"><TextBlock Text="Choose Proton version" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="The recommended detected Proton build is selected automatically. You may choose another detected version if needed." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+          <StackPanel x:Name="ProtonPanel" IsVisible="False" Spacing="16">
+            <StackPanel Spacing="6"><TextBlock Text="Choose Proton settings" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Choose a Proton version and graphics backend for Free Realms." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
             <StackPanel Spacing="8"><TextBlock Text="Proton Version" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged"><ComboBox.ItemTemplate><DataTemplate x:DataType="services:ProtonCandidate"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
-            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><StackPanel Spacing="8"><TextBlock Text="Need another official Proton version?" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Search for Proton in your Steam Library and install the version you want. Restart Sanctuary Linux Installer afterward and the newly installed Proton version should appear here." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="Sanctuary uses a dedicated Proton prefix. Selecting a version here does not modify the Proton installation itself." Foreground="#777777" TextWrapping="Wrap" FontSize="11"/></StackPanel></Border>
+            <StackPanel Spacing="8">
+              <TextBlock Text="Graphics Backend" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/>
+              <ComboBox x:Name="GraphicsBackendComboBox" SelectedIndex="0" SelectionChanged="GraphicsBackendSelectionChanged">
+                <ComboBoxItem Content="Vulkan (DXVK) — Recommended"/>
+                <ComboBoxItem Content="OpenGL (WineD3D) — For systems without usable Vulkan"/>
+              </ComboBox>
+              <TextBlock Text="DXVK uses Vulkan and is recommended for supported hardware. WineD3D stays inside Proton but translates Direct3D through OpenGL for systems with missing or unreliable Vulkan support." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="16"><StackPanel Spacing="7"><TextBlock Text="Need another official Proton version?" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Search for Proton in your Steam Library and install the version you want. Restart Sanctuary Linux Installer afterward and the newly installed Proton version should appear here." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="Selecting a Proton version or graphics backend here does not modify the Proton installation itself." Foreground="#777777" TextWrapping="Wrap" FontSize="11"/></StackPanel></Border>
           </StackPanel>
 
           <StackPanel x:Name="SummaryPanel" IsVisible="False" Spacing="20">
             <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Review the detected environment and selected options before installation begins." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
-            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Graphics backend" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryGraphicsBackend" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
             <CheckBox x:Name="SummaryAcceptCheck" Content="I accept these installation settings and want to continue" IsChecked="False" Click="SummaryAcceptanceChanged"/>
           </StackPanel>
 
