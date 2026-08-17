@@ -2,15 +2,15 @@
 **/bin/
 **/obj/
 **/publish/
+build/
+
+# Generated installer payload
+src/Installer/Resources/launcher-linux-x64.zip
+src/Installer/Resources/icon.png
 
 # Logs / caches
 **/logs/
-**/__pycache__/
 *.log
-
-# Python
-*.pyc
-*.pyo
 
 # IDE
 .vscode/
