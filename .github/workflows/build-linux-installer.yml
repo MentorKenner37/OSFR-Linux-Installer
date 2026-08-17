@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-linux-x64:
     runs-on: ubuntu-latest
@@ -74,3 +77,44 @@ jobs:
           name: OSFR-Linux-Installer-linux-x64
           path: build/installer/OSFR-Linux-Installer
           if-no-files-found: error
+
+      - name: Publish v0.1.0-alpha GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v0.1.0-alpha"
+          TITLE="OSFR Linux Installer v0.1.0-alpha"
+          NOTES=$(cat <<'EOF'
+          First public testing release of the C# OSFR Linux Installer.
+
+          Highlights:
+          - 100% C# / Avalonia installer
+          - Self-contained Linux x64 executable
+          - No Python, Tkinter, Bash installer, or .NET SDK required for end users
+          - Detects native and Flatpak Steam installations
+          - Detects Proton across Steam libraries and compatibilitytools.d
+          - Bundles the patched OSFR Launcher
+          - Creates a dedicated Proton prefix and Linux desktop shortcut
+          - Includes full uninstall support for launcher, Proton data, server/client downloads, and shortcuts
+
+          Requirements:
+          - x86_64 Linux
+          - Steam
+          - Proton installed in Steam
+
+          This is an alpha testing release. Test on a secondary machine before relying on it as a finished installer.
+          EOF
+          )
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" build/installer/OSFR-Linux-Installer --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" build/installer/OSFR-Linux-Installer \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$TITLE" \
+              --notes "$NOTES" \
+              --prerelease
+          fi
