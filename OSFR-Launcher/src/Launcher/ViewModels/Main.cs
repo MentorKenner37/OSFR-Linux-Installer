@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Avalonia.Collections;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -154,10 +155,8 @@ public partial class Main : ObservableObject
 
         Notifications.Add(notification);
 
-        Task.Run(async () =>
-        {
-            await Task.Delay(3000);
-            Notifications.Remove(notification);
-        });
+        DispatcherTimer.RunOnce(
+            () => Notifications.Remove(notification),
+            TimeSpan.FromSeconds(3));
     }
 }
