@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text.Json;
 using OSFR.Linux.Installer.Services;
 using Xunit;
@@ -11,12 +12,10 @@ namespace Installer.UnitTests
         private readonly TempDirFixture _fixture = new();
         public void Dispose() => _fixture.Dispose();
 
-        private static string WriteOwnershipDocument(string installRoot, object doc)
+        private static string ComputeSha256(string path)
         {
-            var marker = Path.Combine(installRoot, InstallationOwnership.MarkerFileName);
-            Directory.CreateDirectory(installRoot);
-            File.WriteAllText(marker, JsonSerializer.Serialize(doc));
-            return marker;
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
         }
 
         [Fact]
@@ -50,11 +49,10 @@ namespace Installer.UnitTests
                 InstallRoot = "/some/other/path",
                 Launcher = "Launcher/OSFRLauncher",
                 InstallerVersion = "0.0",
-                LauncherSha256 = InstallationOwnership.ComputeSha256(launcherFile),
+                LauncherSha256 = ComputeSha256(launcherFile),
                 CreatedUtc = DateTimeOffset.UtcNow
             };
 
-            // write marker with wrong InstallRoot
             var marker = Path.Combine(installRoot, InstallationOwnership.MarkerFileName);
             File.WriteAllText(marker, JsonSerializer.Serialize(doc));
 
@@ -115,7 +113,7 @@ namespace Installer.UnitTests
         public void IsOwned_rejects_symlinked_marker_or_launcher()
         {
             if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
-                return; // symlink behavior tested on Unix-like platforms in CI
+                return;
 
             var installRoot = _fixture.Root;
             var launcherDir = Path.Combine(installRoot, "Launcher");
@@ -126,7 +124,6 @@ namespace Installer.UnitTests
             var marker = Path.Combine(installRoot, InstallationOwnership.MarkerFileName);
             File.WriteAllText(marker, "Sanctuary Linux Installer");
 
-            // Replace marker with symlink
             var realMarkerDir = _fixture.CreateDir("marker-target");
             var realMarker = Path.Combine(realMarkerDir, "marker");
             File.WriteAllText(realMarker, "Sanctuary Linux Installer");
@@ -136,7 +133,9 @@ namespace Installer.UnitTests
 
             Assert.False(InstallationOwnership.IsOwned(installRoot));
 
-            // Now replace launcher with symlink
+            File.Delete(marker);
+            File.WriteAllText(marker, "Sanctuary Linux Installer");
+
             var realLauncherDir = _fixture.CreateDir("real-launcher");
             var realLauncher = Path.Combine(realLauncherDir, "OSFRLauncher");
             File.WriteAllText(realLauncher, "binary");
