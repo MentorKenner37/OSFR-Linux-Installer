@@ -136,15 +136,6 @@
       </Button>
     </StackPanel>
 
-    <TextBlock Grid.Row="0"
-               Grid.Column="1"
-               Margin="25"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Bottom"
-               FontFamily="{StaticResource FontDefault}"
-               FontSize="13"
-               Text="{Binding Message, Mode=OneWay}" />
-
     <Label Grid.Row="0"
            Grid.Column="1"
            Margin="5"
