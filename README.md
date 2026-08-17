@@ -5,12 +5,19 @@ A self-contained C# Linux installer for Open Source Free Realms using Steam Prot
 ## End-user requirements
 
 - x86_64 / AMD64 Linux
-- Steam
+- A graphical Linux desktop session
+- Steam installed and able to launch normally
 - An installed Proton build
+- Working 3D graphics drivers with the 32-bit graphics/Vulkan support required by Steam Proton
+- An internet connection for OSFR login, server data, and client downloads
+- Enough free disk space for the launcher, Proton prefix, and downloaded OSFR server clients
+- Permission to write to your home directory and chosen installation location
+
+Linux Mint users should normally already have the required Steam/graphics components when Steam and Proton are working correctly.
 
 The packaged GitHub Actions build is self-contained. End users do **not** need Python, Bash installer scripts, or the .NET SDK to run it.
 
-The installer does **not** install, update, or modify Steam or Proton.
+The installer does **not** install, update, or modify Steam, Proton, or graphics drivers.
 
 ## What it does
 
