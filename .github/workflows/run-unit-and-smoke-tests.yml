@@ -1,0 +1,38 @@
+name: Run unit and smoke tests
+
+on:
+  push:
+    branches:
+      - feature/add-xunit-tests
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: OSFR-Launcher/src/global.json
+
+      - name: Restore unit tests
+        run: dotnet restore tests/Installer.UnitTests/Installer.UnitTests.csproj
+
+      - name: Run xUnit suite
+        run: dotnet test tests/Installer.UnitTests/Installer.UnitTests.csproj -c Release --no-restore --verbosity normal
+
+      - name: Run installer safety smoke tests
+        run: dotnet run --project src/Installer.SmokeTests/Installer.SmokeTests.csproj -c Release
+
+      - name: Run launcher path safety smoke tests
+        run: dotnet run --project src/Launcher.SmokeTests/Launcher.SmokeTests.csproj -c Release
