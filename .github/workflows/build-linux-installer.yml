@@ -189,18 +189,35 @@ jobs:
           test -f build/installer/Sanctuary-Linux-Installer
           test -f build/installer/Sanctuary-Linux-Installer.sha256
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists; refreshing its title and notes."
-            gh release edit "$TAG" \
-              --title "Sanctuary Linux Installer $TAG" \
-              --notes-file RELEASE_NOTES.md \
-              --prerelease
-          else
-            gh release create "$TAG" \
-              --target "$GITHUB_SHA" \
-              --title "Sanctuary Linux Installer $TAG" \
-              --notes-file RELEASE_NOTES.md \
-              --prerelease
+          release_ready=0
+          for attempt in 1 2 3 4 5; do
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "Release $TAG already exists; refreshing its title and notes."
+              if gh release edit "$TAG" \
+                --title "Sanctuary Linux Installer $TAG" \
+                --notes-file RELEASE_NOTES.md \
+                --prerelease; then
+                release_ready=1
+                break
+              fi
+            else
+              if gh release create "$TAG" \
+                --target "$GITHUB_SHA" \
+                --title "Sanctuary Linux Installer $TAG" \
+                --notes-file RELEASE_NOTES.md \
+                --prerelease; then
+                release_ready=1
+                break
+              fi
+            fi
+
+            echo "GitHub release API attempt $attempt failed; retrying."
+            sleep $((attempt * 3))
+          done
+
+          if [ "$release_ready" -ne 1 ]; then
+            echo "Failed to create or refresh release $TAG after 5 attempts."
+            exit 1
           fi
 
           for attempt in 1 2 3 4 5; do
