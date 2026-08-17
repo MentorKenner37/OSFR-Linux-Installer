@@ -23,7 +23,7 @@ public static class SystemDetector
     {
         var isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
         var isX64 = RuntimeInformation.OSArchitecture == Architecture.X64;
-        var libraries = FindSteamLibraries().Distinct(StringComparer.Ordinal).ToList();
+        var libraries = FindSteamLibraries().Select(CanonicalizePath).Distinct(StringComparer.Ordinal).ToList();
         var steamRoot = FindSteamRoots().FirstOrDefault(Directory.Exists);
         var candidates = FindProtonCandidates(libraries);
         var proton = candidates.FirstOrDefault()?.Path;
@@ -93,6 +93,7 @@ public static class SystemDetector
         var libraryList = (libraries ?? FindSteamLibraries())
             .Concat(FindSteamRoots())
             .Where(Directory.Exists)
+            .Select(CanonicalizePath)
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
@@ -111,6 +112,7 @@ public static class SystemDetector
 
         var ordered = candidates
             .Where(File.Exists)
+            .Select(CanonicalizePath)
             .Distinct(StringComparer.Ordinal)
             .OrderByDescending(IsExperimental)
             .ThenByDescending(IsGeProton)
@@ -121,6 +123,24 @@ public static class SystemDetector
             .ToList();
 
         return ordered.Select((path, index) => new ProtonCandidate(GetProtonDirectoryName(path), path, index == 0)).ToList();
+    }
+
+    public static string CanonicalizePath(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        try
+        {
+            var info = Directory.Exists(fullPath)
+                ? (FileSystemInfo)new DirectoryInfo(fullPath)
+                : new FileInfo(fullPath);
+            var target = info.ResolveLinkTarget(returnFinalTarget: true);
+            return target is null ? fullPath : Path.GetFullPath(target.FullName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            InstallerLog.Warn($"Could not resolve filesystem alias {fullPath}: {ex.Message}");
+            return fullPath;
+        }
     }
 
     private static void AddSteamCommonCandidates(string library, ICollection<string> candidates)
