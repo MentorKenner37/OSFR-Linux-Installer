@@ -40,7 +40,7 @@ public static class ProtonHelper
         if (File.Exists(configured))
             return configured;
 
-        var preferred = new[] { "Proton - Experimental", "Proton Hotfix" };
+        var candidates = new List<string>();
 
         foreach (var library in SteamLibraries())
         {
@@ -48,21 +48,13 @@ public static class ProtonHelper
             if (!Directory.Exists(common))
                 continue;
 
-            foreach (var name in preferred)
-            {
-                var candidate = Path.Combine(common, name, "proton");
-                if (File.Exists(candidate))
-                    return candidate;
-            }
-
             try
             {
-                foreach (var directory in Directory.EnumerateDirectories(common))
+                foreach (var directory in Directory.EnumerateDirectories(common, "Proton*"))
                 {
-                    var name = Path.GetFileName(directory);
                     var candidate = Path.Combine(directory, "proton");
-                    if (name.Contains("Proton", StringComparison.OrdinalIgnoreCase) && File.Exists(candidate))
-                        return candidate;
+                    if (File.Exists(candidate))
+                        candidates.Add(candidate);
                 }
             }
             catch { }
@@ -76,13 +68,20 @@ public static class ProtonHelper
 
             try
             {
-                foreach (var candidate in Directory.EnumerateFiles(tools, "proton", SearchOption.AllDirectories))
-                    return candidate;
+                candidates.AddRange(Directory.EnumerateFiles(tools, "proton", SearchOption.AllDirectories));
             }
             catch { }
         }
 
-        return string.Empty;
+        return candidates
+            .Distinct(StringComparer.Ordinal)
+            .OrderByDescending(IsExperimental)
+            .ThenByDescending(IsGeProton)
+            .ThenByDescending(p => GetProtonVersion(p).Major)
+            .ThenByDescending(p => GetProtonVersion(p).Minor)
+            .ThenByDescending(p => GetProtonVersion(p).Patch)
+            .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault() ?? string.Empty;
     }
 
     private static IEnumerable<string> SteamRoots()
@@ -131,4 +130,30 @@ public static class ProtonHelper
 
         return libraries;
     }
+
+    private static bool IsExperimental(string protonPath) =>
+        GetProtonDirectoryName(protonPath).Contains("Experimental", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsGeProton(string protonPath) =>
+        GetProtonDirectoryName(protonPath).Contains("GE-Proton", StringComparison.OrdinalIgnoreCase);
+
+    private static (int Major, int Minor, int Patch) GetProtonVersion(string protonPath)
+    {
+        var name = GetProtonDirectoryName(protonPath);
+        var match = Regex.Match(
+            name,
+            @"(?:GE-Proton|Proton\s*-?\s*)(?<major>\d+)(?:[.-](?<minor>\d+))?(?:[.-](?<patch>\d+))?",
+            RegexOptions.IgnoreCase);
+
+        if (!match.Success)
+            return (0, 0, 0);
+
+        _ = int.TryParse(match.Groups["major"].Value, out var major);
+        _ = int.TryParse(match.Groups["minor"].Value, out var minor);
+        _ = int.TryParse(match.Groups["patch"].Value, out var patch);
+        return (major, minor, patch);
+    }
+
+    private static string GetProtonDirectoryName(string protonPath) =>
+        Path.GetFileName(Path.GetDirectoryName(protonPath)) ?? string.Empty;
 }
