@@ -1,18 +1,12 @@
-# OSFR Linux Installer v0.2.3-alpha
+# OSFR Linux Installer v0.2.4-alpha
 
-This alpha adds release-integrity verification and a small diagnostics/logging hardening pass on top of v0.2.2-alpha.
+This alpha fixes a default-install-path conflict discovered during real-machine testing on Linux Mint.
 
 ## Highlights
 
-- Publishes `OSFR-Linux-Installer.sha256` beside the installer on every release.
-- Verifies the SHA-256 checksum immediately after building and again after the release job downloads the tested artifact.
-- Runs the packaged single-file installer with `--diagnose` and `--dry-run` before publication.
-- Checks direct and transitive NuGet dependencies for known vulnerabilities during CI.
-- Validates the generated Linux `.desktop` entry with `desktop-file-validate`.
-- Rotates `installer.log` at about 1 MiB and retains up to three previous log files.
-- Keeps logging failures non-fatal while reporting them to standard error when possible.
-- Documents checksum verification and the official release-build environment in the README.
-- Retains the v0.2.2 security hardening: Proton selection, path/symlink protections, staged extraction, safe no-follow deletion, diagnostics, launcher path protections, credential protections, and least-privilege release permissions.
+- Moved installer diagnostics from `~/.local/share/OSFR-Linux/installer.log` to `~/.local/state/OSFR-Linux/installer.log`.
+- Keeps the default installation directory at `~/.local/share/OSFR-Linux` without the installer recreating or occupying it just by launching.
+- Preserves log rotation, checksum verification, dependency vulnerability scanning, packaged installer smoke tests, desktop-entry validation, and all v0.2.2/v0.2.3 security hardening.
 
 ## Verify the download
 
