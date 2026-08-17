@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     private readonly InstallService _installService = new();
     private SystemState _state = SystemDetector.Detect();
     private bool _busy;
+    private bool _updatingProtonSelection;
 
     private static readonly IBrush Good = new SolidColorBrush(Color.Parse("#45D483"));
     private static readonly IBrush Bad = new SolidColorBrush(Color.Parse("#E05252"));
@@ -27,7 +28,25 @@ public partial class MainWindow : Window
 
     private void RefreshState()
     {
+        var previousProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         _state = SystemDetector.Detect();
+
+        _updatingProtonSelection = true;
+        try
+        {
+            ProtonComboBox.ItemsSource = _state.ProtonCandidates;
+            var selected = _state.ProtonCandidates?.FirstOrDefault(p => p.Path == previousProton)
+                           ?? _state.ProtonCandidates?.FirstOrDefault();
+            ProtonComboBox.SelectedItem = selected;
+            ProtonComboBox.IsEnabled = !_busy && (_state.ProtonCandidates?.Count ?? 0) > 0;
+            if (selected is not null)
+                _state = _state.WithProton(selected.Path);
+        }
+        finally
+        {
+            _updatingProtonSelection = false;
+        }
+
         SetCheck(LinuxStatus, _state.IsLinux, _state.IsLinux ? "READY" : "REQUIRED");
         SetCheck(CpuStatus, _state.IsX64, _state.IsX64 ? "READY" : "REQUIRED");
         SetCheck(SteamStatus, _state.SteamRoot is not null, _state.SteamRoot is not null ? "DETECTED" : "NOT FOUND");
@@ -51,7 +70,7 @@ public partial class MainWindow : Window
             {
                 installed = _installService.IsInstalled(InstallRoot);
             }
-            catch
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
             {
                 pathError = "The installation path is not valid.";
                 InstallPathStatus.Text = $"✗ {pathError}";
@@ -99,9 +118,9 @@ public partial class MainWindow : Window
         {
             installed = _installService.IsInstalled(InstallService.NormalizeInstallRoot(path));
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            // Validation above already protects the normal invalid-path cases.
+            InstallerLog.Warn($"Could not validate install path: {ex.Message}");
         }
 
         InstallPathStatus.Text = installed
@@ -115,6 +134,17 @@ public partial class MainWindow : Window
     {
         control.Text = ok ? $"✓ {text}" : $"✗ {text}";
         control.Foreground = ok ? Good : Bad;
+    }
+
+    private void ProtonSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_updatingProtonSelection || ProtonComboBox.SelectedItem is not ProtonCandidate selected)
+            return;
+
+        _state = _state.WithProton(selected.Path);
+        DetailText.Text = $"Steam: {_state.SteamRoot}\nProton: {selected.Path}";
+        InstallerLog.Info($"User selected Proton: {selected.Path}");
+        RefreshInstallUi();
     }
 
     private void InstallPathChanged(object? sender, TextChangedEventArgs e)
@@ -143,14 +173,23 @@ public partial class MainWindow : Window
         if (_busy)
             return;
 
-        if (_installService.IsInstalled(InstallRoot))
-            await UninstallAsync();
-        else
-            await InstallAsync();
+        try
+        {
+            if (_installService.IsInstalled(InstallRoot))
+                await UninstallAsync();
+            else
+                await InstallAsync();
+        }
+        catch (Exception ex)
+        {
+            InstallerLog.Error("Action failed before operation started", ex);
+            await ShowMessageAsync("Operation failed", ex.Message);
+        }
     }
 
     private async Task InstallAsync()
     {
+        // Re-detect Steam/Proton but preserve a user-selected Proton path when it still exists.
         RefreshState();
         if (!_state.Ready)
         {
@@ -173,14 +212,14 @@ public partial class MainWindow : Window
         {
             await _installService.InstallAsync(InstallRoot, _state, progress);
             _installService.Launch(InstallRoot);
-
             shouldClose = CloseAfterInstallCheck.IsChecked == true;
             if (!shouldClose)
                 await ShowMessageAsync("Installation complete", "Open Source Free Realms has been installed successfully and the launcher has started.");
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync("Installation failed", ex.Message);
+            InstallerLog.Error("Installation UI flow failed", ex);
+            await ShowMessageAsync("Installation failed", $"{ex.Message}\n\nDiagnostics: {InstallerLog.LogPath}");
         }
         finally
         {
@@ -211,7 +250,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync("Uninstall failed", ex.Message);
+            InstallerLog.Error("Uninstall failed", ex);
+            await ShowMessageAsync("Uninstall failed", $"{ex.Message}\n\nDiagnostics: {InstallerLog.LogPath}");
         }
         finally
         {
@@ -233,6 +273,7 @@ public partial class MainWindow : Window
         ActionButton.IsEnabled = !busy;
         InstallPathBox.IsEnabled = !busy;
         CloseAfterInstallCheck.IsEnabled = !busy;
+        ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Count ?? 0) > 0;
     }
 
     private async Task<bool> ConfirmAsync(string title, string message)
