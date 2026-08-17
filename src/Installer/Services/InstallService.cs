@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
@@ -11,6 +12,8 @@ public sealed class InstallService
     private const string PayloadResource = "OSFR.Linux.Installer.Payload";
     private const string OwnershipMarker = ".osfr-linux-install";
     private const string LegacyInstallInfo = "install-info.txt";
+    private const string DesktopFileName = "OSFR-Linux.desktop";
+    private const string DesktopIconName = "osfr-linux";
 
     public static string DefaultInstallRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -19,6 +22,10 @@ public sealed class InstallService
     public static string LauncherDataRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".local", "share", "OSFRLauncher");
+
+    public static string DesktopIconPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".local", "share", "icons", "hicolor", "256x256", "apps", $"{DesktopIconName}.png");
 
     public static string NormalizeInstallRoot(string path)
     {
@@ -143,8 +150,9 @@ public sealed class InstallService
             await File.WriteAllTextAsync(Path.Combine(launcherDir, "prefix-path.txt"), prefixDir + Environment.NewLine, cancellationToken);
 
             progress.Report(new(70, "Creating desktop integration..."));
-            var iconPath = await ExtractIconAsync(launcherDir, cancellationToken);
-            CreateDesktopEntries(launcher, iconPath);
+            await InstallDesktopIconAsync(cancellationToken);
+            CreateDesktopEntries(launcher);
+            RefreshDesktopIntegration();
 
             progress.Report(new(85, "Verifying installation..."));
             VerifyLauncher(launcherDir, launcher);
@@ -205,8 +213,9 @@ public sealed class InstallService
                 (Path: LauncherDataRoot, RequireHome: true),
                 (Path: Path.Combine(home, ".cache", "OSFRLauncher"), RequireHome: true),
                 (Path: Path.Combine(home, ".cache", "OSFR-Linux"), RequireHome: true),
-                (Path: Path.Combine(home, ".local", "share", "applications", "OSFR-Linux.desktop"), RequireHome: true),
-                (Path: Path.Combine(home, "Desktop", "OSFR-Linux.desktop"), RequireHome: true)
+                (Path: Path.Combine(home, ".local", "share", "applications", DesktopFileName), RequireHome: true),
+                (Path: Path.Combine(home, "Desktop", DesktopFileName), RequireHome: true),
+                (Path: DesktopIconPath, RequireHome: true)
             };
 
             for (var i = 0; i < targets.Length; i++)
@@ -230,6 +239,7 @@ public sealed class InstallService
                 catch (FileNotFoundException) { }
             }
 
+            RefreshDesktopIntegration();
             progress.Report(new(100, "Uninstallation complete"));
             InstallerLog.Info("Uninstallation completed successfully.");
         }, cancellationToken);
@@ -347,20 +357,21 @@ public sealed class InstallService
         }
     }
 
-    private static async Task<string> ExtractIconAsync(string launcherDir, CancellationToken cancellationToken)
+    private static async Task InstallDesktopIconAsync(CancellationToken cancellationToken)
     {
-        var iconPath = Path.Combine(launcherDir, "OSFRLauncher.png");
-        var assembly = Assembly.GetExecutingAssembly();
-        await using var stream = assembly.GetManifestResourceStream("OSFR.Linux.Installer.Icon");
-        if (stream is null)
-            return iconPath;
+        var iconDirectory = Path.GetDirectoryName(DesktopIconPath)!;
+        Directory.CreateDirectory(iconDirectory);
+        RefuseSymbolicLink(iconDirectory, "icon-theme directory");
+        RefuseSymbolicLink(DesktopIconPath, "desktop icon file");
 
-        await using var output = new FileStream(iconPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        var assembly = Assembly.GetExecutingAssembly();
+        await using var stream = assembly.GetManifestResourceStream("OSFR.Linux.Installer.Icon")
+            ?? throw new InvalidOperationException("The installer icon resource is missing.");
+        await using var output = new FileStream(DesktopIconPath, FileMode.Create, FileAccess.Write, FileShare.None);
         await stream.CopyToAsync(output, cancellationToken);
-        return iconPath;
     }
 
-    private static void CreateDesktopEntries(string launcher, string iconPath)
+    private static void CreateDesktopEntries(string launcher)
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var applications = Path.Combine(home, ".local", "share", "applications");
@@ -373,22 +384,68 @@ public sealed class InstallService
                            Name=Open Source Free Realms
                            Comment=Open Source Free Realms - Linux
                            Exec={QuoteDesktopExecPath(launcher)}
-                           Icon={EscapeDesktopString(iconPath)}
+                           Icon={DesktopIconName}
                            Terminal=false
                            Categories=Game;
                            StartupNotify=true
+                           StartupWMClass=OSFRLauncher
+                           X-GNOME-WMClass=OSFRLauncher
                            """;
 
-        var applicationFile = Path.Combine(applications, "OSFR-Linux.desktop");
+        var applicationFile = Path.Combine(applications, DesktopFileName);
         File.WriteAllText(applicationFile, desktopEntry);
         EnsureExecutable(applicationFile, "application-menu shortcut");
 
         var desktop = Path.Combine(home, "Desktop");
         if (Directory.Exists(desktop) && !IsSymbolicLink(desktop))
         {
-            var desktopFile = Path.Combine(desktop, "OSFR-Linux.desktop");
+            var desktopFile = Path.Combine(desktop, DesktopFileName);
             File.WriteAllText(desktopFile, desktopEntry);
             EnsureExecutable(desktopFile, "desktop shortcut");
+        }
+    }
+
+    private static void RefreshDesktopIntegration()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        RunOptionalCommand("update-desktop-database", Path.Combine(home, ".local", "share", "applications"));
+        RunOptionalCommand("gtk-update-icon-cache", "-f", "-t", Path.Combine(home, ".local", "share", "icons", "hicolor"));
+    }
+
+    private static void RunOptionalCommand(string fileName, params string[] arguments)
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = fileName,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                ArgumentList = { }
+            });
+
+            if (process is null)
+                return;
+
+            foreach (var argument in arguments)
+                process.StartInfo.ArgumentList.Add(argument);
+        }
+        catch (Win32Exception)
+        {
+            // Optional desktop cache utility is not installed.
+        }
+        catch (IOException ex)
+        {
+            InstallerLog.Warn($"Could not refresh desktop integration with {fileName}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            InstallerLog.Warn($"Could not refresh desktop integration with {fileName}: {ex.Message}");
         }
     }
 
@@ -402,12 +459,6 @@ public sealed class InstallService
             .Replace("%", "%%");
         return $"\"{escaped}\"";
     }
-
-    private static string EscapeDesktopString(string value) => value
-        .Replace("\\", "\\\\")
-        .Replace("\n", "\\n")
-        .Replace("\r", "\\r")
-        .Replace("\t", "\\t");
 
     private static void EnsureExecutable(string path, string description)
     {
