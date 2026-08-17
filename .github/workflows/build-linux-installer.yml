@@ -103,7 +103,7 @@ jobs:
             cp "$SKIA" build/launcher/libSkiaSharp.so
           fi
 
-      - name: Embed launcher payload and validate OSFR icon
+      - name: Embed launcher payload and validate Sanctuary icon
         run: |
           set -euo pipefail
           mkdir -p src/Installer/Resources
@@ -126,33 +126,33 @@ jobs:
             -o build/installer
 
           test -f build/installer/Installer
-          mv build/installer/Installer build/installer/OSFR-Linux-Installer
-          chmod +x build/installer/OSFR-Linux-Installer
+          mv build/installer/Installer build/installer/Sanctuary-Linux-Installer
+          chmod +x build/installer/Sanctuary-Linux-Installer
 
       - name: Smoke test packaged installer
         run: |
           set -euo pipefail
-          build/installer/OSFR-Linux-Installer --diagnose | tee /tmp/osfr-diagnose.txt
-          build/installer/OSFR-Linux-Installer --dry-run | tee /tmp/osfr-dry-run.txt
-          grep -q "OSFR Linux Installer diagnostics" /tmp/osfr-diagnose.txt
-          grep -q "no files will be changed" /tmp/osfr-dry-run.txt
-          grep -q "$HOME/.local/state/OSFR-Linux/installer.log" /tmp/osfr-diagnose.txt
+          build/installer/Sanctuary-Linux-Installer --diagnose | tee /tmp/sanctuary-diagnose.txt
+          build/installer/Sanctuary-Linux-Installer --dry-run | tee /tmp/sanctuary-dry-run.txt
+          grep -q "Sanctuary Linux Installer diagnostics" /tmp/sanctuary-diagnose.txt
+          grep -q "no files will be changed" /tmp/sanctuary-dry-run.txt
+          grep -q "$HOME/.local/state/OSFR-Linux/installer.log" /tmp/sanctuary-diagnose.txt
           test ! -e "$HOME/.local/share/OSFR-Linux"
 
       - name: Generate and verify SHA-256 checksum
         run: |
           set -euo pipefail
           cd build/installer
-          sha256sum OSFR-Linux-Installer > OSFR-Linux-Installer.sha256
-          sha256sum -c OSFR-Linux-Installer.sha256
+          sha256sum Sanctuary-Linux-Installer > Sanctuary-Linux-Installer.sha256
+          sha256sum -c Sanctuary-Linux-Installer.sha256
 
       - name: Upload verified installer artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: OSFR-Linux-Installer-linux-x64
+          name: Sanctuary-Linux-Installer-linux-x64
           path: |
-            build/installer/OSFR-Linux-Installer
-            build/installer/OSFR-Linux-Installer.sha256
+            build/installer/Sanctuary-Linux-Installer
+            build/installer/Sanctuary-Linux-Installer.sha256
           if-no-files-found: error
 
   publish-prerelease:
@@ -169,14 +169,14 @@ jobs:
       - name: Download tested installer artifacts
         uses: actions/download-artifact@v8
         with:
-          name: OSFR-Linux-Installer-linux-x64
+          name: Sanctuary-Linux-Installer-linux-x64
           path: build/installer
 
       - name: Verify downloaded checksum
         run: |
           set -euo pipefail
           cd build/installer
-          sha256sum -c OSFR-Linux-Installer.sha256
+          sha256sum -c Sanctuary-Linux-Installer.sha256
 
       - name: Publish versioned prerelease
         env:
@@ -186,31 +186,31 @@ jobs:
           VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n1)"
           test -n "$VERSION"
           TAG="v$VERSION"
-          test -f build/installer/OSFR-Linux-Installer
-          test -f build/installer/OSFR-Linux-Installer.sha256
+          test -f build/installer/Sanctuary-Linux-Installer
+          test -f build/installer/Sanctuary-Linux-Installer.sha256
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists; refreshing its title, notes, and verified assets."
             gh release edit "$TAG" \
-              --title "OSFR Linux Installer $TAG" \
+              --title "Sanctuary Linux Installer $TAG" \
               --notes-file RELEASE_NOTES.md \
               --prerelease
             gh release upload "$TAG" \
-              build/installer/OSFR-Linux-Installer \
-              build/installer/OSFR-Linux-Installer.sha256 \
+              build/installer/Sanctuary-Linux-Installer \
+              build/installer/Sanctuary-Linux-Installer.sha256 \
               --clobber
           else
             gh release create "$TAG" \
-              build/installer/OSFR-Linux-Installer \
-              build/installer/OSFR-Linux-Installer.sha256 \
+              build/installer/Sanctuary-Linux-Installer \
+              build/installer/Sanctuary-Linux-Installer.sha256 \
               --target "$GITHUB_SHA" \
-              --title "OSFR Linux Installer $TAG" \
+              --title "Sanctuary Linux Installer $TAG" \
               --notes-file RELEASE_NOTES.md \
               --prerelease
           fi
 
-          if [ "$VERSION" = "0.2.6-alpha" ]; then
-            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha v0.2.2-alpha v0.2.3-alpha v0.2.4-alpha v0.2.5-alpha; do
+          if [ "$VERSION" = "0.2.7-alpha" ]; then
+            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha v0.2.2-alpha v0.2.3-alpha v0.2.4-alpha v0.2.5-alpha v0.2.6-alpha; do
               if gh release view "$OLD_TAG" >/dev/null 2>&1; then
                 echo "Removing superseded release $OLD_TAG and its tag."
                 gh release delete "$OLD_TAG" --cleanup-tag --yes
