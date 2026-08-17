@@ -7,8 +7,7 @@ public sealed record SystemState(
     bool IsLinux,
     bool IsX64,
     string? SteamRoot,
-    string? ProtonPath,
-    IReadOnlyList<string> SteamLibraries)
+    string? ProtonPath)
 {
     public bool Ready => IsLinux && IsX64 && SteamRoot is not null && ProtonPath is not null;
 }
@@ -21,9 +20,9 @@ public static class SystemDetector
         var isX64 = RuntimeInformation.OSArchitecture == Architecture.X64;
         var libraries = FindSteamLibraries().Distinct(StringComparer.Ordinal).ToList();
         var steamRoot = FindSteamRoots().FirstOrDefault(Directory.Exists);
-        var proton = FindProton(libraries, steamRoot);
+        var proton = FindProton(libraries);
 
-        return new SystemState(isLinux, isX64, steamRoot, proton, libraries);
+        return new SystemState(isLinux, isX64, steamRoot, proton);
     }
 
     public static IEnumerable<string> FindSteamRoots()
@@ -59,7 +58,7 @@ public static class SystemDetector
         }
     }
 
-    private static string? FindProton(IEnumerable<string> libraries, string? steamRoot)
+    private static string? FindProton(IEnumerable<string> libraries)
     {
         var candidates = new List<string>();
 
