@@ -3,24 +3,33 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using NLog;
 
 namespace Launcher.Helpers;
 
 public static class ProtonHelper
 {
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
     public static string GetConfiguredPath(string fileName)
     {
+        var file = Path.Combine(AppContext.BaseDirectory, fileName);
+        if (!File.Exists(file))
+            return string.Empty;
+
         try
         {
-            var file = Path.Combine(AppContext.BaseDirectory, fileName);
-            if (!File.Exists(file))
-                return string.Empty;
-
             var value = File.ReadAllText(file).Trim();
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value;
         }
-        catch
+        catch (IOException ex)
         {
+            Logger.Warn(ex, "Could not read configured Proton/Steam path file {file}", file);
+            return string.Empty;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.Warn(ex, "Could not access configured Proton/Steam path file {file}", file);
             return string.Empty;
         }
     }
@@ -57,7 +66,14 @@ public static class ProtonHelper
                         candidates.Add(candidate);
                 }
             }
-            catch { }
+            catch (IOException ex)
+            {
+                Logger.Warn(ex, "Could not enumerate Proton installations in {path}", common);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Logger.Warn(ex, "Could not access Proton installations in {path}", common);
+            }
         }
 
         foreach (var root in SteamRoots())
@@ -70,7 +86,14 @@ public static class ProtonHelper
             {
                 candidates.AddRange(Directory.EnumerateFiles(tools, "proton", SearchOption.AllDirectories));
             }
-            catch { }
+            catch (IOException ex)
+            {
+                Logger.Warn(ex, "Could not enumerate compatibility tools in {path}", tools);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Logger.Warn(ex, "Could not access compatibility tools in {path}", tools);
+            }
         }
 
         return candidates
@@ -87,7 +110,6 @@ public static class ProtonHelper
     private static IEnumerable<string> SteamRoots()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
         string[] roots =
         [
             Path.Combine(home, ".steam/debian-installation"),
@@ -96,7 +118,6 @@ public static class ProtonHelper
             Path.Combine(home, ".var/app/com.valvesoftware.Steam/data/Steam"),
             Path.Combine(home, ".var/app/com.valvesoftware.Steam/.local/share/Steam")
         ];
-
         return roots.Where(Directory.Exists).Distinct(StringComparer.Ordinal);
     }
 
@@ -107,25 +128,28 @@ public static class ProtonHelper
         foreach (var root in SteamRoots())
         {
             libraries.Add(root);
-
             var vdf = Path.Combine(root, "steamapps/libraryfolders.vdf");
             if (!File.Exists(vdf))
                 continue;
 
             try
             {
-                foreach (var line in File.ReadLines(vdf))
+                var text = File.ReadAllText(vdf);
+                foreach (Match match in Regex.Matches(text, "\\\"path\\\"\\s+\\\"(?<path>[^\\\"]+)\\\"", RegexOptions.IgnoreCase))
                 {
-                    var match = Regex.Match(line, "\\\"path\\\"\\s+\\\"([^\\\"]+)\\\"");
-                    if (!match.Success)
-                        continue;
-
-                    var path = match.Groups[1].Value.Replace("\\\\", "\\");
+                    var path = match.Groups["path"].Value.Replace("\\\\", "\\");
                     if (Directory.Exists(path))
                         libraries.Add(path);
                 }
             }
-            catch { }
+            catch (IOException ex)
+            {
+                Logger.Warn(ex, "Could not read Steam library file {file}", vdf);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Logger.Warn(ex, "Could not access Steam library file {file}", vdf);
+            }
         }
 
         return libraries;
@@ -140,11 +164,7 @@ public static class ProtonHelper
     private static (int Major, int Minor, int Patch) GetProtonVersion(string protonPath)
     {
         var name = GetProtonDirectoryName(protonPath);
-        var match = Regex.Match(
-            name,
-            @"(?:GE-Proton|Proton\s*-?\s*)(?<major>\d+)(?:[.-](?<minor>\d+))?(?:[.-](?<patch>\d+))?",
-            RegexOptions.IgnoreCase);
-
+        var match = Regex.Match(name, @"(?:GE-Proton|Proton\s*-?\s*)(?<major>\d+)(?:[.-](?<minor>\d+))?(?:[.-](?<patch>\d+))?", RegexOptions.IgnoreCase);
         if (!match.Success)
             return (0, 0, 0);
 
