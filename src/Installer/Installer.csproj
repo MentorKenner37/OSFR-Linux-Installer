@@ -20,5 +20,6 @@
 
   <ItemGroup Condition="Exists('Resources/icon.png')">
     <AvaloniaResource Include="Resources/icon.png" />
+    <EmbeddedResource Include="Resources/icon.png" LogicalName="OSFR.Linux.Installer.Icon" />
   </ItemGroup>
 </Project>
