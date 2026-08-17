@@ -1,3 +1,4 @@
+using System.Reflection;
 using OSFR.Linux.Installer.Services;
 
 static void Assert(bool condition, string message)
@@ -117,6 +118,17 @@ if (OperatingSystem.IsLinux())
         if (Directory.Exists(external))
             Directory.Delete(external, true);
     }
+}
+
+if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase))
+{
+    var createDesktopEntries = typeof(InstallService).GetMethod("CreateDesktopEntries", BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("Could not locate desktop-entry generator for validation.");
+
+    createDesktopEntries.Invoke(null, ["/tmp/OSFR Test/OSFRLauncher", "/tmp/OSFR Test/OSFRLauncher.png"]);
+    var generatedDesktop = Path.Combine(home, ".local", "share", "applications", "OSFR-Linux.desktop");
+    Assert(File.Exists(generatedDesktop), "CI desktop-entry generation must produce an application-menu entry.");
+    Console.WriteLine($"Generated desktop entry: {generatedDesktop}");
 }
 
 Console.WriteLine("Installer safety smoke tests passed.");
