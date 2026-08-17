@@ -8,7 +8,7 @@ A self-contained Linux installer for Open Source Free Realms that configures the
 - A graphical desktop environment
 - Steam installed and working
 - At least one installed Proton version
-- Working graphics drivers with the 32-bit Vulkan support required by Steam Proton
+- Working graphics drivers with 32-bit Vulkan support
 - An internet connection
 - Enough free disk space for the launcher, Proton prefix, and game files
 
@@ -33,7 +33,7 @@ Release builds are self-contained. You do **not** need Python, installer scripts
 
 The installer rejects symbolic-link install roots, stages launcher extraction before replacing an existing launcher, rejects unsafe archive paths and archive symlinks, and will not recursively delete an installation directory unless it can verify that the directory belongs to this installation.
 
-Internal OSFR data paths and launcher identifiers are retained for compatibility with existing installations.
+Some internal OSFR data paths, file names, launcher identifiers, and namespaces are intentionally retained for compatibility with existing installations and the upstream launcher. User-facing product branding is **Sanctuary Linux Installer**.
 
 ## Download and install
 
@@ -58,8 +58,8 @@ Internal OSFR data paths and launcher identifiers are retained for compatibility
 
 5. Confirm that Linux, x86_64, Steam, and Proton are detected under **System Compatibility**.
 6. Choose an installation location.
-7. Choose the Proton version you want to use. The recommended detected version is selected automatically.
-8. Review the installation summary and select **Install**.
+7. Choose the Proton version you want to use. The recommended detected version is selected automatically. To add another official Proton version, search for **Proton** in your Steam Library, install the version you want, then restart Sanctuary Linux Installer.
+8. Review the installation summary, check **I accept these installation settings and want to continue**, proceed to the Install step, and select **Install**.
 
 The launcher handles Open Source Free Realms login and downloads the client files required by the selected server.
 
@@ -82,6 +82,8 @@ Installation and detection errors are written to:
 ```text
 ~/.local/state/OSFR-Linux/installer.log
 ```
+
+The diagnostics directory and several other `OSFR-Linux` internal paths are retained for compatibility. They do not change the user-facing product name.
 
 The diagnostics directory is intentionally separate from the default installation directory (`~/.local/share/OSFR-Linux`) so launching the installer does not make the default destination appear occupied.
 
