@@ -27,7 +27,7 @@ Release builds are self-contained. You do **not** need Python, installer scripts
 - Configures the launcher to use the selected Steam and Proton installation
 - Creates application-menu and desktop shortcuts
 - Starts the OSFR Launcher when installation finishes
-- Writes installer diagnostics to `~/.local/share/OSFR-Linux/installer.log`
+- Writes installer diagnostics to `~/.local/state/OSFR-Linux/installer.log`
 - Rotates the installer log at about 1 MiB and keeps up to three previous copies
 - Safely removes OSFR, its dedicated Proton prefix, downloaded clients, data, caches, and shortcuts when uninstalling
 
@@ -78,8 +78,10 @@ Preview the default installation plan without changing files:
 Installation and detection errors are written to:
 
 ```text
-~/.local/share/OSFR-Linux/installer.log
+~/.local/state/OSFR-Linux/installer.log
 ```
+
+The diagnostics directory is intentionally separate from the default installation directory (`~/.local/share/OSFR-Linux`) so launching the installer does not make the default destination appear occupied.
 
 The log is capped by rotation at about 1 MiB per file with up to three previous copies retained. Passwords and session tokens are not intentionally written to installer diagnostics.
 
