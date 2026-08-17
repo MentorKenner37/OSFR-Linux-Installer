@@ -5,6 +5,7 @@
 - Lock the Sanctuary Linux Installer window to a fixed size after final sizing is confirmed.
 - Swap the bottom navigation controls so **Close** is on the left and **Back** is on the right beside **Next / Install**.
 - Present **Installation Requirements** as a clear list instead of paragraph text; make the requirements area scrollable if needed.
+- Move the **Close Sanctuary Linux Installer after a successful installation** option from the Summary panel to the fifth **Install** panel.
 - Keep the current visual theme and overall workflow unchanged.
 
 ## Linux desktop integration
