@@ -23,9 +23,7 @@ public partial class MainWindow : Window
         RefreshState();
     }
 
-    private string InstallRoot => string.IsNullOrWhiteSpace(InstallPathBox.Text)
-        ? InstallService.DefaultInstallRoot
-        : InstallService.NormalizeInstallRoot(InstallPathBox.Text);
+    private string InstallRoot => InstallService.NormalizeInstallRoot(InstallPathBox.Text ?? InstallService.DefaultInstallRoot);
 
     private void RefreshState()
     {
@@ -35,14 +33,29 @@ public partial class MainWindow : Window
         SetCheck(SteamStatus, _state.SteamRoot is not null, _state.SteamRoot is not null ? "DETECTED" : "NOT FOUND");
         SetCheck(ProtonStatus, _state.ProtonPath is not null, _state.ProtonPath is not null ? "DETECTED" : "NOT FOUND");
 
-        var installed = _installService.IsInstalled(InstallRoot);
+        var pathError = RefreshInstallPathState();
+        var installed = false;
+        if (pathError is null)
+        {
+            try
+            {
+                installed = _installService.IsInstalled(InstallRoot);
+            }
+            catch
+            {
+                pathError = "The installation path is not valid.";
+                InstallPathStatus.Text = pathError;
+                InstallPathStatus.Foreground = Bad;
+            }
+        }
+
         ActionButton.Content = installed ? "UNINSTALL" : "INSTALL";
-        ActionButton.IsEnabled = !_busy && (installed || _state.Ready);
+        ActionButton.IsEnabled = !_busy && (installed || (_state.Ready && pathError is null));
 
         HeroStatus.Text = installed
             ? "OSFR IS INSTALLED"
-            : _state.Ready ? "READY TO INSTALL" : "SYSTEM REQUIREMENTS NOT MET";
-        HeroStatus.Foreground = installed || _state.Ready ? Good : Bad;
+            : _state.Ready && pathError is null ? "READY TO INSTALL" : "SYSTEM REQUIREMENTS NOT MET";
+        HeroStatus.Foreground = installed || (_state.Ready && pathError is null) ? Good : Bad;
 
         DetailText.Text = _state.Ready
             ? $"Steam: {_state.SteamRoot}\nProton: {_state.ProtonPath}"
@@ -50,15 +63,56 @@ public partial class MainWindow : Window
 
         if (!_busy)
         {
-            StatusText.Text = installed ? "OSFR is installed. Uninstall is available." : "Choose an installation location, then install OSFR.";
+            StatusText.Text = installed
+                ? "OSFR is installed. Uninstall is available."
+                : pathError is not null
+                    ? "Choose a valid installation location."
+                    : "Choose an installation location, then install OSFR.";
             ProgressText.Text = "Ready";
         }
+    }
+
+    private string? RefreshInstallPathState()
+    {
+        var path = InstallPathBox.Text ?? string.Empty;
+        var error = InstallService.GetInstallDestinationError(path);
+
+        if (error is not null)
+        {
+            InstallPathStatus.Text = $"✗ {error}";
+            InstallPathStatus.Foreground = Bad;
+            return error;
+        }
+
+        var installed = false;
+        try
+        {
+            installed = _installService.IsInstalled(InstallService.NormalizeInstallRoot(path));
+        }
+        catch
+        {
+            // Validation above already protects the normal invalid-path cases.
+        }
+
+        InstallPathStatus.Text = installed
+            ? "✓ Existing OSFR installation detected."
+            : "✓ Installation location is ready.";
+        InstallPathStatus.Foreground = Good;
+        return null;
     }
 
     private static void SetCheck(TextBlock control, bool ok, string text)
     {
         control.Text = ok ? $"✓ {text}" : $"✗ {text}";
         control.Foreground = ok ? Good : Bad;
+    }
+
+    private void InstallPathChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_busy)
+            return;
+
+        RefreshState();
     }
 
     private async void BrowseClicked(object? sender, RoutedEventArgs e)
@@ -73,10 +127,7 @@ public partial class MainWindow : Window
         });
 
         if (folders.Count > 0 && folders[0].TryGetLocalPath() is { } path)
-        {
             InstallPathBox.Text = path;
-            RefreshState();
-        }
     }
 
     private async void ActionClicked(object? sender, RoutedEventArgs e)
@@ -99,14 +150,25 @@ public partial class MainWindow : Window
             return;
         }
 
+        var pathError = InstallService.GetInstallDestinationError(InstallPathBox.Text ?? string.Empty);
+        if (pathError is not null)
+        {
+            await ShowMessageAsync("Invalid installation location", pathError);
+            return;
+        }
+
         SetBusy(true);
         var progress = new Progress<InstallProgress>(UpdateProgress);
+        var shouldClose = false;
 
         try
         {
             await _installService.InstallAsync(InstallRoot, _state, progress);
             _installService.Launch(InstallRoot);
-            await ShowMessageAsync("Installation complete", "Open Source Free Realms has been installed successfully.");
+
+            shouldClose = CloseAfterInstallCheck.IsChecked == true;
+            if (!shouldClose)
+                await ShowMessageAsync("Installation complete", "Open Source Free Realms has been installed successfully and the launcher has started.");
         }
         catch (Exception ex)
         {
@@ -115,8 +177,12 @@ public partial class MainWindow : Window
         finally
         {
             SetBusy(false);
-            RefreshState();
+            if (!shouldClose)
+                RefreshState();
         }
+
+        if (shouldClose)
+            Close();
     }
 
     private async Task UninstallAsync()
@@ -158,6 +224,7 @@ public partial class MainWindow : Window
         _busy = busy;
         ActionButton.IsEnabled = !busy;
         InstallPathBox.IsEnabled = !busy;
+        CloseAfterInstallCheck.IsEnabled = !busy;
     }
 
     private async Task<bool> ConfirmAsync(string title, string message)
