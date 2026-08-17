@@ -1,0 +1,47 @@
+name: Clean Alpha Releases
+
+on:
+  workflow_run:
+    workflows: ["Build Linux Installer"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  clean-releases:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Keep only Alpha 1 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n1)"
+          test -n "$VERSION"
+          KEEP_TAG="v$VERSION"
+
+          echo "Keeping release: $KEEP_TAG"
+
+          gh release edit "$KEEP_TAG" \
+            --title "Sanctuary Linux Launcher — Alpha 1" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease
+
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | while read -r TAG; do
+            [ -n "$TAG" ] || continue
+            if [ "$TAG" != "$KEEP_TAG" ]; then
+              echo "Removing superseded release and tag: $TAG"
+              gh release delete "$TAG" --cleanup-tag --yes
+            fi
+          done
+
+          echo "Release cleanup complete."
