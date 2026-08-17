@@ -79,14 +79,14 @@ try
     foreach (var name in new[] { "Proton 9.0", "Proton 10.0", "Proton Experimental", "Custom-Proton-Build" })
     {
         var dir = Path.Combine(protonLibrary, "steamapps", "common", name);
-        await CreateFakeProtonAsync(dir, 62); // ELF EM_X86_64
+        await CreateFakeProtonAsync(dir, 62);
     }
 
     var toolsDir = Path.Combine(protonLibrary, "compatibilitytools.d", "GE-Proton10-30");
     await CreateFakeProtonAsync(toolsDir, 62);
 
     var armToolsDir = Path.Combine(protonLibrary, "compatibilitytools.d", "GE-Proton11-5-aarch64");
-    await CreateFakeProtonAsync(armToolsDir, 183); // ELF EM_AARCH64
+    await CreateFakeProtonAsync(armToolsDir, 183);
 
     var candidates = SystemDetector.FindProtonCandidates([protonLibrary]);
     Assert(candidates.Count >= 6, "Proton discovery must find standard, custom-named, GE, and architecture-mismatched builds.");
@@ -146,7 +146,12 @@ try
     await File.WriteAllTextAsync(Path.Combine(launcherDirectory, "OSFRLauncher"), "launcher");
     await File.WriteAllTextAsync(Path.Combine(ownershipRoot, InstallationOwnership.LegacyInstallInfoFileName), "Sanctuary Linux Installation");
     InstallationOwnership.Write(ownershipRoot);
-    Assert(service.IsInstalled(ownershipRoot), "A structured ownership marker bound to its canonical install root must be recognized.");
+    Assert(service.IsInstalled(ownershipRoot), "A structured ownership marker bound to its canonical install root and launcher hash must be recognized.");
+
+    await File.AppendAllTextAsync(Path.Combine(launcherDirectory, "OSFRLauncher"), "tampered");
+    Assert(!service.IsInstalled(ownershipRoot), "Changing the owned launcher after the ownership marker is written must invalidate ownership verification.");
+    await File.WriteAllTextAsync(Path.Combine(launcherDirectory, "OSFRLauncher"), "launcher");
+    InstallationOwnership.Write(ownershipRoot);
 
     var copiedLauncherDirectory = Path.Combine(copiedRoot, "Launcher");
     Directory.CreateDirectory(copiedLauncherDirectory);
@@ -164,6 +169,35 @@ finally
         Directory.Delete(copiedRoot, true);
 }
 
+var transactionRoot = Path.Combine(Path.GetTempPath(), $"sanctuary-transaction-{Guid.NewGuid():N}");
+try
+{
+    var oldLauncherDir = Path.Combine(transactionRoot, "Launcher");
+    Directory.CreateDirectory(oldLauncherDir);
+    await File.WriteAllTextAsync(Path.Combine(oldLauncherDir, "OSFRLauncher"), "old-launcher");
+    await File.WriteAllTextAsync(Path.Combine(transactionRoot, InstallationOwnership.LegacyInstallInfoFileName), "old-info");
+    await File.WriteAllTextAsync(Path.Combine(transactionRoot, InstallationOwnership.MarkerFileName), "Sanctuary Linux Installer");
+
+    var staged = Path.Combine(transactionRoot, ".staged-test");
+    Directory.CreateDirectory(staged);
+    await File.WriteAllTextAsync(Path.Combine(staged, "OSFRLauncher"), "new-launcher");
+
+    var transaction = new InstallationTransaction(transactionRoot);
+    transaction.Begin();
+    transaction.Promote(staged);
+    await File.WriteAllTextAsync(Path.Combine(transactionRoot, InstallationOwnership.LegacyInstallInfoFileName), "new-info");
+    transaction.Rollback();
+
+    Assert(await File.ReadAllTextAsync(Path.Combine(transactionRoot, "Launcher", "OSFRLauncher")) == "old-launcher", "Rollback must restore the previous launcher.");
+    Assert(await File.ReadAllTextAsync(Path.Combine(transactionRoot, InstallationOwnership.LegacyInstallInfoFileName)) == "old-info", "Rollback must restore the previous install metadata.");
+    Assert(await File.ReadAllTextAsync(Path.Combine(transactionRoot, InstallationOwnership.MarkerFileName)) == "Sanctuary Linux Installer", "Rollback must restore the previous ownership marker.");
+}
+finally
+{
+    if (Directory.Exists(transactionRoot))
+        Directory.Delete(transactionRoot, true);
+}
+
 if (OperatingSystem.IsLinux())
 {
     var symlinkTestRoot = Path.Combine(Path.GetTempPath(), $"osfr-symlink-smoke-{Guid.NewGuid():N}");
@@ -179,6 +213,8 @@ if (OperatingSystem.IsLinux())
         Directory.CreateSymbolicLink(link, external);
         Assert(InstallService.IsSymbolicLink(link), "Installer must recognize directory symbolic links.");
         Assert(InstallService.GetInstallDestinationError(link) is not null, "Symbolic links must not be accepted as install roots.");
+        Assert(InstallService.HasSymbolicLinkAncestor(Path.Combine(link, "Sanctuary")), "A symbolic-link ancestor must be detected even when the final install directory does not exist yet.");
+        Assert(InstallService.GetInstallDestinationError(Path.Combine(link, "Sanctuary")) is not null, "Install paths below symbolic-link ancestors must be rejected.");
         Assert(File.Exists(outsideSentinel), "Symlink validation must not alter the target directory.");
     }
     finally
@@ -202,6 +238,8 @@ if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringCompar
     Assert(File.Exists(generatedDesktop), "CI desktop-entry generation must produce an application-menu entry.");
 
     var desktopText = await File.ReadAllTextAsync(generatedDesktop);
+    Assert(desktopText.Contains("Name=Sanctuary", StringComparison.Ordinal), "Desktop and application-menu entries must display Sanctuary as the application name.");
+    Assert(!desktopText.Contains("Name=Open Source Free Realms", StringComparison.Ordinal), "Legacy Open Source Free Realms shortcut naming must not remain user-facing.");
     Assert(desktopText.Contains("Icon=osfr-linux", StringComparison.Ordinal), "Desktop entry must use the stable icon-theme name.");
     Assert(desktopText.Contains("StartupWMClass=OSFRLauncher", StringComparison.Ordinal), "Desktop entry must declare the launcher window class for taskbar grouping.");
     Console.WriteLine($"Generated desktop entry: {generatedDesktop}");
