@@ -64,6 +64,15 @@ internal static class SafeFileSystem
             return false;
 
         var normalized = entryName.Replace('\\', '/');
+
+        // Path.IsPathRooted follows the host OS rules. Explicitly reject a Windows
+        // drive-letter absolute path even when the installer is running on Linux.
+        if (normalized.Length >= 3 &&
+            char.IsAsciiLetter(normalized[0]) &&
+            normalized[1] == ':' &&
+            normalized[2] == '/')
+            return false;
+
         return normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)
             .All(segment => segment is not "." and not "..");
     }
