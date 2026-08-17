@@ -1,25 +1,28 @@
-# OSFR Linux Installer v0.2.2-alpha
+# OSFR Linux Installer v0.2.3-alpha
 
-This alpha is a security, robustness, and diagnostics hardening release.
+This alpha adds release-integrity verification and a small diagnostics/logging hardening pass on top of v0.2.2-alpha.
 
 ## Highlights
 
-- Added a Proton version selector while keeping the recommended detected build selected by default.
-- Added `--diagnose` and `--dry-run` command-line modes.
-- Added a per-user installer log at `~/.local/share/OSFR-Linux/installer.log`.
-- Replaced silent Steam/Proton detection failures with targeted error handling and diagnostics.
-- Improved Steam library parsing and added coverage for custom library paths.
-- Added version-aware Proton candidate testing and manual Proton override support.
-- Rejects symbolic links as installation roots and critical launcher paths.
-- Stages launcher extraction and verifies it before replacing an existing launcher.
-- Rejects rooted, traversal, and symbolic-link entries in the embedded launcher archive.
-- Uses no-follow recursive deletion so symlinks are removed as links rather than traversed.
-- Verifies fixed uninstall targets remain inside the user's home directory.
-- Removed broad process-name killing from uninstall.
-- Improved errors for filesystems that cannot provide required Unix execute permissions.
-- Expanded installer security smoke tests for traversal, symlink, Steam VDF, and Proton-selection cases.
-- Keeps existing launcher path-safety tests, credential protections, session-token redaction, and least-privilege CI permissions.
-- Added Discord Rich Presence attribution/disclaimer information to the project documentation.
+- Publishes `OSFR-Linux-Installer.sha256` beside the installer on every release.
+- Verifies the SHA-256 checksum immediately after building and again after the release job downloads the tested artifact.
+- Runs the packaged single-file installer with `--diagnose` and `--dry-run` before publication.
+- Checks direct and transitive NuGet dependencies for known vulnerabilities during CI.
+- Validates the generated Linux `.desktop` entry with `desktop-file-validate`.
+- Rotates `installer.log` at about 1 MiB and retains up to three previous log files.
+- Keeps logging failures non-fatal while reporting them to standard error when possible.
+- Documents checksum verification and the official release-build environment in the README.
+- Retains the v0.2.2 security hardening: Proton selection, path/symlink protections, staged extraction, safe no-follow deletion, diagnostics, launcher path protections, credential protections, and least-privilege release permissions.
+
+## Verify the download
+
+Download both release files into the same directory and run:
+
+```bash
+sha256sum -c OSFR-Linux-Installer.sha256
+```
+
+A successful verification reports `OSFR-Linux-Installer: OK`.
 
 ## Requirements
 
