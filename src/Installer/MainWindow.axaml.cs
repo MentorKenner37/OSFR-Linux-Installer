@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using OSFR.Linux.Installer.Services;
 
@@ -26,9 +27,26 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        ApplyBranding();
         InstallPathBox.Text = InstallService.DefaultInstallRoot;
         RefreshState();
         UpdateStepUi();
+    }
+
+    private void ApplyBranding()
+    {
+        try
+        {
+            using var windowIconStream = OsfrBranding.OpenIconStream();
+            Icon = new WindowIcon(windowIconStream);
+
+            using var brandIconStream = OsfrBranding.OpenIconStream();
+            BrandIcon.Source = new Bitmap(brandIconStream);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException or FormatException)
+        {
+            InstallerLog.Warn($"Could not load OSFR branding icon: {ex.Message}");
+        }
     }
 
     private string InstallRoot => InstallService.NormalizeInstallRoot(InstallPathBox.Text ?? InstallService.DefaultInstallRoot);
