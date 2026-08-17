@@ -28,29 +28,36 @@ Release builds are self-contained. You do **not** need Python, installer scripts
 - Creates application-menu and desktop shortcuts
 - Starts the OSFR Launcher when installation finishes
 - Writes installer diagnostics to `~/.local/share/OSFR-Linux/installer.log`
+- Rotates the installer log at about 1 MiB and keeps up to three previous copies
 - Safely removes OSFR, its dedicated Proton prefix, downloaded clients, data, caches, and shortcuts when uninstalling
 
 The installer rejects symbolic-link install roots, stages launcher extraction before replacing an existing launcher, rejects unsafe archive paths and archive symlinks, and will not recursively delete an installation directory unless it can verify that the directory belongs to this OSFR installation.
 
 ## Download and install
 
-1. Download `OSFR-Linux-Installer` from the **Releases** page.
-2. Make it executable if necessary:
+1. Download `OSFR-Linux-Installer` and `OSFR-Linux-Installer.sha256` from the **Releases** page.
+2. Verify the downloaded installer:
+
+   ```bash
+   sha256sum -c OSFR-Linux-Installer.sha256
+   ```
+
+3. Make the installer executable if necessary:
 
    ```bash
    chmod +x OSFR-Linux-Installer
    ```
 
-3. Run it:
+4. Run it:
 
    ```bash
    ./OSFR-Linux-Installer
    ```
 
-4. Confirm that Linux, x86_64, Steam, and Proton are detected.
-5. Choose the Proton version you want to use. The recommended detected version is selected automatically.
-6. Choose an installation folder and select **Install**.
-7. The OSFR Launcher will open when installation completes.
+5. Confirm that Linux, x86_64, Steam, and Proton are detected.
+6. Choose the Proton version you want to use. The recommended detected version is selected automatically.
+7. Choose an installation folder and select **Install**.
+8. The OSFR Launcher will open when installation completes.
 
 The launcher handles OSFR login and downloads the client files required by the selected server.
 
@@ -68,11 +75,13 @@ Preview the default installation plan without changing files:
 ./OSFR-Linux-Installer --dry-run
 ```
 
-Installation and detection errors are also written to:
+Installation and detection errors are written to:
 
 ```text
 ~/.local/share/OSFR-Linux/installer.log
 ```
+
+The log is capped by rotation at about 1 MiB per file with up to three previous copies retained. Passwords and session tokens are not intentionally written to installer diagnostics.
 
 ## Compatibility
 
@@ -90,11 +99,31 @@ Installation and detection errors are also written to:
 
 The installer already supports common native Steam locations, Flatpak Steam locations, custom Steam libraries, Proton Experimental, standard Proton releases, and GE-Proton. Other distributions still need real-machine testing before they are listed as tested.
 
+## Release verification
+
+The existing GitHub Actions release pipeline verifies the same installer artifact that is ultimately published. It:
+
+- runs installer and launcher safety tests
+- checks direct and transitive NuGet dependencies for known vulnerabilities
+- validates the generated Linux `.desktop` entry with `desktop-file-validate`
+- builds the patched OSFR Launcher and embeds it into the installer
+- builds the self-contained `linux-x64` installer
+- runs the packaged installer with `--diagnose` and `--dry-run`
+- generates and verifies `OSFR-Linux-Installer.sha256`
+- downloads the tested artifact in the release job and verifies its checksum again before publication
+
+Each release contains both:
+
+```text
+OSFR-Linux-Installer
+OSFR-Linux-Installer.sha256
+```
+
 ## Building from source
 
 Development builds require the .NET SDK specified by `OSFR-Launcher/src/global.json`.
 
-The GitHub Actions pipeline runs installer and launcher safety tests, builds the patched OSFR Launcher for `linux-x64`, embeds it into the installer, builds the self-contained installer, and publishes the release artifact.
+Official release builds use the SDK pinned by that file on GitHub's Ubuntu runner, target `linux-x64`, and publish both the launcher and installer as self-contained .NET applications. The installer itself is published as a single-file executable with native libraries included for self-extraction.
 
 End users should download the packaged installer from **Releases** rather than build the project themselves.
 
@@ -105,7 +134,7 @@ End users should download the packaged installer from **Releases** rather than b
 - `src/Launcher.SmokeTests/` — launcher path-safety tests
 - `OSFR-Launcher/` — modified OSFR Launcher source
 - `Directory.Build.props` — shared version information
-- `.github/workflows/build-linux-installer.yml` — Linux build and release workflow
+- `.github/workflows/build-linux-installer.yml` — Linux build, verification, checksum, and release workflow
 
 ## Status
 
