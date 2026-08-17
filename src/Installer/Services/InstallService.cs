@@ -419,21 +419,17 @@ public sealed class InstallService
 
         try
         {
-            using var process = Process.Start(new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
                 FileName = fileName,
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                ArgumentList = { }
-            });
-
-            if (process is null)
-                return;
-
+                CreateNoWindow = true
+            };
             foreach (var argument in arguments)
-                process.StartInfo.ArgumentList.Add(argument);
+                startInfo.ArgumentList.Add(argument);
+
+            using var process = Process.Start(startInfo);
+            process?.WaitForExit(5000);
         }
         catch (Win32Exception)
         {
