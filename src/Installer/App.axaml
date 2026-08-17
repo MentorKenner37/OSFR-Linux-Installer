@@ -26,7 +26,7 @@
     </Style>
 
     <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
-      <Setter Property="BorderBrush" Value="#D53B3B" />
+      <Setter Property="BorderBrush" Value="#42B86B" />
     </Style>
 
     <Style Selector="ComboBox">
@@ -56,16 +56,16 @@
     </Style>
 
     <Style Selector="Button.primary">
-      <Setter Property="Background" Value="#C93232" />
+      <Setter Property="Background" Value="#2F9E5A" />
       <Setter Property="Foreground" Value="White" />
-      <Setter Property="BorderBrush" Value="#E14A4A" />
+      <Setter Property="BorderBrush" Value="#49BF72" />
       <Setter Property="Padding" Value="28,12" />
       <Setter Property="FontSize" Value="14" />
     </Style>
 
     <Style Selector="Button.primary:pointerover">
-      <Setter Property="Background" Value="#DE3B3B" />
-      <Setter Property="BorderBrush" Value="#F05A5A" />
+      <Setter Property="Background" Value="#38B866" />
+      <Setter Property="BorderBrush" Value="#62D487" />
     </Style>
 
     <Style Selector="Button.ghost">
@@ -76,7 +76,7 @@
 
     <Style Selector="ProgressBar">
       <Setter Property="Background" Value="#1A1A1A" />
-      <Setter Property="Foreground" Value="#D53B3B" />
+      <Setter Property="Foreground" Value="#42B86B" />
       <Setter Property="CornerRadius" Value="4" />
     </Style>
 
