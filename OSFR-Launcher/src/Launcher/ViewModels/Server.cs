@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,7 +15,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Downloader;
-
 using HashDepot;
 
 using Launcher.Helpers;
@@ -32,10 +31,10 @@ public partial class Server : ObservableObject
     private readonly Main _main = null!;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-    private static SolidColorBrush WhiteBrush = new(Colors.White);
-    private static SolidColorBrush GreenBrush = new(Color.FromRgb(35, 165, 90));
-    private static SolidColorBrush YellowBrush = new(Color.FromRgb(204, 204, 0));
-    private static SolidColorBrush RedBrush = new(Color.FromRgb(242, 63, 67));
+    private static readonly SolidColorBrush WhiteBrush = new(Colors.White);
+    private static readonly SolidColorBrush GreenBrush = new(Color.FromRgb(35, 165, 90));
+    private static readonly SolidColorBrush YellowBrush = new(Color.FromRgb(204, 204, 0));
+    private static readonly SolidColorBrush RedBrush = new(Color.FromRgb(242, 63, 67));
 
     [ObservableProperty]
     private ServerInfo info = null!;
@@ -62,7 +61,7 @@ public partial class Server : ObservableObject
     private IBrush? serverStatusFill = WhiteBrush;
 
     [ObservableProperty]
-    private bool isDownloading = false;
+    private bool isDownloading;
 
     [ObservableProperty]
     private ObservableStringBuilder markdownBuilder = new();
@@ -97,7 +96,6 @@ public partial class Server : ObservableObject
     {
         MarkdownBuilder.Clear();
         MarkdownBuilder.Append(Info.Description);
-
         await RefreshCommand.ExecuteAsync(null);
     }
 
@@ -113,7 +111,6 @@ public partial class Server : ObservableObject
         if (args.HRef is { IsAbsoluteUri: true, Scheme: "http" or "https" } url)
         {
             var window = App.GetWindow();
-
             await window.Launcher.LaunchUriAsync(url);
         }
     }
@@ -122,13 +119,12 @@ public partial class Server : ObservableObject
     public async Task RefreshAsync()
     {
         Status = App.GetText("Text.ServerStatus.Refreshing");
-
         ServerStatusFill = YellowBrush;
 
         if (!string.IsNullOrEmpty(Info.Url))
         {
-        try
-        {
+            try
+            {
                 var result = await HttpHelper.GetServerManifestAsync(Info.Url);
 
                 if (result.Result != ManifestResult.Success || result.ServerManifest is null)
@@ -146,7 +142,6 @@ public partial class Server : ObservableObject
                             ServerStatusFill = RedBrush;
                             Status = App.GetText("Text.ServerStatus.UnsupportedVersion");
                             break;
-
                         default:
                             ServerStatusFill = RedBrush;
                             Status = App.GetText("Text.ServerStatus.Offline");
@@ -154,31 +149,23 @@ public partial class Server : ObservableObject
                     }
 
                     IsEnabled = false;
-
                     return;
                 }
 
                 var serverManifest = result.ServerManifest;
-
                 Info.Name = serverManifest.Name;
                 Info.Description = serverManifest.Description;
-
                 Info.WebApiUrl = serverManifest.WebApiUrl;
                 Info.LoginServer = serverManifest.LoginServer;
-
                 Settings.Instance.Save();
             }
             catch (Exception ex)
             {
                 ServerStatusFill = RedBrush;
                 Status = App.GetText("Text.ServerStatus.Offline");
-
                 App.AddNotification("An error occurred while getting server info.", true);
-
                 _logger.Error(ex, "An exception was thrown while getting server info for: {Url}.", Info.Url);
-
                 IsEnabled = false;
-
                 return;
             }
         }
@@ -186,7 +173,6 @@ public partial class Server : ObservableObject
         try
         {
             var serverStatus = await ServerStatusHelper.GetAsync(Info.LoginServer);
-
             IsOnline = serverStatus.IsOnline;
 
             if (serverStatus.IsOnline)
@@ -194,17 +180,12 @@ public partial class Server : ObservableObject
                 Status = App.GetText(serverStatus.IsLocked
                     ? "Text.ServerStatus.Locked"
                     : "Text.ServerStatus.Online");
-
                 OnlinePlayers = serverStatus.OnlinePlayers;
-
-                ServerStatusFill = serverStatus.IsLocked
-                    ? RedBrush
-                    : GreenBrush;
+                ServerStatusFill = serverStatus.IsLocked ? RedBrush : GreenBrush;
             }
             else
             {
                 Status = App.GetText("Text.ServerStatus.Offline");
-
                 OnlinePlayers = 0;
                 ServerStatusFill = RedBrush;
             }
@@ -213,14 +194,12 @@ public partial class Server : ObservableObject
         {
             ServerStatusFill = RedBrush;
             Status = App.GetText("Text.ServerStatus.Offline");
-
             _logger.Error(ex, "Error refreshing server status for: '{Name}'.", Info.Name);
-
             App.AddNotification("Unable to refresh server status.", true);
         }
 
         IsEnabled = true;
-        }
+    }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
     public async Task PlayAsync()
@@ -228,32 +207,26 @@ public partial class Server : ObservableObject
         if (Process != null)
         {
             App.AddNotification("Unable to launch, the game is already open.", true);
-
             _logger.Warn("Unable to launch, the game is already open for server: '{Name}'.", Info.Name);
-
             return;
         }
 
         if (!string.IsNullOrEmpty(Info.Url))
         {
-        var clientManifest = await GetClientManifestAsync();
+            var clientManifest = await GetClientManifestAsync();
+            if (clientManifest is null)
+                return;
 
-        if (clientManifest is null)
-            return;
-
-        StatusMessage = App.GetText("Text.Server.VerifyClientFiles");
-
-        if (!await VerifyClientFilesAsync(clientManifest))
-        {
-            StatusMessage = string.Empty;
-
+            StatusMessage = App.GetText("Text.Server.VerifyClientFiles");
+            if (!await VerifyClientFilesAsync(clientManifest))
+            {
+                StatusMessage = string.Empty;
                 return;
             }
 
             if (!clientManifest.Languages.Contains(Settings.Instance.Locale))
             {
                 StatusMessage = string.Empty;
-
                 var selectedLanguage = Locale.LocaleMap[Settings.Instance.Locale];
                 var supportedLanguages = clientManifest.Languages.Select(l => Locale.LocaleMap[l]);
 
@@ -263,23 +236,18 @@ public partial class Server : ObservableObject
                                      Supported languages:
                                      {string.Join(Environment.NewLine, supportedLanguages)}
                                      """, true);
-
-            return;
-        }
+                return;
+            }
         }
 
         if (!IsOnline)
         {
             StatusMessage = string.Empty;
-
             App.AddNotification("Unable to login, the server is offline.", true);
-
             return;
         }
 
         StatusMessage = string.Empty;
-
-        // All checks passed, show the login popup
         App.ShowPopup(new Login(this));
     }
 
@@ -291,17 +259,13 @@ public partial class Server : ObservableObject
         try
         {
             var window = App.GetWindow();
-
-            var folderPath = Path.Combine(Constants.SavePath, Info.SavePath);
-
+            var folderPath = ServerPathHelper.GetServerDirectory(Info.SavePath);
             var directoryInfo = new DirectoryInfo(folderPath);
-
             result = await window.Launcher.LaunchDirectoryInfoAsync(directoryInfo);
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error opening client folder directory.");
-
             result = false;
         }
 
@@ -324,9 +288,7 @@ public partial class Server : ObservableObject
                                      Failed to get client info.
                                      {result.Error}
                                      """, true);
-
                 _logger.Error("Failed to get client manifest for: {Url}: {Error}.", Info.Url, result.Error);
-
                 return null;
             }
 
@@ -335,7 +297,6 @@ public partial class Server : ObservableObject
         catch (Exception ex)
         {
             App.AddNotification("An error occurred while getting client info.", true);
-
             _logger.Error(ex, "An exception was thrown while getting client info for: {Url}.", Info.Url);
         }
 
@@ -346,7 +307,17 @@ public partial class Server : ObservableObject
     {
         _logger.Info("Starting verifying client files for: {Name}.", Info.Name);
 
-        var filesToDownload = await GetFilesToDownloadAsync(clientManifest.RootFolder);
+        List<LocalFile> filesToDownload;
+        try
+        {
+            filesToDownload = await GetFilesToDownloadAsync(clientManifest.RootFolder);
+        }
+        catch (InvalidDataException ex)
+        {
+            _logger.Error(ex, "Rejected unsafe client manifest for server: {Name}.", Info.Name);
+            App.AddNotification("The server's client manifest contains an unsafe file path and was rejected.", true);
+            return false;
+        }
 
         if (filesToDownload.Count == 0)
         {
@@ -355,23 +326,16 @@ public partial class Server : ObservableObject
         }
 
         IsDownloading = true;
-
         var failedFiles = new ConcurrentBag<string>();
 
         try
         {
             var filesDownloaded = 0;
 
-            // Choose between parallel and sequential download based on settings
             if (Settings.Instance.ParallelDownload)
             {
                 var numParallelDownloads = Math.Max(2, Settings.Instance.DownloadThreads);
-
-                var parallelOptions = new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = numParallelDownloads
-                };
-
+                var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = numParallelDownloads };
                 var servicePool = new ConcurrentBag<DownloadService>();
 
                 for (var i = 0; i < numParallelDownloads; i++)
@@ -381,7 +345,7 @@ public partial class Server : ObservableObject
                 {
                     await Parallel.ForEachAsync(filesToDownload, parallelOptions, async (file, ct) =>
                     {
-                        servicePool.TryTake(out var downloadService); // guaranteed non-null
+                        servicePool.TryTake(out var downloadService);
 
                         try
                         {
@@ -394,7 +358,6 @@ public partial class Server : ObservableObject
                         }
 
                         filesDownloaded = Interlocked.Increment(ref filesDownloaded);
-
                         StatusMessage = App.GetText("Text.Server.PreparingGameFiles", filesDownloaded, filesToDownload.Count);
                     });
                 }
@@ -414,7 +377,6 @@ public partial class Server : ObservableObject
                         failedFiles.Add(file.Name);
 
                     filesDownloaded++;
-
                     StatusMessage = App.GetText("Text.Server.PreparingGameFiles", filesDownloaded, filesToDownload.Count);
                 }
             }
@@ -424,11 +386,9 @@ public partial class Server : ObservableObject
             IsDownloading = false;
         }
 
-        // Report any files that failed to download
         if (!failedFiles.IsEmpty)
         {
             var message = new StringBuilder();
-
             message.AppendLine($"Failed to download {failedFiles.Count} file(s):");
             message.AppendLine(string.Join("\n", failedFiles.Take(10)));
 
@@ -439,7 +399,6 @@ public partial class Server : ObservableObject
         }
 
         _logger.Info("Finished verifying client files for: {Name}.", Info.Name);
-
         return failedFiles.IsEmpty;
     }
 
@@ -447,8 +406,6 @@ public partial class Server : ObservableObject
     {
         CustomHttpClientFactory = () => HttpHelper.DownloadHttpClient,
         MaxTryAgainOnFailure = 5,
-
-        // Parallelism happens per-file
         ChunkCount = 1,
         ParallelDownload = false,
     };
@@ -462,12 +419,12 @@ public partial class Server : ObservableObject
 
         try
         {
+            var filePath = ServerPathHelper.GetClientFilePath(Info.SavePath, path, fileName);
+            var fileDirectory = Path.GetDirectoryName(filePath)
+                ?? throw new InvalidDataException("The client manifest contains an invalid file path.");
             var clientFileUri = UriHelper.JoinUriPaths(Info.Url, "client", path, fileName);
-            var fileDirectory = Path.Combine(Constants.SavePath, Info.SavePath, "Client", path);
-            var filePath = Path.Combine(fileDirectory, fileName);
 
             Directory.CreateDirectory(fileDirectory);
-
             await using var fileStream = await downloadService.DownloadFileTaskAsync(clientFileUri);
 
             if (fileStream is null || fileStream.Length == 0)
@@ -477,15 +434,17 @@ public partial class Server : ObservableObject
             }
 
             await using var writeStream = File.Create(filePath);
-
             await fileStream.CopyToAsync(writeStream);
-
             return true;
+        }
+        catch (InvalidDataException ex)
+        {
+            _logger.Error(ex, "Rejected unsafe client file path: {Path}.", downloadFilePath);
+            return false;
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error downloading: {Path}.", downloadFilePath);
-
             return false;
         }
     }
@@ -493,22 +452,19 @@ public partial class Server : ObservableObject
     private async Task<List<LocalFile>> GetFilesToDownloadAsync(ClientFolder rootFolder, string path = "")
     {
         var results = new List<LocalFile>();
+        var fileDirectory = ServerPathHelper.GetClientDirectory(Info.SavePath, path);
 
-        // Recurse into subfolders
         foreach (var folder in rootFolder.Folders)
         {
             var folderPath = Path.Combine(path, folder.Name);
-
+            ServerPathHelper.GetClientDirectory(Info.SavePath, folderPath);
             var folderResults = await GetFilesToDownloadAsync(folder, folderPath);
-
             results.AddRange(folderResults);
         }
 
-        // Check files in the current folder
         foreach (var file in rootFolder.Files)
         {
-            var fileDirectory = Path.Combine(Constants.SavePath, Info.SavePath, "Client", path);
-            var filePath = Path.Combine(fileDirectory, file.Name);
+            var filePath = ServerPathHelper.GetClientFilePath(Info.SavePath, path, file.Name);
 
             if (File.Exists(filePath))
             {
@@ -516,12 +472,9 @@ public partial class Server : ObservableObject
                 {
                     await using var readStream = File.OpenRead(filePath);
 
-                    // First, check if file size matches. This is a quick check before hashing.
                     if (file.Size == readStream.Length)
                     {
                         var hash = await Task.Run(() => XXHash.Hash64(readStream));
-
-                        // If hash also matches, the file is valid.
                         if (file.Hash == hash)
                             continue;
                     }
@@ -532,7 +485,6 @@ public partial class Server : ObservableObject
                 }
             }
 
-            // If file doesn't exist, or size/hash mismatch, add it for download.
             results.Add(new LocalFile
             {
                 Path = path,
