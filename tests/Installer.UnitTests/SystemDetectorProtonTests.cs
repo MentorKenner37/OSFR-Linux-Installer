@@ -15,9 +15,8 @@ namespace Installer.UnitTests
         {
             var header = new byte[20];
             header[0] = 0x7F; header[1] = (byte)'E'; header[2] = (byte)'L'; header[3] = (byte)'F';
-            header[4] = 2; // 64-bit
-            header[5] = littleEndian ? (byte)1 : (byte)2; // endianness
-            // bytes 6-17 left zero
+            header[4] = 2;
+            header[5] = littleEndian ? (byte)1 : (byte)2;
             if (littleEndian)
             {
                 header[18] = (byte)(machine & 0xFF);
@@ -33,17 +32,29 @@ namespace Installer.UnitTests
             File.WriteAllBytes(path, header);
         }
 
+        private static void MakeExecutable(string path)
+        {
+            if (!OperatingSystem.IsLinux())
+                return;
+
+            File.SetUnixFileMode(path,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+        }
+
         [Fact]
         public void Aarch64_proton_named_build_is_incompatible_on_x64_host()
         {
             if (RuntimeInformation.OSArchitecture == Architecture.Arm64)
-                return; // test applies to non-ARM hosts
+                return;
 
             var tools = _fixture.CreateDir("compat-tools");
             var dir = Path.Combine(tools, "Proton-aarch64-test");
             Directory.CreateDirectory(dir);
             var proton = Path.Combine(dir, "proton");
             File.WriteAllText(proton, "stub");
+            MakeExecutable(proton);
 
             var result = SystemDetector.InspectProtonRuntime(proton);
             Assert.Equal("aarch64", result.RuntimeArchitecture);
@@ -59,13 +70,13 @@ namespace Installer.UnitTests
             var dir = _fixture.CreateDir("proton-x64");
             var proton = Path.Combine(dir, "proton");
             File.WriteAllText(proton, "stub");
+            MakeExecutable(proton);
 
             var wine64 = Path.Combine(dir, "files", "bin", "wine64");
-            WriteMinimalElf(wine64, 62, littleEndian: true); // machine 62 == x86_64
+            WriteMinimalElf(wine64, 62, littleEndian: true);
 
             var result = SystemDetector.InspectProtonRuntime(proton);
             Assert.Equal("x86_64", result.RuntimeArchitecture);
-            // Compatible depends on host architecture; on CI host (x64) this should be true
             if (RuntimeInformation.OSArchitecture == Architecture.X64)
                 Assert.True(result.Compatible);
         }
