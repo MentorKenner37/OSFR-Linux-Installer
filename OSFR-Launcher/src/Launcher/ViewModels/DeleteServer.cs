@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -6,7 +6,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Launcher.Helpers;
 using Launcher.Models;
-using Launcher.Services;
 
 using NLog;
 
@@ -39,17 +38,13 @@ public partial class DeleteServer : Popup
     {
         try
         {
-            // Delete the server's directory and all its contents from the file system.
-            var serverDirectoryPath = Path.Combine(Constants.SavePath, Info.SavePath);
+            var serverDirectoryPath = ServerPathHelper.GetServerDirectory(Info.SavePath);
             await ForceDeleteDirectoryAsync(serverDirectoryPath);
         }
         catch (Exception ex)
         {
-            // If file deletion fails, notify the user and log the error.
             _logger.Error(ex, "Error deleting server directory for: {Name}", Info.Name);
-
             App.AddNotification("An error occurred while deleting server.", true);
-
             return false;
         }
 
@@ -72,17 +67,14 @@ public partial class DeleteServer : Popup
                 var directoryInfo = new DirectoryInfo(path);
 
                 foreach (var info in directoryInfo.GetFileSystemInfos("*", SearchOption.AllDirectories))
-                {
                     info.Attributes = FileAttributes.Normal;
-                }
 
-                // Delete the directory and all its contents.
                 directoryInfo.Delete(true);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Failed to forcefully delete directory: {Path}", path);
-                throw; // Re-throw the exception to be caught by the calling method.
+                throw;
             }
         });
     }
