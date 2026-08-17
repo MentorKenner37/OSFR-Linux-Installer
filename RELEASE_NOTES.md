@@ -1,12 +1,15 @@
-# OSFR Linux Installer v0.2.4-alpha
+# OSFR Linux Installer v0.2.5-alpha
 
-This alpha fixes a default-install-path conflict discovered during real-machine testing on Linux Mint.
+This alpha refreshes the installer interface while preserving the hardened Linux installation flow introduced in earlier releases.
 
 ## Highlights
 
-- Moved installer diagnostics from `~/.local/share/OSFR-Linux/installer.log` to `~/.local/state/OSFR-Linux/installer.log`.
-- Keeps the default installation directory at `~/.local/share/OSFR-Linux` without the installer recreating or occupying it just by launching.
-- Preserves log rotation, checksum verification, dependency vulnerability scanning, packaged installer smoke tests, desktop-entry validation, and all v0.2.2/v0.2.3 security hardening.
+- Redesigned the Avalonia installer with a cleaner graphite/black interface and restrained red gaming accents.
+- Added a left-side system-readiness panel and a top visual install-step rail.
+- Improved spacing, hierarchy, controls, cards, and primary-action styling without changing the underlying install/uninstall behavior.
+- Keeps Proton detection and manual Proton selection, custom install locations, live path validation, safe uninstall boundaries, staged extraction, and symlink protections.
+- Retains the v0.2.4 fix that keeps installer logs under `~/.local/state/OSFR-Linux/installer.log` so opening the installer does not occupy the default install directory.
+- Keeps NuGet vulnerability scanning, installer/launcher safety tests, desktop-entry validation, packaged installer smoke tests, SHA-256 generation, and release-time checksum verification.
 
 ## Verify the download
 
@@ -24,7 +27,7 @@ A successful verification reports `OSFR-Linux-Installer: OK`.
 - Graphical Linux desktop
 - Steam installed and working
 - An installed Proton build
-- Up-to-date graphics drivers with the 32-bit Vulkan support needed by Steam Proton
+- Working graphics drivers with the 32-bit Vulkan support needed by Steam Proton
 - Internet connection and enough disk space for downloaded OSFR clients
 
 Linux Mint x86_64 with a working Steam + Proton setup remains the primary tested environment.
