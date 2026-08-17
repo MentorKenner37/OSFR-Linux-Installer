@@ -26,7 +26,7 @@ internal static class Program
     private static void PrintDiagnostics()
     {
         var state = SystemDetector.Detect();
-        Console.WriteLine("OSFR Linux Installer diagnostics");
+        Console.WriteLine("Sanctuary Linux Installer diagnostics");
         Console.WriteLine($"Linux: {state.IsLinux}");
         Console.WriteLine($"x86_64: {state.IsX64}");
         Console.WriteLine($"Steam: {state.SteamRoot ?? "not found"}");
@@ -41,7 +41,7 @@ internal static class Program
     private static void PrintDryRun()
     {
         var state = SystemDetector.Detect();
-        Console.WriteLine("OSFR Linux Installer dry run - no files will be changed");
+        Console.WriteLine("Sanctuary Linux Installer dry run - no files will be changed");
         Console.WriteLine($"Would install to: {InstallService.DefaultInstallRoot}");
         Console.WriteLine($"Would use Steam: {state.SteamRoot ?? "not found"}");
         Console.WriteLine($"Would use Proton: {state.ProtonPath ?? "not found"}");
