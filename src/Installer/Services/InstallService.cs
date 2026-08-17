@@ -105,8 +105,6 @@ public sealed class InstallService
         progress.Report(new(5, "Preparing installation..."));
         Directory.CreateDirectory(installRoot);
 
-        // Mark the directory as installer-owned before making further changes. This lets
-        // interrupted installs be safely repaired while preventing deletion of unrelated folders.
         await File.WriteAllTextAsync(
             Path.Combine(installRoot, OwnershipMarker),
             "Open Source Free Realms Linux Installer\n",
@@ -233,7 +231,6 @@ public sealed class InstallService
         if (File.Exists(Path.Combine(installRoot, OwnershipMarker)))
             return true;
 
-        // Backward compatibility with installations created before ownership markers existed.
         return File.Exists(Path.Combine(installRoot, LegacyInstallInfo)) &&
                File.Exists(Path.Combine(installRoot, "Launcher", "OSFRLauncher"));
     }
@@ -291,8 +288,8 @@ public sealed class InstallService
                            Type=Application
                            Name=Open Source Free Realms
                            Comment=Open Source Free Realms - Linux
-                           Exec={EscapeDesktopValue(launcher)}
-                           Icon={EscapeDesktopValue(iconPath)}
+                           Exec={QuoteDesktopExecPath(launcher)}
+                           Icon={EscapeDesktopString(iconPath)}
                            Terminal=false
                            Categories=Game;
                            StartupNotify=true
@@ -311,7 +308,23 @@ public sealed class InstallService
         }
     }
 
-    private static string EscapeDesktopValue(string value) => value.Replace("\\", "\\\\").Replace(" ", "\\ ");
+    private static string QuoteDesktopExecPath(string value)
+    {
+        var escaped = value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("`", "\\`")
+            .Replace("$", "\\$")
+            .Replace("%", "%%");
+
+        return $"\"{escaped}\"";
+    }
+
+    private static string EscapeDesktopString(string value) => value
+        .Replace("\\", "\\\\")
+        .Replace("\n", "\\n")
+        .Replace("\r", "\\r")
+        .Replace("\t", "\\t");
 
     private static void EnsureExecutable(string path, string description)
     {
