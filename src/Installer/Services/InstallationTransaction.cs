@@ -6,6 +6,8 @@ internal sealed class InstallationTransaction
 {
     private const string StateFileName = ".sanctuary-install-transaction.json";
     private const string BackupDirectoryName = ".launcher-backup";
+    private const string OwnershipBackupName = ".ownership-backup";
+    private const string LegacyInfoBackupName = ".install-info-backup";
     private const int FormatVersion = 1;
 
     private sealed record TransactionDocument(int Version, string State, DateTimeOffset UpdatedUtc);
@@ -13,6 +15,10 @@ internal sealed class InstallationTransaction
     private readonly string _installRoot;
     private readonly string _launcherDirectory;
     private readonly string _backupDirectory;
+    private readonly string _ownershipMarker;
+    private readonly string _ownershipBackup;
+    private readonly string _legacyInfo;
+    private readonly string _legacyInfoBackup;
     private readonly string _stateFile;
     private bool _promoted;
 
@@ -21,6 +27,10 @@ internal sealed class InstallationTransaction
         _installRoot = InstallService.NormalizeInstallRoot(installRoot);
         _launcherDirectory = Path.Combine(_installRoot, "Launcher");
         _backupDirectory = Path.Combine(_installRoot, BackupDirectoryName);
+        _ownershipMarker = Path.Combine(_installRoot, InstallationOwnership.MarkerFileName);
+        _ownershipBackup = Path.Combine(_installRoot, OwnershipBackupName);
+        _legacyInfo = Path.Combine(_installRoot, InstallationOwnership.LegacyInstallInfoFileName);
+        _legacyInfoBackup = Path.Combine(_installRoot, LegacyInfoBackupName);
         _stateFile = Path.Combine(_installRoot, StateFileName);
     }
 
@@ -28,33 +38,39 @@ internal sealed class InstallationTransaction
     {
         installRoot = InstallService.NormalizeInstallRoot(installRoot);
         var stateFile = Path.Combine(installRoot, StateFileName);
-        var launcher = Path.Combine(installRoot, "Launcher");
-        var backup = Path.Combine(installRoot, BackupDirectoryName);
-
         if (!File.Exists(stateFile))
             return;
+
+        var launcher = Path.Combine(installRoot, "Launcher");
+        var backup = Path.Combine(installRoot, BackupDirectoryName);
+        var marker = Path.Combine(installRoot, InstallationOwnership.MarkerFileName);
+        var markerBackup = Path.Combine(installRoot, OwnershipBackupName);
+        var legacyInfo = Path.Combine(installRoot, InstallationOwnership.LegacyInstallInfoFileName);
+        var legacyInfoBackup = Path.Combine(installRoot, LegacyInfoBackupName);
 
         SafeFileSystem.RefuseSymbolicLink(stateFile, "installation transaction state file");
         SafeFileSystem.RefuseSymbolicLink(launcher, "launcher directory");
         SafeFileSystem.RefuseSymbolicLink(backup, "launcher backup directory");
+        SafeFileSystem.RefuseSymbolicLink(markerBackup, "ownership backup file");
+        SafeFileSystem.RefuseSymbolicLink(legacyInfoBackup, "legacy install-info backup file");
 
         var state = ReadState(stateFile);
         InstallerLog.Warn($"Recovering interrupted Sanctuary installation transaction in {installRoot}; state={state}.");
 
         if (string.Equals(state, "committed", StringComparison.Ordinal))
         {
-            if (Directory.Exists(backup))
-                SafeFileSystem.DeleteDirectoryTreeNoFollow(backup);
+            CleanupBackup(backup, markerBackup, legacyInfoBackup);
             File.Delete(stateFile);
             return;
         }
 
         if (Directory.Exists(launcher))
             SafeFileSystem.DeleteDirectoryTreeNoFollow(launcher);
-
         if (Directory.Exists(backup))
             Directory.Move(backup, launcher);
 
+        RestoreFile(markerBackup, marker);
+        RestoreFile(legacyInfoBackup, legacyInfo);
         File.Delete(stateFile);
     }
 
@@ -65,14 +81,22 @@ internal sealed class InstallationTransaction
         SafeFileSystem.RefuseSymbolicLink(_installRoot, "installation root");
         SafeFileSystem.RefuseSymbolicLink(_launcherDirectory, "launcher directory");
         SafeFileSystem.RefuseSymbolicLink(_backupDirectory, "launcher backup directory");
+        SafeFileSystem.RefuseSymbolicLink(_ownershipMarker, "installation ownership marker");
+        SafeFileSystem.RefuseSymbolicLink(_ownershipBackup, "ownership backup file");
+        SafeFileSystem.RefuseSymbolicLink(_legacyInfo, "legacy install-info file");
+        SafeFileSystem.RefuseSymbolicLink(_legacyInfoBackup, "legacy install-info backup file");
 
-        if (Directory.Exists(_backupDirectory))
-            throw new InvalidOperationException("A stale Sanctuary launcher backup exists. Re-run the installer to recover it before continuing.");
+        if (Directory.Exists(_backupDirectory) || File.Exists(_ownershipBackup) || File.Exists(_legacyInfoBackup))
+            throw new InvalidOperationException("Stale Sanctuary transaction backup data exists. Re-run the installer to recover it before continuing.");
 
         WriteState("active");
 
         if (Directory.Exists(_launcherDirectory))
             Directory.Move(_launcherDirectory, _backupDirectory);
+        if (File.Exists(_ownershipMarker))
+            File.Move(_ownershipMarker, _ownershipBackup);
+        if (File.Exists(_legacyInfo))
+            File.Move(_legacyInfo, _legacyInfoBackup);
     }
 
     public void Promote(string stagedLauncherDirectory)
@@ -90,8 +114,7 @@ internal sealed class InstallationTransaction
     public void Commit()
     {
         WriteState("committed");
-        if (Directory.Exists(_backupDirectory))
-            SafeFileSystem.DeleteDirectoryTreeNoFollow(_backupDirectory);
+        CleanupBackup(_backupDirectory, _ownershipBackup, _legacyInfoBackup);
         File.Delete(_stateFile);
     }
 
@@ -103,12 +126,16 @@ internal sealed class InstallationTransaction
                 SafeFileSystem.DeleteDirectoryTreeNoFollow(_launcherDirectory);
             if (Directory.Exists(_backupDirectory))
                 Directory.Move(_backupDirectory, _launcherDirectory);
+
+            RestoreFile(_ownershipBackup, _ownershipMarker);
+            RestoreFile(_legacyInfoBackup, _legacyInfo);
+
             if (File.Exists(_stateFile))
                 File.Delete(_stateFile);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            InstallerLog.Error("Failed to fully roll back Sanctuary launcher transaction", ex);
+            InstallerLog.Error("Failed to fully roll back Sanctuary installation transaction", ex);
             throw;
         }
     }
@@ -132,6 +159,24 @@ internal sealed class InstallationTransaction
         {
             throw new InvalidDataException("The interrupted-install transaction metadata is corrupt.", ex);
         }
+    }
+
+    private static void CleanupBackup(string launcherBackup, string markerBackup, string legacyInfoBackup)
+    {
+        if (Directory.Exists(launcherBackup))
+            SafeFileSystem.DeleteDirectoryTreeNoFollow(launcherBackup);
+        if (File.Exists(markerBackup))
+            File.Delete(markerBackup);
+        if (File.Exists(legacyInfoBackup))
+            File.Delete(legacyInfoBackup);
+    }
+
+    private static void RestoreFile(string backup, string destination)
+    {
+        if (File.Exists(destination))
+            File.Delete(destination);
+        if (File.Exists(backup))
+            File.Move(backup, destination);
     }
 
     private static void WriteJsonAtomically<T>(string destination, T value)
