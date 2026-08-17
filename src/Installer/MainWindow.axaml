@@ -11,7 +11,7 @@
         <StackPanel Spacing="5">
           <TextBlock Text="OPEN SOURCE FREE REALMS" FontSize="13" FontWeight="Bold" Foreground="#4EA8DE" />
           <TextBlock Text="Linux Installer" FontSize="30" FontWeight="SemiBold" Foreground="#F5F7F9" />
-          <TextBlock Text="A streamlined Steam Proton setup for Free Realms on Linux." FontSize="14" Foreground="#8795A3" />
+          <TextBlock Text="Installs the OSFR launcher and configures a dedicated Proton prefix." FontSize="14" Foreground="#8795A3" />
         </StackPanel>
         <Border Grid.Column="1" Background="#13202A" BorderBrush="#294459" BorderThickness="1" CornerRadius="18" Padding="14,8" VerticalAlignment="Top">
           <TextBlock x:Name="HeroStatus" Text="Checking system..." Foreground="#62C8A0" FontWeight="SemiBold" FontSize="12" />
@@ -27,7 +27,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel>
                 <TextBlock Text="System readiness" FontSize="18" FontWeight="SemiBold" Foreground="#F3F6F8" />
-                <TextBlock Text="The installer checks the essentials before making any changes." FontSize="13" Foreground="#7E8C99" Margin="0,3,0,0" />
+                <TextBlock Text="Checks Linux, x86_64, Steam, and Proton before installation." FontSize="13" Foreground="#7E8C99" Margin="0,3,0,0" />
               </StackPanel>
               <TextBlock Grid.Column="1" Text="SYSTEM CHECK" Foreground="#586A79" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
             </Grid>
@@ -72,7 +72,7 @@
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
             <StackPanel Spacing="8">
               <TextBlock Text="Installation location" FontSize="17" FontWeight="SemiBold" Foreground="#F3F6F8" />
-              <TextBlock Text="Choose where the Linux launcher and Proton environment will live." FontSize="12" Foreground="#7E8C99" />
+              <TextBlock Text="Choose where the launcher and dedicated Proton prefix will be stored." FontSize="12" Foreground="#7E8C99" />
               <TextBox x:Name="InstallPathBox" Margin="0,4,0,0" />
             </StackPanel>
             <Button Grid.Column="1" Content="Browse" Click="BrowseClicked" VerticalAlignment="Bottom" MinWidth="105" />
@@ -95,7 +95,7 @@
 
         <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,2,0,8">
           <Button x:Name="ActionButton" Classes="primary" Grid.Column="0" Content="INSTALL" Click="ActionClicked" MinWidth="150" />
-          <TextBlock Grid.Column="1" Text="Steam and Proton remain managed by Steam." Foreground="#576573" FontSize="11" VerticalAlignment="Center" Margin="18,0" />
+          <TextBlock Grid.Column="1" Text="Does not install or modify Steam or Proton." Foreground="#576573" FontSize="11" VerticalAlignment="Center" Margin="18,0" />
           <Button Classes="ghost" Grid.Column="2" Content="Close" Click="CloseClicked" MinWidth="105" />
         </Grid>
       </Grid>
