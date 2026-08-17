@@ -1,19 +1,18 @@
-# Sanctuary Linux Installer v0.2.9-alpha
+# Sanctuary Linux Installer v0.2.10-alpha
 
-This alpha incorporates the latest real-machine Linux Mint testing feedback and finishes another focused installer polish pass.
+This alpha completes the latest installer UI and branding polish pass from real-machine Linux Mint testing.
 
 ## Highlights
 
-- Increases the fixed installer window height slightly while preserving the current width and non-resizable layout.
-- Rewords the graphics requirement to **Working graphics drivers with 32-bit Vulkan support**.
-- Deduplicates Proton builds discovered through multiple Steam path aliases by resolving canonical filesystem paths before display.
-- Keeps Proton Experimental, Proton Hotfix, GE-Proton, and other detected compatibility tools selectable without duplicate entries.
-- Adds concise Step 3 instructions for installing additional official Proton versions through the Steam Library's Tools filter.
-- Adds an explicit **I accept these installation settings and want to continue** checkbox to the Summary panel; Next remains disabled until accepted.
-- Reapplies the bundled Sanctuary window icon during the installation state transition to address the installer taskbar icon disappearing when Install is clicked.
-- Preserves the working installed Sanctuary/OSFR launcher icon-theme integration and taskbar grouping.
-- Preserves custom install locations, dedicated Proton prefixes, safe uninstall boundaries, staged extraction, symlink protections, diagnostics, dry-run support, log rotation, and checksum verification.
-- Continues running NuGet vulnerability scanning, installer/launcher safety tests, desktop-entry validation, packaged installer smoke tests, SHA-256 generation, and release-time checksum verification.
+- Removes the redundant top installer title/header strip while retaining the internal window title for product identity.
+- Keeps the **SANCTUARY / LINUX INSTALLER** branding underneath the icon and the **Welcome to Sanctuary Linux Installer** Step 1 heading.
+- Relocates the **ALPHA** badge into the left branding area and moves the step navigation/main content upward.
+- Removes the redundant **Configure Open Source Free Realms for Steam Proton** subtitle.
+- Corrects Step 3 Proton help text for the current Steam UI: users are instructed to search for Proton in their Steam Library rather than use a Tools filter.
+- Retains the fixed 1180×790 installer size and the working taskbar icon behavior confirmed in v0.2.9-alpha testing.
+- Retains canonical-path Proton deduplication and the Summary acceptance checkbox.
+- Standardizes user-facing product branding on **Sanctuary Linux Installer** while intentionally retaining legacy OSFR internal paths and identifiers where changing them could break compatibility.
+- Preserves custom install locations, dedicated Proton prefixes, safe uninstall boundaries, staged extraction, symlink protections, diagnostics, dry-run support, log rotation, desktop integration, and checksum verification.
 
 ## Verify the download
 
