@@ -3,8 +3,7 @@
         xmlns:services="clr-namespace:OSFR.Linux.Installer.Services"
         x:Class="OSFR.Linux.Installer.MainWindow"
         Title="Sanctuary Linux Installer"
-        Width="1180" Height="790" CanResize="False"
-        SystemDecorations="None"
+        Width="1180" Height="825" CanResize="False"
         Background="#101010">
 
   <Grid ColumnDefinitions="310,*">
