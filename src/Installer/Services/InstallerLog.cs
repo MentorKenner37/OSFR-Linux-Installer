@@ -8,7 +8,7 @@ public static class InstallerLog
 
     public static string LogPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".local", "share", "OSFR-Linux", "installer.log");
+        ".local", "state", "OSFR-Linux", "installer.log");
 
     public static void Info(string message) => Write("INFO", message);
     public static void Warn(string message) => Write("WARN", message);
