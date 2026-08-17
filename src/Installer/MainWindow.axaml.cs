@@ -49,6 +49,19 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ReapplyWindowIcon()
+    {
+        try
+        {
+            using var stream = OsfrBranding.OpenIconStream();
+            Icon = new WindowIcon(stream);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException or FormatException)
+        {
+            InstallerLog.Warn($"Could not reapply Sanctuary window icon: {ex.Message}");
+        }
+    }
+
     private string InstallRoot => InstallService.NormalizeInstallRoot(InstallPathBox.Text ?? InstallService.DefaultInstallRoot);
 
     private void RefreshState()
@@ -207,7 +220,7 @@ public partial class MainWindow : Window
             1 => _state.Ready,
             2 => pathError is null,
             3 => _state.ProtonPath is not null,
-            4 => true,
+            4 => SummaryAcceptCheck.IsChecked == true,
             _ => false
         };
 
@@ -225,6 +238,8 @@ public partial class MainWindow : Window
             return;
         if (_step == 3 && _state.ProtonPath is null)
             return;
+        if (_step == 4 && SummaryAcceptCheck.IsChecked != true)
+            return;
 
         _step++;
         UpdateStepUi();
@@ -238,6 +253,8 @@ public partial class MainWindow : Window
         _step--;
         UpdateStepUi();
     }
+
+    private void SummaryAcceptanceChanged(object? sender, RoutedEventArgs e) => UpdateStepUi();
 
     private void ProtonSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -294,6 +311,7 @@ public partial class MainWindow : Window
     {
         var selectedProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         RefreshState();
+        ReapplyWindowIcon();
         if (selectedProton is not null && _state.ProtonCandidates?.Any(p => p.Path == selectedProton) == true)
             _state = _state.WithProton(selectedProton);
 
@@ -311,6 +329,7 @@ public partial class MainWindow : Window
         }
 
         SetBusy(true);
+        ReapplyWindowIcon();
         var progress = new Progress<InstallProgress>(UpdateProgress);
         var shouldClose = false;
 
@@ -318,6 +337,7 @@ public partial class MainWindow : Window
         {
             await _installService.InstallAsync(InstallRoot, _state, progress);
             _installService.Launch(InstallRoot);
+            ReapplyWindowIcon();
             shouldClose = CloseAfterInstallCheck.IsChecked == true;
             if (!shouldClose)
                 await ShowMessageAsync("Installation complete", "Sanctuary has been installed successfully and the Open Source Free Realms launcher has started.");
@@ -330,6 +350,7 @@ public partial class MainWindow : Window
         finally
         {
             SetBusy(false);
+            ReapplyWindowIcon();
             if (!shouldClose)
                 RefreshState();
         }
@@ -379,6 +400,7 @@ public partial class MainWindow : Window
         ActionButton.IsEnabled = !busy;
         InstallPathBox.IsEnabled = !busy;
         CloseAfterInstallCheck.IsEnabled = !busy;
+        SummaryAcceptCheck.IsEnabled = !busy;
         ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Count ?? 0) > 0;
         UpdateStepUi();
     }
