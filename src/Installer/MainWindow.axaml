@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="OSFR.Linux.Installer.MainWindow"
         Title="Open Source Free Realms - Linux Installer"
-        Width="1040" Height="740" MinWidth="860" MinHeight="640"
+        Width="1040" Height="780" MinWidth="860" MinHeight="680"
         Background="#0A0F14">
 
   <Grid RowDefinitions="Auto,*">
@@ -21,7 +21,6 @@
 
     <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
       <Grid Margin="34" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="18">
-
         <Border Grid.Row="0" Background="#0F161D" BorderBrush="#202C36" BorderThickness="1" CornerRadius="14" Padding="22">
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
@@ -40,7 +39,6 @@
                   <TextBlock x:Name="LinuxStatus" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" />
                 </Grid>
               </Border>
-
               <Border Grid.Row="0" Grid.Column="1" Background="#111A22" BorderBrush="#202D37" BorderThickness="1" CornerRadius="10" Padding="15">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                   <Border Width="28" Height="28" CornerRadius="7" Background="#172A35"><TextBlock Text="64" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#57B8E6" FontSize="11" FontWeight="Bold" /></Border>
@@ -48,7 +46,6 @@
                   <TextBlock x:Name="CpuStatus" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" />
                 </Grid>
               </Border>
-
               <Border Grid.Row="1" Grid.Column="0" Background="#111A22" BorderBrush="#202D37" BorderThickness="1" CornerRadius="10" Padding="15">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                   <Border Width="28" Height="28" CornerRadius="7" Background="#172A35"><TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#57B8E6" FontWeight="Bold" /></Border>
@@ -56,7 +53,6 @@
                   <TextBlock x:Name="SteamStatus" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" />
                 </Grid>
               </Border>
-
               <Border Grid.Row="1" Grid.Column="1" Background="#111A22" BorderBrush="#202D37" BorderThickness="1" CornerRadius="10" Padding="15">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                   <Border Width="28" Height="28" CornerRadius="7" Background="#172A35"><TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#57B8E6" FontWeight="Bold" /></Border>
@@ -65,6 +61,18 @@
                 </Grid>
               </Border>
             </Grid>
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="Proton version" FontSize="13" FontWeight="SemiBold" Foreground="#EEF2F5" />
+              <ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged" MinHeight="38">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Name}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="The recommended detected version is selected automatically. You can override it before installing." FontSize="11" Foreground="#72808C" TextWrapping="Wrap" />
+            </StackPanel>
           </StackPanel>
         </Border>
 
@@ -91,6 +99,7 @@
             </Grid>
             <ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="10" Margin="0,3,0,0" />
             <TextBlock x:Name="DetailText" Foreground="#74818D" TextWrapping="Wrap" FontSize="12" MinHeight="18" />
+            <TextBlock Text="Installer diagnostics are written to ~/.local/share/OSFR-Linux/installer.log" Foreground="#576573" FontSize="11" />
           </StackPanel>
         </Border>
 
