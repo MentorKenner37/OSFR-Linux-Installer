@@ -28,7 +28,7 @@ public static class SystemDetector
         var candidates = FindProtonCandidates(libraries);
         var proton = candidates.FirstOrDefault()?.Path;
 
-        InstallerLog.Info($"System detection: Linux={isLinux}, x64={isX64}, Steam={(steamRoot ?? "not found")}, Proton={(proton ?? "not found")}");
+        InstallerLog.Info($"System detection: Linux={isLinux}, x64={isX64}, Steam={(steamRoot ?? "not found")}, Proton={(proton ?? "not found")}, ProtonCandidates={candidates.Count}");
         return new SystemState(isLinux, isX64, steamRoot, proton, candidates);
     }
 
@@ -38,6 +38,7 @@ public static class SystemDetector
         yield return Path.Combine(home, ".steam", "debian-installation");
         yield return Path.Combine(home, ".local", "share", "Steam");
         yield return Path.Combine(home, ".steam", "steam");
+        yield return Path.Combine(home, ".steam", "root");
         yield return Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", "data", "Steam");
         yield return Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam");
     }
@@ -78,7 +79,6 @@ public static class SystemDetector
 
     public static IEnumerable<string> ParseSteamLibraryPaths(string vdfText)
     {
-        // Supports current nested libraryfolders.vdf entries and older top-level path entries.
         foreach (Match match in Regex.Matches(vdfText, "\\\"path\\\"\\s+\\\"(?<path>[^\\\"]+)\\\"", RegexOptions.IgnoreCase))
         {
             var path = match.Groups["path"].Value.Replace("\\\\", "\\");
@@ -90,55 +90,27 @@ public static class SystemDetector
     public static IReadOnlyList<ProtonCandidate> FindProtonCandidates(IEnumerable<string>? libraries = null)
     {
         var candidates = new List<string>();
-        var libraryList = (libraries ?? FindSteamLibraries()).Distinct(StringComparer.Ordinal).ToList();
+        var libraryList = (libraries ?? FindSteamLibraries())
+            .Concat(FindSteamRoots())
+            .Where(Directory.Exists)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
         foreach (var library in libraryList)
         {
-            var common = Path.Combine(library, "steamapps", "common");
-            if (!Directory.Exists(common))
-                continue;
-
-            try
-            {
-                foreach (var directory in Directory.EnumerateDirectories(common, "Proton*"))
-                {
-                    var proton = Path.Combine(directory, "proton");
-                    if (File.Exists(proton))
-                        candidates.Add(proton);
-                }
-            }
-            catch (IOException ex)
-            {
-                InstallerLog.Warn($"Could not enumerate Proton builds in {common}: {ex.Message}");
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                InstallerLog.Warn($"Could not access Proton builds in {common}: {ex.Message}");
-            }
+            AddSteamCommonCandidates(library, candidates);
+            AddCompatibilityToolCandidates(Path.Combine(library, "compatibilitytools.d"), candidates);
         }
 
-        foreach (var root in FindSteamRoots().Where(Directory.Exists))
+        var envToolPaths = Environment.GetEnvironmentVariable("STEAM_COMPAT_TOOL_PATHS");
+        if (!string.IsNullOrWhiteSpace(envToolPaths))
         {
-            var tools = Path.Combine(root, "compatibilitytools.d");
-            if (!Directory.Exists(tools))
-                continue;
-
-            try
-            {
-                foreach (var proton in Directory.EnumerateFiles(tools, "proton", SearchOption.AllDirectories))
-                    candidates.Add(proton);
-            }
-            catch (IOException ex)
-            {
-                InstallerLog.Warn($"Could not enumerate compatibility tools in {tools}: {ex.Message}");
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                InstallerLog.Warn($"Could not access compatibility tools in {tools}: {ex.Message}");
-            }
+            foreach (var path in envToolPaths.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                AddCompatibilityToolCandidates(path, candidates);
         }
 
         var ordered = candidates
+            .Where(File.Exists)
             .Distinct(StringComparer.Ordinal)
             .OrderByDescending(IsExperimental)
             .ThenByDescending(IsGeProton)
@@ -149,6 +121,59 @@ public static class SystemDetector
             .ToList();
 
         return ordered.Select((path, index) => new ProtonCandidate(GetProtonDirectoryName(path), path, index == 0)).ToList();
+    }
+
+    private static void AddSteamCommonCandidates(string library, ICollection<string> candidates)
+    {
+        var common = Path.Combine(library, "steamapps", "common");
+        if (!Directory.Exists(common))
+            return;
+
+        try
+        {
+            foreach (var directory in Directory.EnumerateDirectories(common))
+            {
+                var proton = Path.Combine(directory, "proton");
+                if (File.Exists(proton))
+                    candidates.Add(proton);
+            }
+        }
+        catch (IOException ex)
+        {
+            InstallerLog.Warn($"Could not enumerate Proton builds in {common}: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            InstallerLog.Warn($"Could not access Proton builds in {common}: {ex.Message}");
+        }
+    }
+
+    private static void AddCompatibilityToolCandidates(string tools, ICollection<string> candidates)
+    {
+        if (!Directory.Exists(tools))
+            return;
+
+        try
+        {
+            var directProton = Path.Combine(tools, "proton");
+            if (File.Exists(directProton))
+                candidates.Add(directProton);
+
+            foreach (var directory in Directory.EnumerateDirectories(tools))
+            {
+                var proton = Path.Combine(directory, "proton");
+                if (File.Exists(proton))
+                    candidates.Add(proton);
+            }
+        }
+        catch (IOException ex)
+        {
+            InstallerLog.Warn($"Could not enumerate compatibility tools in {tools}: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            InstallerLog.Warn($"Could not access compatibility tools in {tools}: {ex.Message}");
+        }
     }
 
     private static bool IsExperimental(string protonPath) =>
