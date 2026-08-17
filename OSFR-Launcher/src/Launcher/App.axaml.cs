@@ -1,21 +1,16 @@
 using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
+using System.Reflection;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using CommunityToolkit.Mvvm.Input;
-
 using Launcher.Models;
 using Launcher.ViewModels;
 
 using NLog;
-
-using Velopack;
-using Velopack.Sources;
 
 namespace Launcher;
 
@@ -26,10 +21,8 @@ public partial class App : Application
     private Main _main = null!;
     private Window _window = null!;
 
-    private const string GitHubRepoUrl = "https://github.com/Open-Source-Free-Realms/Launcher";
-    private static readonly UpdateManager _updateManager = new(new GithubSource(GitHubRepoUrl, null, false));
-
-    public static SemanticVersion CurrentVersion => _updateManager.CurrentVersion ?? new SemanticVersion(0, 0, 0);
+    public static string CurrentVersion =>
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
 
     public App()
     {
@@ -60,51 +53,6 @@ public partial class App : Application
         main.Show();
 
         base.OnFrameworkInitializationCompleted();
-    }
-
-    [RelayCommand(AllowConcurrentExecutions = false)]
-    public static async Task CheckForUpdatesAsync()
-    {
-        if (Current is not App app)
-            throw new InvalidOperationException();
-
-        try
-        {
-            if (_updateManager.IsInstalled)
-            {
-                app._main.Message = GetText("Text.Main.CheckingForUpdates");
-
-                var updateInfo = await _updateManager.CheckForUpdatesAsync();
-
-                if (updateInfo is null)
-                {
-                    app._main.Message = GetText("Text.Main.NoUpdatesFound");
-
-                    await Task.Delay(500);
-
-                    app._main.Message = string.Empty;
-                }
-                else
-                {
-                    await _updateManager.DownloadUpdatesAsync(updateInfo, p =>
-                    {
-                        app._main.Message = GetText("Text.Main.Downloading", updateInfo.TargetFullRelease.Version, p);
-                    });
-
-                    app._main.Message = GetText("Text.Main.Relaunching");
-
-                    await Task.Delay(500);
-
-                    _updateManager.ApplyUpdatesAndRestart(updateInfo);
-                    return;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            app._logger.Error(ex, "Error checking for updates");
-            AddNotification(GetText("Text.Main.UpdateError"), true);
-        }
     }
 
     public static Window GetWindow()
@@ -179,7 +127,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            // Catch this, because it's a fire and forget method, to prevent crashes.
+            // Fire-and-forget popup processing must not crash the launcher.
             Debug.WriteLine(ex);
         }
     }
