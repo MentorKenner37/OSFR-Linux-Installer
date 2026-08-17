@@ -12,16 +12,23 @@ public partial class MainWindow : Window
     private SystemState _state = SystemDetector.Detect();
     private bool _busy;
     private bool _updatingProtonSelection;
+    private int _step = 1;
 
     private static readonly IBrush Good = new SolidColorBrush(Color.Parse("#45D483"));
     private static readonly IBrush Bad = new SolidColorBrush(Color.Parse("#E05252"));
     private static readonly IBrush Muted = new SolidColorBrush(Color.Parse("#91A0B8"));
+    private static readonly IBrush Active = new SolidColorBrush(Color.Parse("#C93232"));
+    private static readonly IBrush ActiveText = new SolidColorBrush(Color.Parse("#E64A4A"));
+    private static readonly IBrush Inactive = new SolidColorBrush(Color.Parse("#232323"));
+    private static readonly IBrush InactiveBorder = new SolidColorBrush(Color.Parse("#414141"));
+    private static readonly IBrush InactiveText = new SolidColorBrush(Color.Parse("#9A9A9A"));
 
     public MainWindow()
     {
         InitializeComponent();
         InstallPathBox.Text = InstallService.DefaultInstallRoot;
         RefreshState();
+        UpdateStepUi();
     }
 
     private string InstallRoot => InstallService.NormalizeInstallRoot(InstallPathBox.Text ?? InstallService.DefaultInstallRoot);
@@ -96,9 +103,12 @@ public partial class MainWindow : Window
                 ? "OSFR is installed. Uninstall is available."
                 : pathError is not null
                     ? "Choose a valid installation location."
-                    : "Choose an installation location, then install OSFR.";
+                    : "Ready to install.";
             ProgressText.Text = "Ready";
         }
+
+        RefreshSummary();
+        UpdateStepUi();
     }
 
     private string? RefreshInstallPathState()
@@ -130,10 +140,85 @@ public partial class MainWindow : Window
         return null;
     }
 
+    private void RefreshSummary()
+    {
+        SummaryInstallPath.Text = InstallPathBox.Text ?? InstallService.DefaultInstallRoot;
+        SummarySteamPath.Text = _state.SteamRoot ?? "Not detected";
+        SummaryProtonPath.Text = _state.ProtonPath ?? "Not detected";
+    }
+
     private static void SetCheck(TextBlock control, bool ok, string text)
     {
         control.Text = ok ? $"✓ {text}" : $"✗ {text}";
         control.Foreground = ok ? Good : Bad;
+    }
+
+    private void SetStepStyle(Border circle, TextBlock label, bool active)
+    {
+        circle.Background = active ? Active : Inactive;
+        circle.BorderBrush = active ? Active : InactiveBorder;
+        circle.BorderThickness = active ? new Avalonia.Thickness(0) : new Avalonia.Thickness(1);
+        if (circle.Child is TextBlock number)
+            number.Foreground = active ? Brushes.White : InactiveText;
+        label.Foreground = active ? ActiveText : InactiveText;
+        label.FontWeight = active ? FontWeight.SemiBold : FontWeight.Normal;
+    }
+
+    private void UpdateStepUi()
+    {
+        WelcomePanel.IsVisible = _step == 1;
+        LocationPanel.IsVisible = _step == 2;
+        ProtonPanel.IsVisible = _step == 3;
+        SummaryPanel.IsVisible = _step == 4;
+        InstallPanel.IsVisible = _step == 5;
+
+        SetStepStyle(Step1Circle, Step1Label, _step == 1);
+        SetStepStyle(Step2Circle, Step2Label, _step == 2);
+        SetStepStyle(Step3Circle, Step3Label, _step == 3);
+        SetStepStyle(Step4Circle, Step4Label, _step == 4);
+        SetStepStyle(Step5Circle, Step5Label, _step == 5);
+
+        BackButton.IsEnabled = !_busy && _step > 1;
+        NextButton.IsVisible = _step < 5;
+        ActionButton.IsVisible = _step == 5;
+        StepHint.Text = $"Step {_step} of 5";
+
+        var pathError = InstallService.GetInstallDestinationError(InstallPathBox.Text ?? string.Empty);
+        NextButton.IsEnabled = !_busy && _step switch
+        {
+            1 => _state.Ready,
+            2 => pathError is null,
+            3 => _state.ProtonPath is not null,
+            4 => true,
+            _ => false
+        };
+
+        RefreshSummary();
+    }
+
+    private void NextClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_busy || _step >= 5)
+            return;
+
+        if (_step == 1 && !_state.Ready)
+            return;
+        if (_step == 2 && InstallService.GetInstallDestinationError(InstallPathBox.Text ?? string.Empty) is not null)
+            return;
+        if (_step == 3 && _state.ProtonPath is null)
+            return;
+
+        _step++;
+        UpdateStepUi();
+    }
+
+    private void BackClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_busy || _step <= 1)
+            return;
+
+        _step--;
+        UpdateStepUi();
     }
 
     private void ProtonSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -189,8 +274,11 @@ public partial class MainWindow : Window
 
     private async Task InstallAsync()
     {
-        // Re-detect Steam/Proton but preserve a user-selected Proton path when it still exists.
+        var selectedProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         RefreshState();
+        if (selectedProton is not null && _state.ProtonCandidates?.Any(p => p.Path == selectedProton) == true)
+            _state = _state.WithProton(selectedProton);
+
         if (!_state.Ready)
         {
             await ShowMessageAsync("Requirements not met", "Linux x86_64, Steam, and Proton must be installed first.");
@@ -274,6 +362,7 @@ public partial class MainWindow : Window
         InstallPathBox.IsEnabled = !busy;
         CloseAfterInstallCheck.IsEnabled = !busy;
         ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Count ?? 0) > 0;
+        UpdateStepUi();
     }
 
     private async Task<bool> ConfirmAsync(string title, string message)
