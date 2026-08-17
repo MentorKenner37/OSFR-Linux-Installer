@@ -13,8 +13,6 @@ using NLog;
 using NLog.Config;
 using NLog.Targets;
 
-using Velopack;
-
 namespace Launcher;
 
 internal sealed class Program
@@ -38,8 +36,6 @@ internal sealed class Program
 
     internal static AppBuilder BuildAvaloniaApp()
     {
-        VelopackApp.Build().Run();
-
         var builder = AppBuilder.Configure<App>()
             .WithInterFont()
             .UsePlatformDetect();
@@ -62,7 +58,6 @@ internal sealed class Program
         config.AddRule(LogLevel.Debug, LogLevel.Fatal, debuggerTarget);
 #endif
 
-        // Ensure logs directory exists
         var logsDir = Path.Combine(Directory.GetCurrentDirectory(), "logs");
         if (!Directory.Exists(logsDir))
         {
