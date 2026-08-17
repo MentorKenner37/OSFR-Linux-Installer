@@ -30,9 +30,6 @@ public partial class Main : ObservableObject
     private Server? activeServer;
 
     [ObservableProperty]
-    private string message = string.Empty;
-
-    [ObservableProperty]
     private string version = App.CurrentVersion;
 
     public AvaloniaList<Server> Servers { get; } = [];
