@@ -72,6 +72,15 @@ public static class WineHelper
         return libraries;
     }
 
+    public static string GetSteamRoot()
+    {
+        string configured = GetConfiguredPath("steam-path.txt");
+        if (Directory.Exists(configured))
+            return configured;
+
+        return SteamRoots().FirstOrDefault() ?? string.Empty;
+    }
+
     public static string GetPath()
     {
         string configured = GetConfiguredPath("proton-path.txt");
