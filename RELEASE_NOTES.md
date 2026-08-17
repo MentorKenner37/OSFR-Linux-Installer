@@ -1,24 +1,26 @@
-# Sanctuary Linux Installer v0.2.12-alpha
+# Sanctuary Linux Installer v0.2.13-alpha
 
-This alpha focuses on runtime validation, safer ownership tracking, and more reliable reinstall/uninstall behavior.
+This alpha hardens failure recovery and completes the visible Sanctuary launcher branding cleanup.
 
 ## Highlights
 
-- Proton detection now records runtime architecture and compatibility instead of treating every discovered `proton` file as usable.
-- ARM64/aarch64 Proton builds are rejected on x86_64 systems and cannot become the recommended or selected runtime.
-- Each Proton candidate is paired with the Steam root that discovered it so the selected Proton and Steam compatibility path stay consistent.
-- The launcher now treats the installer-selected Proton and Steam paths as authoritative instead of running a second independent Proton discovery routine.
-- The last successful custom Sanctuary install location is persisted and restored on later installer launches after validation.
-- Installation ownership now uses structured metadata bound to the canonical install root, install ID, and expected launcher path before recursive uninstall is authorized.
-- Existing older installations remain supported through a constrained legacy ownership check.
-- Existing staged extraction, archive traversal protection, symlink rejection, non-following recursive deletion, dedicated Proton prefix, diagnostics, desktop integration, and checksum verification remain in place.
+- Launcher replacement is now transactional. Existing launchers and ownership metadata are backed up before promotion, and a failed update rolls back to the previous working installation.
+- Interrupted installs now leave a small transaction journal that distinguishes preparation, active replacement, and committed states so a later installer run can recover safely after a crash or power loss.
+- New installs are not considered owned until launcher extraction, Proton configuration, desktop integration, and final verification have all succeeded.
+- Ownership metadata now records the installer version and SHA-256 hash of the installed launcher. A modified launcher no longer satisfies the strongest ownership check.
+- Ownership marker writes use randomized temporary files, write-through flushing, restrictive permissions, and atomic replacement.
+- Valid legacy ownership metadata is automatically migrated to the stronger structured format when an existing installation is recognized.
+- Install paths below symbolic-link ancestors are rejected, tightening destructive filesystem boundaries.
+- Destructive filesystem helpers and transaction logic are separated from the main install flow to make the code easier to audit and maintain.
+- The installed desktop shortcut and application-menu display name now show **Sanctuary** instead of **Open Source Free Realms**. Internal compatibility identifiers such as `OSFRLauncher` remain unchanged where required.
 
-## New regression coverage
+## Regression coverage
 
-- Explicit x86_64 vs aarch64 Proton compatibility test using ELF runtime architecture headers.
-- Incompatible Proton builds cannot become recommended or make the installer ready.
-- Copying a valid ownership marker to a different directory does not authorize uninstall there.
-- Existing non-empty-directory, symlink, archive traversal, launcher path, desktop-entry, packaged-installer, and checksum smoke tests continue to run in CI.
+- Transaction rollback restores the previous launcher, ownership marker, and install metadata.
+- Ownership verification detects launcher tampering through its recorded SHA-256 hash.
+- Symbolic-link ancestors are rejected even when the final install directory does not exist yet.
+- Generated desktop entries are required to use `Name=Sanctuary` and must not expose the legacy Open Source Free Realms shortcut name.
+- Existing Proton architecture, path traversal, non-empty-directory, symlink, desktop validation, packaged-installer, vulnerability, and checksum tests remain in CI.
 
 ## Verify the download
 
@@ -43,4 +45,4 @@ Linux Mint x86_64 with a working Steam + Proton setup remains the primary tested
 
 ## Alpha status
 
-This remains a prerelease. Fresh-install Linux Mint testing and broader validation across Ubuntu, Fedora, Arch, SteamOS, Flatpak Steam, custom Steam libraries, and varied GPU/driver combinations are still recommended before beta/stable status.
+This remains a prerelease. Fresh-install Linux Mint testing and broader validation across Debian, Ubuntu, Fedora, Arch, SteamOS, Flatpak Steam, custom Steam libraries, and varied GPU/driver combinations are still recommended before beta/stable status.
