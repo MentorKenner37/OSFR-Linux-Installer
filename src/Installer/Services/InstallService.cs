@@ -9,6 +9,8 @@ public sealed record InstallProgress(int Percent, string Message);
 public sealed class InstallService
 {
     private const string PayloadResource = "OSFR.Linux.Installer.Payload";
+    private const string OwnershipMarker = ".osfr-linux-install";
+    private const string LegacyInstallInfo = "install-info.txt";
 
     public static string DefaultInstallRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -18,8 +20,24 @@ public sealed class InstallService
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".local", "share", "OSFRLauncher");
 
-    public bool IsInstalled(string installRoot) =>
-        File.Exists(Path.Combine(installRoot, "Launcher", "OSFRLauncher"));
+    public static string NormalizeInstallRoot(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        path = Environment.ExpandEnvironmentVariables(path.Trim());
+
+        if (path == "~")
+            path = home;
+        else if (path.StartsWith("~/", StringComparison.Ordinal))
+            path = Path.Combine(home, path[2..]);
+
+        return Path.GetFullPath(path);
+    }
+
+    public bool IsInstalled(string installRoot)
+    {
+        installRoot = NormalizeInstallRoot(installRoot);
+        return File.Exists(Path.Combine(installRoot, "Launcher", "OSFRLauncher"));
+    }
 
     public async Task InstallAsync(
         string installRoot,
@@ -30,12 +48,22 @@ public sealed class InstallService
         if (!state.Ready || state.SteamRoot is null || state.ProtonPath is null)
             throw new InvalidOperationException("Linux, x86_64, Steam and Proton are required.");
 
-        installRoot = Path.GetFullPath(Environment.ExpandEnvironmentVariables(installRoot));
+        installRoot = NormalizeInstallRoot(installRoot);
+        ValidateInstallDestination(installRoot);
+
         var launcherDir = Path.Combine(installRoot, "Launcher");
         var prefixDir = Path.Combine(installRoot, "ProtonPrefix");
 
         progress.Report(new(5, "Preparing installation..."));
         Directory.CreateDirectory(installRoot);
+
+        // Mark the directory as installer-owned before making further changes. This lets
+        // interrupted installs be safely repaired while preventing deletion of unrelated folders.
+        await File.WriteAllTextAsync(
+            Path.Combine(installRoot, OwnershipMarker),
+            "Open Source Free Realms Linux Installer\n",
+            cancellationToken);
+
         Directory.CreateDirectory(prefixDir);
 
         if (Directory.Exists(launcherDir))
@@ -82,7 +110,7 @@ public sealed class InstallService
                    Proton: {state.ProtonPath}
                    Proton Prefix: {prefixDir}
                    """;
-        await File.WriteAllTextAsync(Path.Combine(installRoot, "install-info.txt"), info, cancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(installRoot, LegacyInstallInfo), info, cancellationToken);
 
         progress.Report(new(100, "Installation complete"));
     }
@@ -92,6 +120,14 @@ public sealed class InstallService
         IProgress<InstallProgress> progress,
         CancellationToken cancellationToken = default)
     {
+        installRoot = NormalizeInstallRoot(installRoot);
+
+        if (Directory.Exists(installRoot) && !IsOwnedInstallRoot(installRoot))
+        {
+            throw new InvalidOperationException(
+                "The selected folder is not recognized as an OSFR Linux installation, so it will not be deleted.");
+        }
+
         return Task.Run(() =>
         {
             progress.Report(new(10, "Stopping OSFR processes..."));
@@ -132,6 +168,7 @@ public sealed class InstallService
 
     public void Launch(string installRoot)
     {
+        installRoot = NormalizeInstallRoot(installRoot);
         var launcher = Path.Combine(installRoot, "Launcher", "OSFRLauncher");
         if (!File.Exists(launcher))
             throw new FileNotFoundException("OSFRLauncher was not found.", launcher);
@@ -142,6 +179,41 @@ public sealed class InstallService
             WorkingDirectory = Path.GetDirectoryName(launcher)!,
             UseShellExecute = false
         });
+    }
+
+    private static void ValidateInstallDestination(string installRoot)
+    {
+        var home = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        var root = Path.GetPathRoot(installRoot);
+
+        if (string.Equals(installRoot, root, StringComparison.Ordinal) ||
+            string.Equals(installRoot, home, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Choose a dedicated folder for OSFR. The filesystem root and your home folder cannot be used directly.");
+        }
+
+        if (!Directory.Exists(installRoot) || IsOwnedInstallRoot(installRoot))
+            return;
+
+        if (Directory.EnumerateFileSystemEntries(installRoot).Any())
+        {
+            throw new InvalidOperationException(
+                "The selected folder already contains files. Choose an empty folder or an existing OSFR Linux installation.");
+        }
+    }
+
+    private static bool IsOwnedInstallRoot(string installRoot)
+    {
+        if (!Directory.Exists(installRoot))
+            return false;
+
+        if (File.Exists(Path.Combine(installRoot, OwnershipMarker)))
+            return true;
+
+        // Backward compatibility with installations created before ownership markers existed.
+        return File.Exists(Path.Combine(installRoot, LegacyInstallInfo)) &&
+               File.Exists(Path.Combine(installRoot, "Launcher", "OSFRLauncher"));
     }
 
     private static async Task ExtractLauncherPayloadAsync(string launcherDir, CancellationToken cancellationToken)
