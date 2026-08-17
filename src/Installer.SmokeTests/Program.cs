@@ -9,6 +9,7 @@ static void Assert(bool condition, string message)
 var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 var normalized = InstallService.NormalizeInstallRoot("~/OSFR-Smoke-Test");
 Assert(normalized == Path.GetFullPath(Path.Combine(home, "OSFR-Smoke-Test")), "Tilde install paths must resolve under the user home directory.");
+Assert(InstallService.GetInstallDestinationError(home) is not null, "The home directory must not be accepted as an install root.");
 
 var ready = new SystemState(true, true, "/tmp/fake-steam", "/tmp/fake-proton");
 Assert(ready.Ready, "A complete Linux x64 Steam/Proton state should be ready.");
@@ -24,6 +25,11 @@ await File.WriteAllTextAsync(sentinel, "unrelated user data");
 
 try
 {
+    Assert(InstallService.GetInstallDestinationError(tempRoot) is not null,
+        "Live validation must reject a non-empty unrelated directory.");
+    Assert(!service.IsInstalled(tempRoot),
+        "An unrelated directory must never be reported as an OSFR installation.");
+
     var installRejected = false;
     try
     {
