@@ -33,10 +33,58 @@ public sealed class InstallService
         return Path.GetFullPath(path);
     }
 
+    public static string? GetInstallDestinationError(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return "Choose a dedicated folder for OSFR.";
+
+        string installRoot;
+        try
+        {
+            installRoot = NormalizeInstallRoot(path);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return "The installation path is not valid.";
+        }
+
+        var home = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        var root = Path.GetPathRoot(installRoot);
+
+        if (string.Equals(installRoot, root, StringComparison.Ordinal) ||
+            string.Equals(installRoot, home, StringComparison.Ordinal))
+        {
+            return "Choose a dedicated OSFR folder instead of the filesystem root or your home folder.";
+        }
+
+        if (File.Exists(installRoot))
+            return "The selected path is a file. Choose a folder instead.";
+
+        if (!Directory.Exists(installRoot) || IsOwnedInstallRoot(installRoot))
+            return null;
+
+        try
+        {
+            if (Directory.EnumerateFileSystemEntries(installRoot).Any())
+                return "This folder already contains files. Choose an empty folder or an existing OSFR installation.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return "The selected folder cannot be read with your current permissions.";
+        }
+        catch (IOException)
+        {
+            return "The selected folder cannot be accessed.";
+        }
+
+        return null;
+    }
+
     public bool IsInstalled(string installRoot)
     {
         installRoot = NormalizeInstallRoot(installRoot);
-        return File.Exists(Path.Combine(installRoot, "Launcher", "OSFRLauncher"));
+        return IsOwnedInstallRoot(installRoot) &&
+               File.Exists(Path.Combine(installRoot, "Launcher", "OSFRLauncher"));
     }
 
     public async Task InstallAsync(
@@ -77,18 +125,7 @@ public sealed class InstallService
         if (!File.Exists(launcher))
             throw new InvalidDataException("The embedded launcher payload did not contain OSFRLauncher.");
 
-        if (!OperatingSystem.IsWindows())
-        {
-            try
-            {
-                File.SetUnixFileMode(
-                    launcher,
-                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
-            }
-            catch { }
-        }
+        EnsureExecutable(launcher, "OSFR Launcher");
 
         progress.Report(new(55, "Configuring Steam Proton..."));
         await File.WriteAllTextAsync(Path.Combine(launcherDir, "proton-path.txt"), state.ProtonPath + Environment.NewLine, cancellationToken);
@@ -183,24 +220,9 @@ public sealed class InstallService
 
     private static void ValidateInstallDestination(string installRoot)
     {
-        var home = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-        var root = Path.GetPathRoot(installRoot);
-
-        if (string.Equals(installRoot, root, StringComparison.Ordinal) ||
-            string.Equals(installRoot, home, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                "Choose a dedicated folder for OSFR. The filesystem root and your home folder cannot be used directly.");
-        }
-
-        if (!Directory.Exists(installRoot) || IsOwnedInstallRoot(installRoot))
-            return;
-
-        if (Directory.EnumerateFileSystemEntries(installRoot).Any())
-        {
-            throw new InvalidOperationException(
-                "The selected folder already contains files. Choose an empty folder or an existing OSFR Linux installation.");
-        }
+        var error = GetInstallDestinationError(installRoot);
+        if (error is not null)
+            throw new InvalidOperationException(error);
     }
 
     private static bool IsOwnedInstallRoot(string installRoot)
@@ -278,18 +300,52 @@ public sealed class InstallService
 
         var applicationFile = Path.Combine(applications, "OSFR-Linux.desktop");
         File.WriteAllText(applicationFile, desktopEntry);
+        EnsureExecutable(applicationFile, "application-menu shortcut");
 
         var desktop = Path.Combine(home, "Desktop");
         if (Directory.Exists(desktop))
-            File.WriteAllText(Path.Combine(desktop, "OSFR-Linux.desktop"), desktopEntry);
+        {
+            var desktopFile = Path.Combine(desktop, "OSFR-Linux.desktop");
+            File.WriteAllText(desktopFile, desktopEntry);
+            EnsureExecutable(desktopFile, "desktop shortcut");
+        }
     }
 
     private static string EscapeDesktopValue(string value) => value.Replace("\\", "\\\\").Replace(" ", "\\ ");
+
+    private static void EnsureExecutable(string path, string description)
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        try
+        {
+            var mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                       UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                       UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
+
+            File.SetUnixFileMode(path, mode);
+            var actual = File.GetUnixFileMode(path);
+            if ((actual & UnixFileMode.UserExecute) == 0)
+                throw new IOException("The execute permission was not applied.");
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"The installer could not make the {description} executable: {path}", ex);
+        }
+    }
 
     private static void VerifyLauncher(string launcherDir, string launcher)
     {
         if (!File.Exists(launcher))
             throw new FileNotFoundException("Launcher verification failed.", launcher);
+
+        if (OperatingSystem.IsLinux() &&
+            (File.GetUnixFileMode(launcher) & UnixFileMode.UserExecute) == 0)
+        {
+            throw new InvalidOperationException("Launcher verification failed because OSFRLauncher is not executable.");
+        }
 
         var skia = Path.Combine(launcherDir, "libSkiaSharp.so");
         if (!File.Exists(skia))
