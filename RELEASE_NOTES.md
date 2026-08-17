@@ -1,18 +1,23 @@
-# Sanctuary Linux Installer v0.2.7-alpha
+# Sanctuary Linux Installer v0.2.8-alpha
 
-This alpha rebrands the Linux installer as Sanctuary Linux Installer and refreshes the interface with a green visual identity and more professional setup language.
+This alpha finishes the current installer polish pass and improves Linux desktop integration for a more consistent installed-app experience.
 
 ## Highlights
 
-- Rebranded the installer UI, window title, product metadata, diagnostics, and release artifacts as Sanctuary Linux Installer.
-- Replaced the previous red accent color with a consistent green accent across buttons, progress indicators, focus states, step navigation, headings, and status elements.
-- Renamed the system status area to **System Compatibility** and clarified the detected requirements.
-- Reworked the introductory requirements panel with more professional language explaining the supported environment and what the installer does and does not modify.
-- Retains the real five-step setup flow: Welcome, Location, Proton, Summary, and Install.
-- Preserves manual Proton selection, custom install locations, dedicated Proton prefixes, safe uninstall boundaries, staged extraction, symlink protections, and path validation.
-- Continues using the official installer icon in the application window, installer UI, application menu, and desktop shortcut.
-- Keeps internal OSFR data paths and launcher identifiers for compatibility with existing installations while presenting Sanctuary branding to users.
-- Keeps NuGet vulnerability scanning, installer/launcher safety tests, desktop-entry validation, packaged installer smoke tests, SHA-256 generation, and release-time checksum verification.
+- Locks the installer window to its finalized size and disables resizing.
+- Moves **Close** to the lower-left and places **Back** beside **Next / Install**.
+- Reworks **Installation Requirements** into a cleaner scrollable list.
+- Moves **Close Sanctuary Linux Installer after a successful installation** to the fifth Install panel.
+- Expands Proton discovery so more installed Proton/GE-Proton/custom compatibility-tool builds are exposed in the selector.
+- Keeps the recommended Proton build selected automatically while allowing manual override.
+- Improves Linux icon integration by installing `osfr-linux.png` into the user's hicolor icon theme.
+- Uses `Icon=osfr-linux` in generated desktop entries for stable menu/desktop icon resolution.
+- Adds `StartupWMClass=OSFRLauncher` and `X-GNOME-WMClass=OSFRLauncher` to improve launcher/taskbar grouping.
+- Refreshes desktop and icon caches when the relevant Linux utilities are available.
+- Removes the installed icon during uninstall and refreshes desktop integration afterward.
+- Keeps the installer window icon explicitly set from the bundled Sanctuary branding resource.
+- Preserves custom install locations, dedicated Proton prefixes, safe uninstall boundaries, staged extraction, symlink protections, diagnostics, dry-run support, log rotation, and checksum verification.
+- Continues running NuGet vulnerability scanning, installer/launcher safety tests, desktop-entry validation, packaged installer smoke tests, SHA-256 generation, and release-time checksum verification.
 
 ## Verify the download
 
