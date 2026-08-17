@@ -1,14 +1,17 @@
-# OSFR Linux Installer v0.2.5-alpha
+# OSFR Linux Installer v0.2.6-alpha
 
-This alpha refreshes the installer interface while preserving the hardened Linux installation flow introduced in earlier releases.
+This alpha turns the redesigned installer into a true five-step setup flow and introduces the official OSFR Linux Installer icon throughout the application.
 
 ## Highlights
 
-- Redesigned the Avalonia installer with a cleaner graphite/black interface and restrained red gaming accents.
-- Added a left-side system-readiness panel and a top visual install-step rail.
-- Improved spacing, hierarchy, controls, cards, and primary-action styling without changing the underlying install/uninstall behavior.
-- Keeps Proton detection and manual Proton selection, custom install locations, live path validation, safe uninstall boundaries, staged extraction, and symlink protections.
-- Retains the v0.2.4 fix that keeps installer logs under `~/.local/state/OSFR-Linux/installer.log` so opening the installer does not occupy the default install directory.
+- Reworked the installer into a real five-step wizard: Welcome/System Check, Install Location, Proton, Summary, and Install.
+- Added working Back/Next navigation and step validation so users cannot advance past unmet requirements or invalid paths.
+- Preserves the user's manually selected Proton version when installation starts.
+- Added the official OSFR icon as the single branding asset used by the installer.
+- Uses the official icon inside the installer UI and as the installer window/taskbar icon.
+- Installs the same official icon for the OSFR application-menu and desktop shortcuts.
+- Removed the obsolete split/base64 icon assets and updated CI to validate the real PNG asset directly.
+- Retains the hardened install/uninstall flow, staged ZIP extraction, symlink protections, dedicated Proton prefix, safe path validation, and installer logging under `~/.local/state/OSFR-Linux`.
 - Keeps NuGet vulnerability scanning, installer/launcher safety tests, desktop-entry validation, packaged installer smoke tests, SHA-256 generation, and release-time checksum verification.
 
 ## Verify the download
