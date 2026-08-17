@@ -18,6 +18,11 @@
     <EmbeddedResource Include="Resources/launcher-linux-x64.zip" LogicalName="OSFR.Linux.Installer.Payload" />
   </ItemGroup>
 
+  <ItemGroup Condition="Exists('Resources/icon.png')">
+    <AvaloniaResource Include="Resources/icon.png" />
+    <EmbeddedResource Include="Resources/icon.png" LogicalName="OSFR.Linux.Installer.Icon" />
+  </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Branding/osfr-icon.b64.00" LogicalName="OSFR.Linux.Installer.Branding.osfr_icon_b64_00" />
     <EmbeddedResource Include="Branding/osfr-icon.b64.01" LogicalName="OSFR.Linux.Installer.Branding.osfr_icon_b64_01" />
