@@ -168,7 +168,19 @@ public partial class Login : Popup
             launcherArguments.Add(serverArguments);
 
         var arguments = string.Join(' ', launcherArguments);
-        var workingDirectory = Path.Combine(Constants.SavePath, _server.Info.SavePath, "Client");
+        string workingDirectory;
+
+        try
+        {
+            workingDirectory = ServerPathHelper.GetClientDirectory(_server.Info.SavePath);
+        }
+        catch (InvalidDataException ex)
+        {
+            App.AddNotification("Unable to launch the game because the saved server path is unsafe.", true);
+            _logger.Error(ex, "Rejected unsafe server path while launching: {Name}.", _server.Info.Name);
+            return;
+        }
+
         var executablePath = Path.Combine(workingDirectory, Constants.ClientExecutableName);
 
         if (!File.Exists(executablePath))
@@ -218,8 +230,7 @@ public partial class Login : Popup
 
         try
         {
-            _logger.Info("Launching FreeRealms through Proton: {Proton}", protonPath);
-            _logger.Info("Proton arguments: {Arguments}", _server.Process.StartInfo.Arguments);
+            _logger.Info("Launching FreeRealms through Proton: {Proton} for server: {Name}.", protonPath, _server.Info.Name);
             _server.Process.Start();
         }
         catch (Exception ex)
