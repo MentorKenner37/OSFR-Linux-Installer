@@ -8,7 +8,7 @@ A self-contained C# Linux installer for Open Source Free Realms using Steam Prot
 - A graphical Linux desktop session
 - Steam installed and able to launch normally
 - An installed Proton build
-- Working 3D graphics drivers with the 32-bit graphics/Vulkan support required by Steam Proton
+- Up-to-date graphics drivers with the 32-bit Vulkan support needed by Steam Proton
 - An internet connection for OSFR login, server data, and client downloads
 - Enough free disk space for the launcher, Proton prefix, and downloaded OSFR server clients
 - Permission to write to your home directory and chosen installation location
