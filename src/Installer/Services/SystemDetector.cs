@@ -97,9 +97,38 @@ public static class SystemDetector
 
         return candidates
             .Distinct(StringComparer.Ordinal)
-            .OrderByDescending(p => p.Contains("Proton - Experimental", StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(p => p.Contains("GE-Proton", StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(p => p, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(IsExperimental)
+            .ThenByDescending(IsGeProton)
+            .ThenByDescending(p => GetProtonVersion(p).Major)
+            .ThenByDescending(p => GetProtonVersion(p).Minor)
+            .ThenByDescending(p => GetProtonVersion(p).Patch)
+            .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
     }
+
+    private static bool IsExperimental(string protonPath) =>
+        GetProtonDirectoryName(protonPath).Contains("Experimental", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsGeProton(string protonPath) =>
+        GetProtonDirectoryName(protonPath).Contains("GE-Proton", StringComparison.OrdinalIgnoreCase);
+
+    private static (int Major, int Minor, int Patch) GetProtonVersion(string protonPath)
+    {
+        var name = GetProtonDirectoryName(protonPath);
+        var match = Regex.Match(
+            name,
+            @"(?:GE-Proton|Proton\s*-?\s*)(?<major>\d+)(?:[.-](?<minor>\d+))?(?:[.-](?<patch>\d+))?",
+            RegexOptions.IgnoreCase);
+
+        if (!match.Success)
+            return (0, 0, 0);
+
+        _ = int.TryParse(match.Groups["major"].Value, out var major);
+        _ = int.TryParse(match.Groups["minor"].Value, out var minor);
+        _ = int.TryParse(match.Groups["patch"].Value, out var patch);
+        return (major, minor, patch);
+    }
+
+    private static string GetProtonDirectoryName(string protonPath) =>
+        Path.GetFileName(Path.GetDirectoryName(protonPath)) ?? string.Empty;
 }
