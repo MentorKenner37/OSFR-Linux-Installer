@@ -45,17 +45,23 @@ Assert(!notReady.Ready, "Steam is required for readiness.");
 var protonLibrary = Path.Combine(Path.GetTempPath(), $"osfr-proton-ranking-{Guid.NewGuid():N}");
 try
 {
-    foreach (var name in new[] { "Proton 9.0", "Proton 10.0", "Proton Experimental" })
+    foreach (var name in new[] { "Proton 9.0", "Proton 10.0", "Proton Experimental", "Custom Proton Build" })
     {
         var dir = Path.Combine(protonLibrary, "steamapps", "common", name);
         Directory.CreateDirectory(dir);
         await File.WriteAllTextAsync(Path.Combine(dir, "proton"), string.Empty);
     }
 
+    var geDir = Path.Combine(protonLibrary, "compatibilitytools.d", "GE-Proton10-30");
+    Directory.CreateDirectory(geDir);
+    await File.WriteAllTextAsync(Path.Combine(geDir, "proton"), string.Empty);
+
     var candidates = SystemDetector.FindProtonCandidates([protonLibrary]);
-    Assert(candidates.Count >= 3, "Proton discovery must find available builds.");
+    Assert(candidates.Count >= 5, "Proton discovery must expose official, custom-named, and compatibility-tool builds.");
     Assert(candidates[0].Name.Contains("Experimental", StringComparison.OrdinalIgnoreCase), "Proton Experimental must remain the default recommendation when installed.");
     Assert(candidates.Any(p => p.Name == "Proton 10.0"), "Proton 10.0 must be exposed as a selectable candidate.");
+    Assert(candidates.Any(p => p.Name == "Custom Proton Build"), "Custom-named Steam compatibility builds with a proton launcher must be selectable.");
+    Assert(candidates.Any(p => p.Name == "GE-Proton10-30"), "GE-Proton compatibility-tool builds must be selectable.");
 }
 finally
 {
