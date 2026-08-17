@@ -135,6 +135,8 @@ jobs:
           build/installer/OSFR-Linux-Installer --dry-run | tee /tmp/osfr-dry-run.txt
           grep -q "OSFR Linux Installer diagnostics" /tmp/osfr-diagnose.txt
           grep -q "no files will be changed" /tmp/osfr-dry-run.txt
+          grep -q "$HOME/.local/state/OSFR-Linux/installer.log" /tmp/osfr-diagnose.txt
+          test ! -e "$HOME/.local/share/OSFR-Linux"
 
       - name: Generate and verify SHA-256 checksum
         run: |
@@ -206,8 +208,8 @@ jobs:
               --prerelease
           fi
 
-          if [ "$VERSION" = "0.2.3-alpha" ]; then
-            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha v0.2.2-alpha; do
+          if [ "$VERSION" = "0.2.4-alpha" ]; then
+            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha v0.2.2-alpha v0.2.3-alpha; do
               if gh release view "$OLD_TAG" >/dev/null 2>&1; then
                 echo "Removing superseded release $OLD_TAG and its tag."
                 gh release delete "$OLD_TAG" --cleanup-tag --yes
