@@ -18,8 +18,8 @@ public partial class MainWindow : Window
     private static readonly IBrush Good = new SolidColorBrush(Color.Parse("#45D483"));
     private static readonly IBrush Bad = new SolidColorBrush(Color.Parse("#E05252"));
     private static readonly IBrush Muted = new SolidColorBrush(Color.Parse("#91A0B8"));
-    private static readonly IBrush Active = new SolidColorBrush(Color.Parse("#C93232"));
-    private static readonly IBrush ActiveText = new SolidColorBrush(Color.Parse("#E64A4A"));
+    private static readonly IBrush Active = new SolidColorBrush(Color.Parse("#2F9E5A"));
+    private static readonly IBrush ActiveText = new SolidColorBrush(Color.Parse("#4CCF7A"));
     private static readonly IBrush Inactive = new SolidColorBrush(Color.Parse("#232323"));
     private static readonly IBrush InactiveBorder = new SolidColorBrush(Color.Parse("#414141"));
     private static readonly IBrush InactiveText = new SolidColorBrush(Color.Parse("#9A9A9A"));
@@ -45,7 +45,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException or FormatException)
         {
-            InstallerLog.Warn($"Could not load OSFR branding icon: {ex.Message}");
+            InstallerLog.Warn($"Could not load Sanctuary branding icon: {ex.Message}");
         }
     }
 
@@ -72,14 +72,14 @@ public partial class MainWindow : Window
             _updatingProtonSelection = false;
         }
 
-        SetCheck(LinuxStatus, _state.IsLinux, _state.IsLinux ? "READY" : "REQUIRED");
-        SetCheck(CpuStatus, _state.IsX64, _state.IsX64 ? "READY" : "REQUIRED");
+        SetCheck(LinuxStatus, _state.IsLinux, _state.IsLinux ? "SUPPORTED" : "REQUIRED");
+        SetCheck(CpuStatus, _state.IsX64, _state.IsX64 ? "SUPPORTED" : "REQUIRED");
         SetCheck(SteamStatus, _state.SteamRoot is not null, _state.SteamRoot is not null ? "DETECTED" : "NOT FOUND");
         SetCheck(ProtonStatus, _state.ProtonPath is not null, _state.ProtonPath is not null ? "DETECTED" : "NOT FOUND");
 
         DetailText.Text = _state.Ready
             ? $"Steam: {_state.SteamRoot}\nProton: {_state.ProtonPath}"
-            : "This installer requires x86_64 Linux, Steam, and an installed Proton build.";
+            : "A supported x86_64 Linux environment, Steam, and an installed Proton build are required before installation can continue.";
 
         RefreshInstallUi();
     }
@@ -107,21 +107,21 @@ public partial class MainWindow : Window
         ActionButton.IsEnabled = !_busy && (installed || (_state.Ready && pathError is null));
 
         HeroStatus.Text = installed
-            ? "OSFR IS INSTALLED"
+            ? "SANCTUARY IS INSTALLED"
             : !_state.Ready
                 ? "SYSTEM REQUIREMENTS NOT MET"
                 : pathError is not null
-                    ? "INSTALL LOCATION NEEDS ATTENTION"
-                    : "READY TO INSTALL";
+                    ? "INSTALL LOCATION REQUIRES ATTENTION"
+                    : "SYSTEM READY FOR INSTALLATION";
         HeroStatus.Foreground = installed || (_state.Ready && pathError is null) ? Good : Bad;
 
         if (!_busy)
         {
             StatusText.Text = installed
-                ? "OSFR is installed. Uninstall is available."
+                ? "Sanctuary is installed. Uninstall is available."
                 : pathError is not null
-                    ? "Choose a valid installation location."
-                    : "Ready to install.";
+                    ? "Select a valid installation location to continue."
+                    : "Ready to install Sanctuary.";
             ProgressText.Text = "Ready";
         }
 
@@ -152,8 +152,8 @@ public partial class MainWindow : Window
         }
 
         InstallPathStatus.Text = installed
-            ? "✓ Existing OSFR installation detected."
-            : "✓ Installation location is ready.";
+            ? "✓ Existing Sanctuary installation detected."
+            : "✓ Installation location is available.";
         InstallPathStatus.Foreground = Good;
         return null;
     }
@@ -263,7 +263,7 @@ public partial class MainWindow : Window
 
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Choose OSFR installation location",
+            Title = "Choose Sanctuary installation location",
             AllowMultiple = false
         });
 
@@ -299,7 +299,7 @@ public partial class MainWindow : Window
 
         if (!_state.Ready)
         {
-            await ShowMessageAsync("Requirements not met", "Linux x86_64, Steam, and Proton must be installed first.");
+            await ShowMessageAsync("Requirements not met", "A supported x86_64 Linux environment, Steam, and Proton must be available before Sanctuary can be installed.");
             return;
         }
 
@@ -320,7 +320,7 @@ public partial class MainWindow : Window
             _installService.Launch(InstallRoot);
             shouldClose = CloseAfterInstallCheck.IsChecked == true;
             if (!shouldClose)
-                await ShowMessageAsync("Installation complete", "Open Source Free Realms has been installed successfully and the launcher has started.");
+                await ShowMessageAsync("Installation complete", "Sanctuary has been installed successfully and the Open Source Free Realms launcher has started.");
         }
         catch (Exception ex)
         {
@@ -341,8 +341,8 @@ public partial class MainWindow : Window
     private async Task UninstallAsync()
     {
         var confirmed = await ConfirmAsync(
-            "Uninstall OSFR",
-            "Remove the OSFR Launcher, Proton prefix, all downloaded server clients, OSFR data, and shortcuts? The installer itself will be preserved.");
+            "Uninstall Sanctuary",
+            "Remove Sanctuary, its dedicated Proton prefix, all downloaded Open Source Free Realms server clients, application data, and shortcuts? The installer executable itself will be preserved.");
         if (!confirmed)
             return;
 
@@ -352,7 +352,7 @@ public partial class MainWindow : Window
         try
         {
             await _installService.UninstallAsync(InstallRoot, progress);
-            await ShowMessageAsync("Uninstall complete", "OSFR and all downloaded server/client data have been removed.");
+            await ShowMessageAsync("Uninstall complete", "Sanctuary and its downloaded Open Source Free Realms data have been removed.");
         }
         catch (Exception ex)
         {
