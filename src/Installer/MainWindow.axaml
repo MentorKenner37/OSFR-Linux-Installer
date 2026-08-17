@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="clr-namespace:OSFR.Linux.Installer.Services"
         x:Class="OSFR.Linux.Installer.MainWindow"
         Title="Open Source Free Realms - Linux Installer"
         Width="1040" Height="780" MinWidth="860" MinHeight="680"
@@ -66,7 +67,7 @@
               <TextBlock Text="Proton version" FontSize="13" FontWeight="SemiBold" Foreground="#EEF2F5" />
               <ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged" MinHeight="38">
                 <ComboBox.ItemTemplate>
-                  <DataTemplate>
+                  <DataTemplate x:DataType="services:ProtonCandidate">
                     <TextBlock Text="{Binding Name}" />
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
