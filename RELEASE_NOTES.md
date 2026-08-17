@@ -5,6 +5,7 @@ This is the first public alpha release under the cleaned Sanctuary Linux Launche
 ## Highlights
 
 - Steam and Proton detection with native Steam, Flatpak Steam, custom Steam libraries, Proton Experimental, standard Proton releases, and GE-Proton support
+- Selectable Proton graphics backend: Vulkan via DXVK (recommended) or OpenGL via WineD3D for systems without usable Vulkan support
 - Proton runtime architecture checks to prevent incompatible ARM64/x86_64 selections
 - Dedicated Proton prefix management for Open Source Free Realms
 - Transactional launcher replacement with rollback after failed updates
@@ -43,7 +44,8 @@ chmod +x Sanctuary-Linux-Installer
 - Graphical Linux desktop
 - Steam installed and working
 - A compatible Proton version installed
-- Working graphics drivers with 32-bit Vulkan support
+- Working graphics drivers
+- Vulkan support is recommended for DXVK; OpenGL/WineD3D is available as a compatibility fallback
 - Internet connection and sufficient disk space
 
 ## Alpha status
