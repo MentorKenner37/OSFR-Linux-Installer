@@ -28,6 +28,11 @@ jobs:
           set -euo pipefail
           dotnet run --project src/Installer.SmokeTests/Installer.SmokeTests.csproj -c Release
 
+      - name: Run launcher path safety smoke tests
+        run: |
+          set -euo pipefail
+          dotnet run --project src/Launcher.SmokeTests/Launcher.SmokeTests.csproj -c Release
+
       - name: Publish patched OSFR Launcher
         run: |
           set -euo pipefail
