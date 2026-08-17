@@ -16,7 +16,7 @@ namespace Installer.UnitTests
         [InlineData("..\\..\\file", false)]
         [InlineData("normal-file.txt", true)]
         [InlineData("dir/sub/file.txt", true)]
-        [InlineData("....\/weirdname", true)]
+        [InlineData("..../weirdname", true)]
         [InlineData(".hidden/file", true)]
         public void IsSafeArchiveEntry_additional_cases(string entry, bool expected)
         {
