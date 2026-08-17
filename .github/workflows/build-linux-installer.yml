@@ -209,8 +209,8 @@ jobs:
               --prerelease
           fi
 
-          if [ "$VERSION" = "0.2.7-alpha" ]; then
-            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha v0.2.2-alpha v0.2.3-alpha v0.2.4-alpha v0.2.5-alpha v0.2.6-alpha; do
+          if [ "$VERSION" = "0.2.8-alpha" ]; then
+            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha v0.2.2-alpha v0.2.3-alpha v0.2.4-alpha v0.2.5-alpha v0.2.6-alpha v0.2.7-alpha; do
               if gh release view "$OLD_TAG" >/dev/null 2>&1; then
                 echo "Removing superseded release $OLD_TAG and its tag."
                 gh release delete "$OLD_TAG" --cleanup-tag --yes
