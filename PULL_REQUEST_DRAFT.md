@@ -10,4 +10,6 @@ Notes:
 - No production behavior changed except narrow InternalsVisibleTo in AssemblyInfo to allow tests to exercise internals.
 - Tests use real temporary directories; avoid mocking filesystem operations.
 
+Trigger: CI run requested at 2026-08-17T19:58:00Z UTC
+
 Run instructions and expectations are in the PR description.
