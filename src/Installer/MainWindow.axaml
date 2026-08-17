@@ -2,117 +2,165 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:services="clr-namespace:OSFR.Linux.Installer.Services"
         x:Class="OSFR.Linux.Installer.MainWindow"
-        Title="Open Source Free Realms - Linux Installer"
-        Width="1040" Height="780" MinWidth="860" MinHeight="680"
-        Background="#0A0F14">
+        Title="OSFR Linux Installer"
+        Width="1180" Height="760" MinWidth="980" MinHeight="700"
+        Background="#101010">
 
-  <Grid RowDefinitions="Auto,*">
-    <Border Grid.Row="0" Background="#0D141B" BorderBrush="#1F2A34" BorderThickness="0,0,0,1" Padding="34,22">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="5">
-          <TextBlock Text="OPEN SOURCE FREE REALMS" FontSize="13" FontWeight="Bold" Foreground="#4EA8DE" />
-          <TextBlock Text="Linux Installer" FontSize="30" FontWeight="SemiBold" Foreground="#F5F7F9" />
-          <TextBlock Text="Installs the OSFR launcher and configures a dedicated Proton prefix." FontSize="14" Foreground="#8795A3" />
+  <Grid ColumnDefinitions="310,*">
+    <Border Grid.Column="0" Background="#121212" BorderBrush="#2B2B2B" BorderThickness="0,0,1,0" Padding="24">
+      <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="18">
+        <StackPanel Grid.Row="0" Spacing="2">
+          <TextBlock Text="OSFR" FontSize="42" FontWeight="Bold" Foreground="#F4F4F4" />
+          <TextBlock Text="LINUX INSTALLER" FontSize="15" FontWeight="Bold" Foreground="#D53B3B" LetterSpacing="1.5" />
         </StackPanel>
-        <Border Grid.Column="1" Background="#13202A" BorderBrush="#294459" BorderThickness="1" CornerRadius="18" Padding="14,8" VerticalAlignment="Top">
-          <TextBlock x:Name="HeroStatus" Text="Checking system..." Foreground="#62C8A0" FontWeight="SemiBold" FontSize="12" />
+
+        <Border Grid.Row="1" Background="#171717" BorderBrush="#313131" BorderThickness="1" CornerRadius="8" Padding="18">
+          <StackPanel Spacing="14">
+            <TextBlock Text="System Readiness" FontSize="18" FontWeight="SemiBold" Foreground="#E64A4A" />
+
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <TextBlock Text="●" Foreground="#45D483" FontSize="16" VerticalAlignment="Top" />
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="Operating System" Foreground="#F0F0F0" FontWeight="SemiBold" />
+                <TextBlock x:Name="LinuxStatus" FontSize="12" Foreground="#A0A0A0" />
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <TextBlock Text="●" Foreground="#45D483" FontSize="16" VerticalAlignment="Top" />
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="Processor" Foreground="#F0F0F0" FontWeight="SemiBold" />
+                <TextBlock x:Name="CpuStatus" FontSize="12" Foreground="#A0A0A0" />
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <TextBlock Text="●" Foreground="#45D483" FontSize="16" VerticalAlignment="Top" />
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="Steam" Foreground="#F0F0F0" FontWeight="SemiBold" />
+                <TextBlock x:Name="SteamStatus" FontSize="12" Foreground="#A0A0A0" />
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <TextBlock Text="●" Foreground="#45D483" FontSize="16" VerticalAlignment="Top" />
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="Proton" Foreground="#F0F0F0" FontWeight="SemiBold" />
+                <TextBlock x:Name="ProtonStatus" FontSize="12" Foreground="#A0A0A0" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
         </Border>
+
+        <Border Grid.Row="2" Background="#171717" BorderBrush="#313131" BorderThickness="1" CornerRadius="8" Padding="18">
+          <StackPanel Spacing="8">
+            <TextBlock Text="About" FontSize="17" FontWeight="SemiBold" Foreground="#E64A4A" />
+            <TextBlock Text="Installs and configures Open Source Free Realms on Linux using Steam Proton." TextWrapping="Wrap" Foreground="#B6B6B6" FontSize="12" LineHeight="18" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="4" Spacing="7">
+          <TextBlock x:Name="HeroStatus" Text="Checking system..." FontWeight="SemiBold" FontSize="12" Foreground="#45D483" />
+          <TextBlock Text="Steam and Proton are detected only. They are not modified by this installer." TextWrapping="Wrap" Foreground="#707070" FontSize="11" />
+        </StackPanel>
       </Grid>
     </Border>
 
-    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-      <Grid Margin="34" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="18">
-        <Border Grid.Row="0" Background="#0F161D" BorderBrush="#202C36" BorderThickness="1" CornerRadius="14" Padding="22">
-          <StackPanel Spacing="16">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel>
-                <TextBlock Text="System readiness" FontSize="18" FontWeight="SemiBold" Foreground="#F3F6F8" />
-                <TextBlock Text="Checks Linux, x86_64, Steam, and Proton before installation." FontSize="13" Foreground="#7E8C99" Margin="0,3,0,0" />
-              </StackPanel>
-              <TextBlock Grid.Column="1" Text="SYSTEM CHECK" Foreground="#586A79" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
-            </Grid>
-
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
-              <Border Grid.Row="0" Grid.Column="0" Background="#111A22" BorderBrush="#202D37" BorderThickness="1" CornerRadius="10" Padding="15">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                  <Border Width="28" Height="28" CornerRadius="7" Background="#172A35"><TextBlock Text="L" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#57B8E6" FontWeight="Bold" /></Border>
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="Linux" Foreground="#EEF2F5" FontWeight="SemiBold"/><TextBlock Text="Operating system" FontSize="11" Foreground="#72808C"/></StackPanel>
-                  <TextBlock x:Name="LinuxStatus" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-              <Border Grid.Row="0" Grid.Column="1" Background="#111A22" BorderBrush="#202D37" BorderThickness="1" CornerRadius="10" Padding="15">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                  <Border Width="28" Height="28" CornerRadius="7" Background="#172A35"><TextBlock Text="64" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#57B8E6" FontSize="11" FontWeight="Bold" /></Border>
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="x86_64" Foreground="#EEF2F5" FontWeight="SemiBold"/><TextBlock Text="Processor architecture" FontSize="11" Foreground="#72808C"/></StackPanel>
-                  <TextBlock x:Name="CpuStatus" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-              <Border Grid.Row="1" Grid.Column="0" Background="#111A22" BorderBrush="#202D37" BorderThickness="1" CornerRadius="10" Padding="15">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                  <Border Width="28" Height="28" CornerRadius="7" Background="#172A35"><TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#57B8E6" FontWeight="Bold" /></Border>
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="Steam" Foreground="#EEF2F5" FontWeight="SemiBold"/><TextBlock Text="Client installation" FontSize="11" Foreground="#72808C"/></StackPanel>
-                  <TextBlock x:Name="SteamStatus" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-              <Border Grid.Row="1" Grid.Column="1" Background="#111A22" BorderBrush="#202D37" BorderThickness="1" CornerRadius="10" Padding="15">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                  <Border Width="28" Height="28" CornerRadius="7" Background="#172A35"><TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#57B8E6" FontWeight="Bold" /></Border>
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="Proton" Foreground="#EEF2F5" FontWeight="SemiBold"/><TextBlock Text="Compatibility runtime" FontSize="11" Foreground="#72808C"/></StackPanel>
-                  <TextBlock x:Name="ProtonStatus" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-            </Grid>
-
-            <StackPanel Spacing="6">
-              <TextBlock Text="Proton version" FontSize="13" FontWeight="SemiBold" Foreground="#EEF2F5" />
-              <ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged" MinHeight="38">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="services:ProtonCandidate">
-                    <TextBlock Text="{Binding Name}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <TextBlock Text="The recommended detected version is selected automatically. You can override it before installing." FontSize="11" Foreground="#72808C" TextWrapping="Wrap" />
-            </StackPanel>
+    <Grid Grid.Column="1" RowDefinitions="Auto,*">
+      <Border Grid.Row="0" Background="#141414" BorderBrush="#2B2B2B" BorderThickness="0,0,0,1" Padding="28,22">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="3">
+            <TextBlock Text="OSFR Linux Installer" FontSize="25" FontWeight="SemiBold" Foreground="#F5F5F5" />
+            <TextBlock Text="Configure Open Source Free Realms for Steam Proton" Foreground="#8D8D8D" FontSize="12" />
           </StackPanel>
-        </Border>
-
-        <Border Grid.Row="1" Background="#0F161D" BorderBrush="#202C36" BorderThickness="1" CornerRadius="14" Padding="22">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
-            <StackPanel Spacing="8">
-              <TextBlock Text="Installation location" FontSize="17" FontWeight="SemiBold" Foreground="#F3F6F8" />
-              <TextBlock Text="Choose where the launcher and dedicated Proton prefix will be stored." FontSize="12" Foreground="#7E8C99" />
-              <TextBox x:Name="InstallPathBox" Margin="0,4,0,0" TextChanged="InstallPathChanged" />
-              <TextBlock x:Name="InstallPathStatus" FontSize="11" Foreground="#62C8A0" TextWrapping="Wrap" />
-            </StackPanel>
-            <Button Grid.Column="1" Content="Browse" Click="BrowseClicked" VerticalAlignment="Bottom" MinWidth="105" />
-          </Grid>
-        </Border>
-
-        <Border Grid.Row="2" Background="#0F161D" BorderBrush="#202C36" BorderThickness="1" CornerRadius="14" Padding="22">
-          <StackPanel Spacing="10">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel>
-                <TextBlock Text="Installation progress" FontSize="17" FontWeight="SemiBold" Foreground="#F3F6F8" />
-                <TextBlock x:Name="StatusText" Text="Ready" FontSize="12" Foreground="#82909D" Margin="0,3,0,0" />
-              </StackPanel>
-              <TextBlock x:Name="ProgressText" Grid.Column="1" Text="Ready" Foreground="#57B8E6" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
-            </Grid>
-            <ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="10" Margin="0,3,0,0" />
-            <TextBlock x:Name="DetailText" Foreground="#74818D" TextWrapping="Wrap" FontSize="12" MinHeight="18" />
-            <TextBlock Text="Installer diagnostics are written to ~/.local/share/OSFR-Linux/installer.log" Foreground="#576573" FontSize="11" />
-          </StackPanel>
-        </Border>
-
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,2,0,8">
-          <Button x:Name="ActionButton" Classes="primary" Grid.Column="0" Content="INSTALL" Click="ActionClicked" MinWidth="150" />
-          <StackPanel Grid.Column="1" Margin="18,0" VerticalAlignment="Center" Spacing="5">
-            <CheckBox x:Name="CloseAfterInstallCheck" Content="Close installer after a successful installation" IsChecked="True" Foreground="#A9B5C0" FontSize="12" />
-            <TextBlock Text="Does not install or modify Steam or Proton." Foreground="#576573" FontSize="11" />
-          </StackPanel>
-          <Button Classes="ghost" Grid.Column="2" Content="Close" Click="CloseClicked" MinWidth="105" />
+          <Border Grid.Column="1" Background="#1C1C1C" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="15" Padding="12,6" VerticalAlignment="Center">
+            <TextBlock Text="ALPHA" Foreground="#E64A4A" FontWeight="Bold" FontSize="11" />
+          </Border>
         </Grid>
-      </Grid>
-    </ScrollViewer>
+      </Border>
+
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="30,26,30,30" Spacing="22">
+          <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8">
+            <StackPanel Grid.Column="0" Spacing="7" HorizontalAlignment="Stretch">
+              <Border Background="#C93232" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="White" /></Border>
+              <TextBlock Text="Welcome" HorizontalAlignment="Center" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="12" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="7" HorizontalAlignment="Stretch">
+              <Border Background="#232323" BorderBrush="#414141" BorderThickness="1" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#A5A5A5" /></Border>
+              <TextBlock Text="Location" HorizontalAlignment="Center" Foreground="#9A9A9A" FontSize="12" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="7" HorizontalAlignment="Stretch">
+              <Border Background="#232323" BorderBrush="#414141" BorderThickness="1" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#A5A5A5" /></Border>
+              <TextBlock Text="Proton" HorizontalAlignment="Center" Foreground="#9A9A9A" FontSize="12" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" Spacing="7" HorizontalAlignment="Stretch">
+              <Border Background="#232323" BorderBrush="#414141" BorderThickness="1" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="4" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#A5A5A5" /></Border>
+              <TextBlock Text="Summary" HorizontalAlignment="Center" Foreground="#9A9A9A" FontSize="12" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" Spacing="7" HorizontalAlignment="Stretch">
+              <Border Background="#232323" BorderBrush="#414141" BorderThickness="1" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="5" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#A5A5A5" /></Border>
+              <TextBlock Text="Install" HorizontalAlignment="Center" Foreground="#9A9A9A" FontSize="12" />
+            </StackPanel>
+          </Grid>
+
+          <Border BorderBrush="#292929" BorderThickness="0,1,0,0" />
+
+          <StackPanel Spacing="5">
+            <TextBlock Text="Welcome to OSFR Linux Installer" FontSize="25" FontWeight="SemiBold" Foreground="#F4F4F4" />
+            <TextBlock Text="Choose where OSFR should be installed and which detected Proton version should run Free Realms." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap" />
+          </StackPanel>
+
+          <Border Background="#151515" BorderBrush="#2D2D2D" BorderThickness="1" CornerRadius="8" Padding="20">
+            <StackPanel Spacing="18">
+              <StackPanel Spacing="7">
+                <TextBlock Text="Installation Directory" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="15" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                  <TextBox x:Name="InstallPathBox" TextChanged="InstallPathChanged" />
+                  <Button Grid.Column="1" Content="Browse..." Click="BrowseClicked" MinWidth="105" />
+                </Grid>
+                <TextBlock x:Name="InstallPathStatus" FontSize="11" Foreground="#45D483" TextWrapping="Wrap" />
+              </StackPanel>
+
+              <StackPanel Spacing="7">
+                <TextBlock Text="Proton Version" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="15" />
+                <ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="services:ProtonCandidate">
+                      <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="The recommended detected build is selected automatically. You can choose another detected version." Foreground="#777777" FontSize="11" TextWrapping="Wrap" />
+              </StackPanel>
+
+              <StackPanel Spacing="8">
+                <TextBlock Text="Installation Progress" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="15" />
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock x:Name="StatusText" Text="Ready" Foreground="#B6B6B6" FontSize="12" />
+                  <TextBlock x:Name="ProgressText" Grid.Column="1" Text="Ready" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="12" />
+                </Grid>
+                <ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="9" />
+                <TextBlock x:Name="DetailText" Foreground="#7F7F7F" TextWrapping="Wrap" FontSize="11" MinHeight="18" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Background="#151515" BorderBrush="#2D2D2D" BorderThickness="1" CornerRadius="8" Padding="18">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Installation Options" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="14" />
+              <CheckBox x:Name="CloseAfterInstallCheck" Content="Close installer after a successful installation" IsChecked="True" />
+              <TextBlock Text="Installer logs are stored separately under ~/.local/state/OSFR-Linux so they do not interfere with the installation directory." Foreground="#737373" FontSize="11" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Margin="0,2,0,0">
+            <TextBlock Grid.Column="0" Text="Ready when you are." Foreground="#666666" VerticalAlignment="Center" FontSize="11" />
+            <Button Grid.Column="1" Classes="ghost" Content="Close" Click="CloseClicked" MinWidth="105" />
+            <Button x:Name="ActionButton" Grid.Column="2" Classes="primary" Content="INSTALL" Click="ActionClicked" MinWidth="145" />
+          </Grid>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
   </Grid>
 </Window>
