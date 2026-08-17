@@ -1,0 +1,76 @@
+name: Build Linux Installer
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-linux-x64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: OSFR-Launcher/src/global.json
+
+      - name: Publish patched OSFR Launcher
+        run: |
+          set -euo pipefail
+          rm -rf build/launcher
+          dotnet publish OSFR-Launcher/src/Launcher/Launcher.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=false \
+            -p:DebugType=None \
+            -p:DebugSymbols=false \
+            -o build/launcher
+
+          test -f build/launcher/Launcher
+          mv build/launcher/Launcher build/launcher/OSFRLauncher
+          chmod +x build/launcher/OSFRLauncher
+
+          if [ ! -f build/launcher/libSkiaSharp.so ]; then
+            SKIA="$(find build/launcher -type f -path '*/linux-x64/native/libSkiaSharp.so' -print -quit)"
+            test -n "$SKIA"
+            cp "$SKIA" build/launcher/libSkiaSharp.so
+          fi
+
+      - name: Embed launcher payload
+        run: |
+          set -euo pipefail
+          mkdir -p src/Installer/Resources
+          (cd build/launcher && zip -qr ../../src/Installer/Resources/launcher-linux-x64.zip .)
+          cp OSFR-Launcher/assets/icon.png src/Installer/Resources/icon.png
+
+      - name: Publish self-contained C# installer
+        run: |
+          set -euo pipefail
+          rm -rf build/installer
+          dotnet publish src/Installer/Installer.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:DebugType=None \
+            -p:DebugSymbols=false \
+            -o build/installer
+
+          test -f build/installer/Installer
+          mv build/installer/Installer build/installer/OSFR-Linux-Installer
+          chmod +x build/installer/OSFR-Linux-Installer
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: OSFR-Linux-Installer-linux-x64
+          path: build/installer/OSFR-Linux-Installer
+          if-no-files-found: error
