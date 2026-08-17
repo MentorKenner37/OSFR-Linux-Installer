@@ -1,21 +1,17 @@
-# Sanctuary Linux Installer v0.2.8-alpha
+# Sanctuary Linux Installer v0.2.9-alpha
 
-This alpha finishes the current installer polish pass and improves Linux desktop integration for a more consistent installed-app experience.
+This alpha incorporates the latest real-machine Linux Mint testing feedback and finishes another focused installer polish pass.
 
 ## Highlights
 
-- Locks the installer window to its finalized size and disables resizing.
-- Moves **Close** to the lower-left and places **Back** beside **Next / Install**.
-- Reworks **Installation Requirements** into a cleaner scrollable list.
-- Moves **Close Sanctuary Linux Installer after a successful installation** to the fifth Install panel.
-- Expands Proton discovery so more installed Proton/GE-Proton/custom compatibility-tool builds are exposed in the selector.
-- Keeps the recommended Proton build selected automatically while allowing manual override.
-- Improves Linux icon integration by installing `osfr-linux.png` into the user's hicolor icon theme.
-- Uses `Icon=osfr-linux` in generated desktop entries for stable menu/desktop icon resolution.
-- Adds `StartupWMClass=OSFRLauncher` and `X-GNOME-WMClass=OSFRLauncher` to improve launcher/taskbar grouping.
-- Refreshes desktop and icon caches when the relevant Linux utilities are available.
-- Removes the installed icon during uninstall and refreshes desktop integration afterward.
-- Keeps the installer window icon explicitly set from the bundled Sanctuary branding resource.
+- Increases the fixed installer window height slightly while preserving the current width and non-resizable layout.
+- Rewords the graphics requirement to **Working graphics drivers with 32-bit Vulkan support**.
+- Deduplicates Proton builds discovered through multiple Steam path aliases by resolving canonical filesystem paths before display.
+- Keeps Proton Experimental, Proton Hotfix, GE-Proton, and other detected compatibility tools selectable without duplicate entries.
+- Adds concise Step 3 instructions for installing additional official Proton versions through the Steam Library's Tools filter.
+- Adds an explicit **I accept these installation settings and want to continue** checkbox to the Summary panel; Next remains disabled until accepted.
+- Reapplies the bundled Sanctuary window icon during the installation state transition to address the installer taskbar icon disappearing when Install is clicked.
+- Preserves the working installed Sanctuary/OSFR launcher icon-theme integration and taskbar grouping.
 - Preserves custom install locations, dedicated Proton prefixes, safe uninstall boundaries, staged extraction, symlink protections, diagnostics, dry-run support, log rotation, and checksum verification.
 - Continues running NuGet vulnerability scanning, installer/launcher safety tests, desktop-entry validation, packaged installer smoke tests, SHA-256 generation, and release-time checksum verification.
 
@@ -35,7 +31,7 @@ A successful verification reports `Sanctuary-Linux-Installer: OK`.
 - Graphical Linux desktop
 - Steam installed and working
 - An installed Proton build
-- Working graphics drivers with the 32-bit Vulkan support needed by Steam Proton
+- Working graphics drivers with 32-bit Vulkan support
 - Internet connection and enough disk space for downloaded Open Source Free Realms clients
 
 Linux Mint x86_64 with a working Steam + Proton setup remains the primary tested environment.
