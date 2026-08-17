@@ -1,18 +1,15 @@
-# Sanctuary Linux Installer v0.2.10-alpha
+# Sanctuary Linux Installer v0.2.11-alpha
 
-This alpha completes the latest installer UI and branding polish pass from real-machine Linux Mint testing.
+This alpha corrects the window behavior and spacing regression introduced by the previous UI cleanup.
 
 ## Highlights
 
-- Removes the redundant top installer title/header strip while retaining the internal window title for product identity.
-- Keeps the **SANCTUARY / LINUX INSTALLER** branding underneath the icon and the **Welcome to Sanctuary Linux Installer** Step 1 heading.
-- Relocates the **ALPHA** badge into the left branding area and moves the step navigation/main content upward.
-- Removes the redundant **Configure Open Source Free Realms for Steam Proton** subtitle.
-- Corrects Step 3 Proton help text for the current Steam UI: users are instructed to search for Proton in their Steam Library rather than use a Tools filter.
-- Retains the fixed 1180×790 installer size and the working taskbar icon behavior confirmed in v0.2.9-alpha testing.
-- Retains canonical-path Proton deduplication and the Summary acceptance checkbox.
-- Standardizes user-facing product branding on **Sanctuary Linux Installer** while intentionally retaining legacy OSFR internal paths and identifiers where changing them could break compatibility.
-- Preserves custom install locations, dedicated Proton prefixes, safe uninstall boundaries, staged extraction, symlink protections, diagnostics, dry-run support, log rotation, desktop integration, and checksum verification.
+- Restores the normal Linux system title bar so the installer can be dragged around naturally again.
+- Keeps the **ALPHA** badge in the left branding area.
+- Keeps the redundant in-app header/subtitle removed.
+- Increases the fixed window height slightly from 790 to 825 pixels so the bottom controls and content are no longer clipped while retaining the 1180-pixel width and non-resizable layout.
+- Preserves the **SANCTUARY / LINUX INSTALLER** branding under the icon and the **Welcome to Sanctuary Linux Installer** Step 1 heading.
+- Preserves the corrected Steam Proton instructions, Proton deduplication, Summary acceptance checkbox, taskbar icon behavior, custom install locations, dedicated prefixes, safety checks, diagnostics, and checksum verification.
 
 ## Verify the download
 
