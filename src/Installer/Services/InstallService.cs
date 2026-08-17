@@ -278,7 +278,7 @@ public sealed class InstallService
 
     public static bool IsSafeArchiveEntry(string entryName)
     {
-        if (string.IsNullOrWhiteSpace(entryName) || Path.IsPathRooted(entryName) || entryName.StartsWith('/', StringComparison.Ordinal) || entryName.StartsWith('\\'))
+        if (string.IsNullOrWhiteSpace(entryName) || Path.IsPathRooted(entryName) || entryName.StartsWith("/", StringComparison.Ordinal) || entryName.StartsWith("\\", StringComparison.Ordinal))
             return false;
 
         var normalized = entryName.Replace('\\', '/');
@@ -322,7 +322,6 @@ public sealed class InstallService
             if (!IsSafeArchiveEntry(entry.FullName))
                 throw new InvalidDataException($"Unsafe path in launcher payload: {entry.FullName}");
 
-            // Unix file-type bits are stored in the high 16 bits. 0xA000 denotes a symbolic link.
             var unixType = (entry.ExternalAttributes >> 16) & 0xF000;
             if (unixType == 0xA000)
                 throw new InvalidDataException($"Symbolic links are not allowed in the launcher payload: {entry.FullName}");
