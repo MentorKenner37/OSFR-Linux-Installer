@@ -25,7 +25,7 @@ public partial class MainWindow : Window
 
     private string InstallRoot => string.IsNullOrWhiteSpace(InstallPathBox.Text)
         ? InstallService.DefaultInstallRoot
-        : Path.GetFullPath(Environment.ExpandEnvironmentVariables(InstallPathBox.Text));
+        : InstallService.NormalizeInstallRoot(InstallPathBox.Text);
 
     private void RefreshState()
     {
@@ -182,7 +182,13 @@ public partial class MainWindow : Window
 
     private static Window BuildDialog(string title, string message, params Button[] buttons)
     {
-        var buttonPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+        };
+
         foreach (var button in buttons)
             buttonPanel.Children.Add(button);
 
