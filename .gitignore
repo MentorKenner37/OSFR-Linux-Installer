@@ -1,0 +1,34 @@
+# .NET build output
+**/bin/
+**/obj/
+**/publish/
+
+# Logs / caches
+**/logs/
+**/__pycache__/
+*.log
+
+# Python
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+.vs/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Local OSFR runtime/install data
+OSFRLauncher/
+OSFR-Linux/
+ProtonPrefix/
+Client/
+install-status
+
+# Backups
+*.backup
+*.backup2
+*.before-*
