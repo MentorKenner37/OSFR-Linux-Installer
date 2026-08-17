@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Xml.Serialization;
 
@@ -18,7 +18,6 @@ public partial class Settings : ObservableObject
 {
     private static readonly string _savePath = Path.Combine(Constants.SavePath, Constants.SettingsFile);
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-
     private static readonly Lazy<Settings> _instance = new(Create());
 
     [ObservableProperty]
@@ -29,6 +28,7 @@ public partial class Settings : ObservableObject
 
     [ObservableProperty]
     private int downloadThreads = Math.Max(1, MaxDownloadThreads / 2);
+
     public static int MaxDownloadThreads => Environment.ProcessorCount;
 
     [ObservableProperty]
@@ -37,7 +37,6 @@ public partial class Settings : ObservableObject
     [ObservableProperty]
     private AvaloniaList<ServerInfo> serverInfoList = [];
 
-    public event EventHandler? LocaleChanged;
     public event EventHandler? DiscordActivityChanged;
 
     private Settings() { }
@@ -50,7 +49,6 @@ public partial class Settings : ObservableObject
         if (!XmlHelper.TryDeserialize(_savePath, out Settings? settings))
         {
             _logger.Error("Failed to deserialize settings from '{Path}'.", _savePath);
-
             return new Settings();
         }
 
@@ -63,13 +61,8 @@ public partial class Settings : ObservableObject
     public void Save()
     {
         if (!XmlHelper.TrySerialize(Instance, _savePath))
-        {
             _logger.Error("Failed to serialize and save settings to '{Path}'.", _savePath);
-        }
     }
-
-    partial void OnLocaleChanged(LocaleType value)
-        => LocaleChanged?.Invoke(this, EventArgs.Empty);
 
     partial void OnDiscordActivityChanged(bool value)
     {
