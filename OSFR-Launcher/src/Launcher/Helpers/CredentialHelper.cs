@@ -28,6 +28,10 @@ public static class CredentialHelper
         {
             var keyDirectory = new DirectoryInfo(Path.Combine(Constants.SavePath, KeysDirectory));
             keyDirectory.Create();
+            RestrictDirectoryToCurrentUser(keyDirectory.FullName);
+
+            if (File.Exists(_storePath))
+                RestrictFileToCurrentUser(_storePath);
 
             return DataProtectionProvider
                 .Create(keyDirectory)
@@ -36,7 +40,6 @@ public static class CredentialHelper
         catch (Exception ex)
         {
             _logger.Warn(ex, "Password protection unavailable.");
-
             return null;
         }
     }
@@ -58,7 +61,6 @@ public static class CredentialHelper
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to read the stored password.");
-
             return null;
         }
     }
@@ -93,7 +95,6 @@ public static class CredentialHelper
             lock (_sync)
             {
                 var store = Load();
-
                 if (store.Remove(server.Url))
                     Save(store);
             }
@@ -111,6 +112,7 @@ public static class CredentialHelper
             if (!File.Exists(_storePath))
                 return new Dictionary<string, string>(StringComparer.Ordinal);
 
+            RestrictFileToCurrentUser(_storePath);
             var json = File.ReadAllText(_storePath);
 
             if (string.IsNullOrWhiteSpace(json))
@@ -130,5 +132,24 @@ public static class CredentialHelper
     {
         Directory.CreateDirectory(Constants.SavePath);
         File.WriteAllText(_storePath, JsonSerializer.Serialize(store));
+        RestrictFileToCurrentUser(_storePath);
+    }
+
+    private static void RestrictDirectoryToCurrentUser(string path)
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        File.SetUnixFileMode(
+            path,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    }
+
+    private static void RestrictFileToCurrentUser(string path)
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
     }
 }
