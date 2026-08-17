@@ -37,4 +37,35 @@ var sanitized = "../../Bad/Server\\Name".ToValidDirectoryName();
 Assert(!sanitized.Contains('/') && !sanitized.Contains('\\') && sanitized is not "." and not "..",
     "Server names must be converted to safe single directory names.");
 
-Console.WriteLine("Launcher path safety smoke tests passed.");
+var protonConfig = Path.Combine(AppContext.BaseDirectory, "proton-path.txt");
+var graphicsConfig = Path.Combine(AppContext.BaseDirectory, "graphics-backend.txt");
+var fakeProton = Path.Combine(AppContext.BaseDirectory, "smoke-proton");
+try
+{
+    File.WriteAllText(fakeProton, "stub");
+    File.WriteAllText(protonConfig, fakeProton + Environment.NewLine);
+
+    File.WriteAllText(graphicsConfig, "wined3d\n");
+    _ = ProtonHelper.GetPath();
+    Assert(Environment.GetEnvironmentVariable("PROTON_USE_WINED3D") == "1",
+        "WineD3D selection must enable PROTON_USE_WINED3D for Proton child processes.");
+
+    File.WriteAllText(graphicsConfig, "dxvk\n");
+    _ = ProtonHelper.GetPath();
+    Assert(Environment.GetEnvironmentVariable("PROTON_USE_WINED3D") == "0",
+        "DXVK selection must explicitly disable PROTON_USE_WINED3D.");
+
+    File.Delete(graphicsConfig);
+    Environment.SetEnvironmentVariable("PROTON_USE_WINED3D", "1");
+    _ = ProtonHelper.GetPath();
+    Assert(Environment.GetEnvironmentVariable("PROTON_USE_WINED3D") == "0",
+        "Missing graphics configuration must default Sanctuary to DXVK rather than inheriting a parent-shell WineD3D override.");
+}
+finally
+{
+    File.Delete(graphicsConfig);
+    File.Delete(protonConfig);
+    File.Delete(fakeProton);
+}
+
+Console.WriteLine("Launcher path and graphics backend safety smoke tests passed.");

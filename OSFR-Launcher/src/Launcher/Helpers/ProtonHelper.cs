@@ -7,6 +7,7 @@ namespace Launcher.Helpers;
 public static class ProtonHelper
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+    private const string GraphicsBackendFileName = "graphics-backend.txt";
 
     public static string GetConfiguredPath(string fileName)
     {
@@ -47,6 +48,8 @@ public static class ProtonHelper
 
     public static string GetPath()
     {
+        ApplyConfiguredGraphicsBackend();
+
         var configured = GetConfiguredPath("proton-path.txt");
         if (File.Exists(configured))
             return configured;
@@ -57,5 +60,24 @@ public static class ProtonHelper
             Logger.Error("Sanctuary was launched without a configured Proton path. Re-run Sanctuary Linux Installer to repair the installation.");
 
         return string.Empty;
+    }
+
+    private static void ApplyConfiguredGraphicsBackend()
+    {
+        var backend = GetConfiguredPath(GraphicsBackendFileName).ToLowerInvariant();
+        if (backend == "wined3d")
+        {
+            Environment.SetEnvironmentVariable("PROTON_USE_WINED3D", "1");
+            Logger.Info("Using OpenGL WineD3D graphics backend for Proton.");
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(backend) && backend != "dxvk")
+            Logger.Warn("Unknown graphics backend '{backend}'. Falling back to DXVK/Vulkan.", backend);
+
+        // Explicitly disable WineD3D so a parent-shell environment override cannot
+        // silently replace the user's Sanctuary selection.
+        Environment.SetEnvironmentVariable("PROTON_USE_WINED3D", "0");
+        Logger.Info("Using Vulkan DXVK graphics backend for Proton.");
     }
 }

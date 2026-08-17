@@ -33,6 +33,9 @@ public partial class MainWindow : Window
         UpdateStepUi();
     }
 
+    private string SelectedGraphicsBackend =>
+        GraphicsBackendComboBox.SelectedIndex == 1 ? GraphicsBackendConfig.WineD3D : GraphicsBackendConfig.Dxvk;
+
     private void ApplyBranding()
     {
         try
@@ -178,6 +181,7 @@ public partial class MainWindow : Window
         SummaryInstallPath.Text = InstallPathBox.Text ?? InstallService.DefaultInstallRoot;
         SummarySteamPath.Text = _state.SteamRoot ?? "Not detected";
         SummaryProtonPath.Text = _state.ProtonPath ?? "Not detected";
+        SummaryGraphicsBackend.Text = GraphicsBackendConfig.DisplayName(SelectedGraphicsBackend);
     }
 
     private static void SetCheck(TextBlock control, bool ok, string text)
@@ -269,6 +273,14 @@ public partial class MainWindow : Window
         RefreshInstallUi();
     }
 
+    private void GraphicsBackendSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        InstallerLog.Info($"User selected graphics backend: {GraphicsBackendConfig.DisplayName(SelectedGraphicsBackend)}");
+        SummaryAcceptCheck.IsChecked = false;
+        RefreshSummary();
+        UpdateStepUi();
+    }
+
     private void InstallPathChanged(object? sender, TextChangedEventArgs e)
     {
         if (!_busy)
@@ -312,6 +324,7 @@ public partial class MainWindow : Window
     private async Task InstallAsync()
     {
         var selectedProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
+        var selectedGraphicsBackend = SelectedGraphicsBackend;
         RefreshState();
         ReapplyWindowIcon();
         if (selectedProton is not null && _state.ProtonCandidates?.FirstOrDefault(candidate => candidate.Path == selectedProton && candidate.Compatible) is { } selected)
@@ -338,6 +351,20 @@ public partial class MainWindow : Window
         try
         {
             await _installService.InstallAsync(InstallRoot, _state, progress);
+
+            try
+            {
+                GraphicsBackendConfig.Write(InstallRoot, selectedGraphicsBackend);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                InstallerLog.Error("Installation completed but graphics backend configuration failed", ex);
+                await ShowMessageAsync(
+                    "Graphics configuration failed",
+                    $"Sanctuary was installed, but the selected graphics backend could not be saved. The launcher was not started.\n\n{ex.Message}\n\nDiagnostics: {InstallerLog.LogPath}");
+                return;
+            }
+
             _installService.Launch(InstallRoot);
             ReapplyWindowIcon();
             shouldClose = CloseAfterInstallCheck.IsChecked == true;
@@ -405,6 +432,7 @@ public partial class MainWindow : Window
         CloseAfterInstallCheck.IsEnabled = !busy;
         SummaryAcceptCheck.IsEnabled = !busy;
         ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Any(candidate => candidate.Compatible) ?? false);
+        GraphicsBackendComboBox.IsEnabled = !busy;
         UpdateStepUi();
     }
 
