@@ -10,8 +10,6 @@ public sealed record InstallProgress(int Percent, string Message);
 public sealed class InstallService
 {
     private const string PayloadResource = "OSFR.Linux.Installer.Payload";
-    private const string OwnershipMarker = ".osfr-linux-install";
-    private const string LegacyInstallInfo = "install-info.txt";
     private const string DesktopFileName = "OSFR-Linux.desktop";
     private const string DesktopIconName = "osfr-linux";
 
@@ -43,7 +41,7 @@ public sealed class InstallService
     public static string? GetInstallDestinationError(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
-            return "Choose a dedicated folder for OSFR.";
+            return "Choose a dedicated folder for Sanctuary.";
 
         string installRoot;
         try
@@ -61,7 +59,7 @@ public sealed class InstallService
         if (string.Equals(installRoot, root, StringComparison.Ordinal) ||
             string.Equals(installRoot, home, StringComparison.Ordinal))
         {
-            return "Choose a dedicated OSFR folder instead of the filesystem root or your home folder.";
+            return "Choose a dedicated Sanctuary folder instead of the filesystem root or your home folder.";
         }
 
         if (File.Exists(installRoot))
@@ -76,7 +74,7 @@ public sealed class InstallService
         try
         {
             if (Directory.EnumerateFileSystemEntries(installRoot).Any())
-                return "This folder already contains files. Choose an empty folder or an existing OSFR installation.";
+                return "This folder already contains files. Choose an empty folder or an existing Sanctuary installation.";
         }
         catch (UnauthorizedAccessException)
         {
@@ -103,8 +101,8 @@ public sealed class InstallService
         IProgress<InstallProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (!state.Ready || state.SteamRoot is null || state.ProtonPath is null)
-            throw new InvalidOperationException("Linux, x86_64, Steam and Proton are required.");
+        if (!state.Ready || state.SteamRoot is null || state.ProtonPath is null || !state.ProtonCompatible)
+            throw new InvalidOperationException("Linux, x86_64, Steam and a compatible Proton runtime are required.");
 
         installRoot = NormalizeInstallRoot(installRoot);
         ValidateInstallDestination(installRoot);
@@ -119,11 +117,6 @@ public sealed class InstallService
             progress.Report(new(5, "Preparing installation..."));
             Directory.CreateDirectory(installRoot);
             RefuseSymbolicLink(installRoot, "installation folder");
-
-            await File.WriteAllTextAsync(
-                Path.Combine(installRoot, OwnershipMarker),
-                "Open Source Free Realms Linux Installer\n",
-                cancellationToken);
 
             Directory.CreateDirectory(prefixDir);
             RefuseSymbolicLink(prefixDir, "Proton prefix folder");
@@ -149,6 +142,31 @@ public sealed class InstallService
             await File.WriteAllTextAsync(Path.Combine(launcherDir, "steam-path.txt"), state.SteamRoot + Environment.NewLine, cancellationToken);
             await File.WriteAllTextAsync(Path.Combine(launcherDir, "prefix-path.txt"), prefixDir + Environment.NewLine, cancellationToken);
 
+            VerifyLauncher(launcherDir, launcher);
+
+            var info = $"""
+                       Sanctuary Linux Installation
+
+                       Launcher: {launcher}
+                       Steam: {state.SteamRoot}
+                       Proton: {state.ProtonPath}
+                       Proton Prefix: {prefixDir}
+                       """;
+            await File.WriteAllTextAsync(
+                Path.Combine(installRoot, InstallationOwnership.LegacyInstallInfoFileName),
+                info,
+                cancellationToken);
+
+            InstallationOwnership.Write(installRoot);
+            try
+            {
+                InstallerState.SaveInstallRoot(installRoot);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                InstallerLog.Warn($"Installation succeeded but the custom install location could not be remembered: {ex.Message}");
+            }
+
             progress.Report(new(70, "Creating desktop integration..."));
             await InstallDesktopIconAsync(cancellationToken);
             CreateDesktopEntries(launcher);
@@ -156,16 +174,8 @@ public sealed class InstallService
 
             progress.Report(new(85, "Verifying installation..."));
             VerifyLauncher(launcherDir, launcher);
-
-            var info = $"""
-                       OSFR Linux Installation
-
-                       Launcher: {launcher}
-                       Steam: {state.SteamRoot}
-                       Proton: {state.ProtonPath}
-                       Proton Prefix: {prefixDir}
-                       """;
-            await File.WriteAllTextAsync(Path.Combine(installRoot, LegacyInstallInfo), info, cancellationToken);
+            if (!InstallationOwnership.IsOwned(installRoot))
+                throw new InvalidOperationException("Installation ownership verification failed.");
 
             progress.Report(new(100, "Installation complete"));
             InstallerLog.Info("Installation completed successfully.");
@@ -199,12 +209,12 @@ public sealed class InstallService
             throw new InvalidOperationException("The selected installation folder is a symbolic link and will not be recursively deleted.");
 
         if (Directory.Exists(installRoot) && !IsOwnedInstallRoot(installRoot))
-            throw new InvalidOperationException("The selected folder is not recognized as an OSFR Linux installation, so it will not be deleted.");
+            throw new InvalidOperationException("The selected folder is not recognized as a Sanctuary Linux installation, so it will not be deleted.");
 
         return Task.Run(() =>
         {
             InstallerLog.Info($"Starting uninstall from {installRoot}");
-            progress.Report(new(10, "Preparing OSFR removal..."));
+            progress.Report(new(10, "Preparing Sanctuary removal..."));
 
             var home = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
             var targets = new[]
@@ -239,6 +249,7 @@ public sealed class InstallService
                 catch (FileNotFoundException) { }
             }
 
+            InstallerState.ClearInstallRoot(installRoot);
             RefreshDesktopIntegration();
             progress.Report(new(100, "Uninstallation complete"));
             InstallerLog.Info("Uninstallation completed successfully.");
@@ -303,19 +314,7 @@ public sealed class InstallService
             throw new InvalidOperationException(error);
     }
 
-    private static bool IsOwnedInstallRoot(string installRoot)
-    {
-        if (!Directory.Exists(installRoot) || IsSymbolicLink(installRoot))
-            return false;
-
-        var marker = Path.Combine(installRoot, OwnershipMarker);
-        if (File.Exists(marker) && !IsSymbolicLink(marker))
-            return true;
-
-        var info = Path.Combine(installRoot, LegacyInstallInfo);
-        var launcher = Path.Combine(installRoot, "Launcher", "OSFRLauncher");
-        return File.Exists(info) && !IsSymbolicLink(info) && File.Exists(launcher) && !IsSymbolicLink(launcher);
-    }
+    private static bool IsOwnedInstallRoot(string installRoot) => InstallationOwnership.IsOwned(installRoot);
 
     private static async Task ExtractLauncherPayloadAsync(string stagingDir, CancellationToken cancellationToken)
     {
