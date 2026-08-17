@@ -25,10 +25,55 @@ jobs:
         with:
           global-json-file: OSFR-Launcher/src/global.json
 
+      - name: Check NuGet dependencies for known vulnerabilities
+        run: |
+          set -euo pipefail
+          dotnet list src/Installer/Installer.csproj package --vulnerable --include-transitive --format json > /tmp/installer-vulnerabilities.json
+          dotnet list OSFR-Launcher/src/Launcher/Launcher.csproj package --vulnerable --include-transitive --format json > /tmp/launcher-vulnerabilities.json
+          python3 - <<'PY'
+          import json
+          import sys
+
+          files = [
+              "/tmp/installer-vulnerabilities.json",
+              "/tmp/launcher-vulnerabilities.json",
+          ]
+          findings = []
+
+          def walk(value, source):
+              if isinstance(value, dict):
+                  for key, child in value.items():
+                      if key.lower() == "vulnerabilities" and isinstance(child, list) and child:
+                          findings.append((source, child))
+                      walk(child, source)
+              elif isinstance(value, list):
+                  for child in value:
+                      walk(child, source)
+
+          for path in files:
+              with open(path, encoding="utf-8-sig") as handle:
+                  walk(json.load(handle), path)
+
+          if findings:
+              for source, items in findings:
+                  print(f"Known vulnerable NuGet dependencies reported in {source}:")
+                  print(json.dumps(items, indent=2))
+              sys.exit(1)
+
+          print("No known vulnerable NuGet dependencies reported.")
+          PY
+
       - name: Run installer safety smoke tests
         run: |
           set -euo pipefail
           dotnet run --project src/Installer.SmokeTests/Installer.SmokeTests.csproj -c Release
+
+      - name: Validate generated desktop entry
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils
+          desktop-file-validate "$HOME/.local/share/applications/OSFR-Linux.desktop"
 
       - name: Run launcher path safety smoke tests
         run: |
@@ -83,11 +128,28 @@ jobs:
           mv build/installer/Installer build/installer/OSFR-Linux-Installer
           chmod +x build/installer/OSFR-Linux-Installer
 
-      - name: Upload installer artifact
+      - name: Smoke test packaged installer
+        run: |
+          set -euo pipefail
+          build/installer/OSFR-Linux-Installer --diagnose | tee /tmp/osfr-diagnose.txt
+          build/installer/OSFR-Linux-Installer --dry-run | tee /tmp/osfr-dry-run.txt
+          grep -q "OSFR Linux Installer diagnostics" /tmp/osfr-diagnose.txt
+          grep -q "no files will be changed" /tmp/osfr-dry-run.txt
+
+      - name: Generate and verify SHA-256 checksum
+        run: |
+          set -euo pipefail
+          cd build/installer
+          sha256sum OSFR-Linux-Installer > OSFR-Linux-Installer.sha256
+          sha256sum -c OSFR-Linux-Installer.sha256
+
+      - name: Upload verified installer artifacts
         uses: actions/upload-artifact@v7
         with:
           name: OSFR-Linux-Installer-linux-x64
-          path: build/installer/OSFR-Linux-Installer
+          path: |
+            build/installer/OSFR-Linux-Installer
+            build/installer/OSFR-Linux-Installer.sha256
           if-no-files-found: error
 
   publish-prerelease:
@@ -101,11 +163,17 @@ jobs:
       - name: Checkout release metadata
         uses: actions/checkout@v6
 
-      - name: Download tested installer artifact
+      - name: Download tested installer artifacts
         uses: actions/download-artifact@v8
         with:
           name: OSFR-Linux-Installer-linux-x64
           path: build/installer
+
+      - name: Verify downloaded checksum
+        run: |
+          set -euo pipefail
+          cd build/installer
+          sha256sum -c OSFR-Linux-Installer.sha256
 
       - name: Publish versioned prerelease
         env:
@@ -116,24 +184,30 @@ jobs:
           test -n "$VERSION"
           TAG="v$VERSION"
           test -f build/installer/OSFR-Linux-Installer
+          test -f build/installer/OSFR-Linux-Installer.sha256
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists; refreshing its title and notes."
+            echo "Release $TAG already exists; refreshing its title, notes, and verified assets."
             gh release edit "$TAG" \
               --title "OSFR Linux Installer $TAG" \
               --notes-file RELEASE_NOTES.md \
               --prerelease
+            gh release upload "$TAG" \
+              build/installer/OSFR-Linux-Installer \
+              build/installer/OSFR-Linux-Installer.sha256 \
+              --clobber
           else
             gh release create "$TAG" \
               build/installer/OSFR-Linux-Installer \
+              build/installer/OSFR-Linux-Installer.sha256 \
               --target "$GITHUB_SHA" \
               --title "OSFR Linux Installer $TAG" \
               --notes-file RELEASE_NOTES.md \
               --prerelease
           fi
 
-          if [ "$VERSION" = "0.2.2-alpha" ]; then
-            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha; do
+          if [ "$VERSION" = "0.2.3-alpha" ]; then
+            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha v0.2.2-alpha; do
               if gh release view "$OLD_TAG" >/dev/null 2>&1; then
                 echo "Removing superseded release $OLD_TAG and its tag."
                 gh release delete "$OLD_TAG" --cleanup-tag --yes
