@@ -3,13 +3,18 @@ using System.Text.RegularExpressions;
 
 namespace OSFR.Linux.Installer.Services;
 
+public sealed record ProtonCandidate(string Name, string Path, bool Recommended = false);
+
 public sealed record SystemState(
     bool IsLinux,
     bool IsX64,
     string? SteamRoot,
-    string? ProtonPath)
+    string? ProtonPath,
+    IReadOnlyList<ProtonCandidate>? ProtonCandidates = null)
 {
     public bool Ready => IsLinux && IsX64 && SteamRoot is not null && ProtonPath is not null;
+
+    public SystemState WithProton(string protonPath) => this with { ProtonPath = protonPath };
 }
 
 public static class SystemDetector
@@ -20,15 +25,16 @@ public static class SystemDetector
         var isX64 = RuntimeInformation.OSArchitecture == Architecture.X64;
         var libraries = FindSteamLibraries().Distinct(StringComparer.Ordinal).ToList();
         var steamRoot = FindSteamRoots().FirstOrDefault(Directory.Exists);
-        var proton = FindProton(libraries);
+        var candidates = FindProtonCandidates(libraries);
+        var proton = candidates.FirstOrDefault()?.Path;
 
-        return new SystemState(isLinux, isX64, steamRoot, proton);
+        InstallerLog.Info($"System detection: Linux={isLinux}, x64={isX64}, Steam={(steamRoot ?? "not found")}, Proton={(proton ?? "not found")}");
+        return new SystemState(isLinux, isX64, steamRoot, proton, candidates);
     }
 
     public static IEnumerable<string> FindSteamRoots()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
         yield return Path.Combine(home, ".steam", "debian-installation");
         yield return Path.Combine(home, ".local", "share", "Steam");
         yield return Path.Combine(home, ".steam", "steam");
@@ -47,23 +53,46 @@ public static class SystemDetector
                 continue;
 
             string text;
-            try { text = File.ReadAllText(vdf); }
-            catch { continue; }
-
-            foreach (Match match in Regex.Matches(text, "\\\"path\\\"\\s+\\\"(?<path>[^\\\"]+)\\\""))
+            try
             {
-                var path = match.Groups["path"].Value.Replace("\\\\", "\\");
+                text = File.ReadAllText(vdf);
+            }
+            catch (IOException ex)
+            {
+                InstallerLog.Warn($"Could not read Steam library file {vdf}: {ex.Message}");
+                continue;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                InstallerLog.Warn($"Could not access Steam library file {vdf}: {ex.Message}");
+                continue;
+            }
+
+            foreach (var path in ParseSteamLibraryPaths(text))
+            {
                 if (Directory.Exists(path))
                     yield return path;
             }
         }
     }
 
-    private static string? FindProton(IEnumerable<string> libraries)
+    public static IEnumerable<string> ParseSteamLibraryPaths(string vdfText)
+    {
+        // Supports current nested libraryfolders.vdf entries and older top-level path entries.
+        foreach (Match match in Regex.Matches(vdfText, "\\\"path\\\"\\s+\\\"(?<path>[^\\\"]+)\\\"", RegexOptions.IgnoreCase))
+        {
+            var path = match.Groups["path"].Value.Replace("\\\\", "\\");
+            if (!string.IsNullOrWhiteSpace(path))
+                yield return path;
+        }
+    }
+
+    public static IReadOnlyList<ProtonCandidate> FindProtonCandidates(IEnumerable<string>? libraries = null)
     {
         var candidates = new List<string>();
+        var libraryList = (libraries ?? FindSteamLibraries()).Distinct(StringComparer.Ordinal).ToList();
 
-        foreach (var library in libraries)
+        foreach (var library in libraryList)
         {
             var common = Path.Combine(library, "steamapps", "common");
             if (!Directory.Exists(common))
@@ -78,7 +107,14 @@ public static class SystemDetector
                         candidates.Add(proton);
                 }
             }
-            catch { }
+            catch (IOException ex)
+            {
+                InstallerLog.Warn($"Could not enumerate Proton builds in {common}: {ex.Message}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                InstallerLog.Warn($"Could not access Proton builds in {common}: {ex.Message}");
+            }
         }
 
         foreach (var root in FindSteamRoots().Where(Directory.Exists))
@@ -92,10 +128,17 @@ public static class SystemDetector
                 foreach (var proton in Directory.EnumerateFiles(tools, "proton", SearchOption.AllDirectories))
                     candidates.Add(proton);
             }
-            catch { }
+            catch (IOException ex)
+            {
+                InstallerLog.Warn($"Could not enumerate compatibility tools in {tools}: {ex.Message}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                InstallerLog.Warn($"Could not access compatibility tools in {tools}: {ex.Message}");
+            }
         }
 
-        return candidates
+        var ordered = candidates
             .Distinct(StringComparer.Ordinal)
             .OrderByDescending(IsExperimental)
             .ThenByDescending(IsGeProton)
@@ -103,7 +146,9 @@ public static class SystemDetector
             .ThenByDescending(p => GetProtonVersion(p).Minor)
             .ThenByDescending(p => GetProtonVersion(p).Patch)
             .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
+            .ToList();
+
+        return ordered.Select((path, index) => new ProtonCandidate(GetProtonDirectoryName(path), path, index == 0)).ToList();
     }
 
     private static bool IsExperimental(string protonPath) =>
@@ -115,11 +160,7 @@ public static class SystemDetector
     private static (int Major, int Minor, int Patch) GetProtonVersion(string protonPath)
     {
         var name = GetProtonDirectoryName(protonPath);
-        var match = Regex.Match(
-            name,
-            @"(?:GE-Proton|Proton\s*-?\s*)(?<major>\d+)(?:[.-](?<minor>\d+))?(?:[.-](?<patch>\d+))?",
-            RegexOptions.IgnoreCase);
-
+        var match = Regex.Match(name, @"(?:GE-Proton|Proton\s*-?\s*)(?<major>\d+)(?:[.-](?<minor>\d+))?(?:[.-](?<patch>\d+))?", RegexOptions.IgnoreCase);
         if (!match.Success)
             return (0, 0, 0);
 
