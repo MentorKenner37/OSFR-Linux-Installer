@@ -22,27 +22,45 @@ Assert(!InstallService.IsSafeArchiveEntry("\\tmp\\escape"), "Rooted backslash pa
 Assert(InstallService.IsPathInside(Path.Combine(home, ".cache", "OSFR-Linux"), home), "Known OSFR data inside home must pass the home boundary check.");
 Assert(!InstallService.IsPathInside(Path.GetTempPath(), home), "Paths outside home must fail the home boundary check.");
 
-var vdf = """
-          "libraryfolders"
-          {
-              "0"
-              {
-                  "path" "/home/test/.local/share/Steam"
-              }
-              "1"
-              {
-                  "path" "/mnt/games/SteamLibrary"
-              }
-          }
-          """;
-var parsedLibraries = SystemDetector.ParseSteamLibraryPaths(vdf).ToList();
+var modernVdf = """
+                "libraryfolders"
+                {
+                    "0" { "path" "/home/test/.local/share/Steam" }
+                    "1" { "path" "/mnt/games/SteamLibrary" }
+                }
+                """;
+var parsedLibraries = SystemDetector.ParseSteamLibraryPaths(modernVdf).ToList();
 Assert(parsedLibraries.Count == 2, "Steam VDF parsing must find nested library path entries.");
 Assert(parsedLibraries[1] == "/mnt/games/SteamLibrary", "Steam VDF parsing must preserve custom library paths.");
+
+var legacyVdf = "\"1\" \"/mnt/legacy\"\n\"path\" \"/mnt/current\"";
+Assert(SystemDetector.ParseSteamLibraryPaths(legacyVdf).Single() == "/mnt/current", "Steam path parsing must ignore unrelated legacy numeric entries safely.");
 
 var ready = new SystemState(true, true, "/tmp/fake-steam", "/tmp/fake-proton");
 Assert(ready.Ready, "A complete Linux x64 Steam/Proton state should be ready.");
 var notReady = new SystemState(true, true, null, "/tmp/fake-proton");
 Assert(!notReady.Ready, "Steam is required for readiness.");
+
+var protonLibrary = Path.Combine(Path.GetTempPath(), $"osfr-proton-ranking-{Guid.NewGuid():N}");
+try
+{
+    foreach (var name in new[] { "Proton 9.0", "Proton 10.0", "Proton Experimental" })
+    {
+        var dir = Path.Combine(protonLibrary, "steamapps", "common", name);
+        Directory.CreateDirectory(dir);
+        await File.WriteAllTextAsync(Path.Combine(dir, "proton"), string.Empty);
+    }
+
+    var candidates = SystemDetector.FindProtonCandidates([protonLibrary]);
+    Assert(candidates.Count >= 3, "Proton discovery must find available builds.");
+    Assert(candidates[0].Name.Contains("Experimental", StringComparison.OrdinalIgnoreCase), "Proton Experimental must remain the default recommendation when installed.");
+    Assert(candidates.Any(p => p.Name == "Proton 10.0"), "Proton 10.0 must be exposed as a selectable candidate.");
+}
+finally
+{
+    if (Directory.Exists(protonLibrary))
+        Directory.Delete(protonLibrary, true);
+}
 
 var service = new InstallService();
 var tempRoot = Path.Combine(Path.GetTempPath(), $"osfr-installer-smoke-{Guid.NewGuid():N}");
@@ -88,6 +106,7 @@ if (OperatingSystem.IsLinux())
         Directory.CreateSymbolicLink(link, external);
         Assert(InstallService.IsSymbolicLink(link), "Installer must recognize directory symbolic links.");
         Assert(InstallService.GetInstallDestinationError(link) is not null, "Symbolic links must not be accepted as install roots.");
+        Assert(File.Exists(outsideSentinel), "Symlink validation must not alter the target directory.");
     }
     finally
     {
