@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="OSFR.Linux.Installer.MainWindow"
+        Title="Open Source Free Realms - Linux Installer"
+        Width="980" Height="680" MinWidth="820" MinHeight="580"
+        Background="#080D18">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="38">
+    <Border Grid.Row="0" Background="#18243A" CornerRadius="12" Padding="24" Margin="0,0,0,18">
+      <StackPanel Spacing="7">
+        <TextBlock Text="WELCOME BACK TO FREE REALMS" FontSize="25" FontWeight="Bold" Foreground="#F5F7FB" />
+        <TextBlock Text="Proton-powered Open Source Free Realms for Linux" Foreground="#91A0B8" />
+        <TextBlock x:Name="HeroStatus" Text="Checking system..." FontWeight="Bold" Foreground="#45D483" Margin="0,8,0,0" />
+      </StackPanel>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8" Margin="0,0,0,18">
+      <Border Grid.Row="0" Grid.Column="0" Background="#111A2B" CornerRadius="8" Padding="14"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="Linux operating system" Foreground="#F5F7FB"/><TextBlock x:Name="LinuxStatus" Grid.Column="1" FontWeight="Bold"/></Grid></Border>
+      <Border Grid.Row="0" Grid.Column="1" Background="#111A2B" CornerRadius="8" Padding="14"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="x86_64 processor" Foreground="#F5F7FB"/><TextBlock x:Name="CpuStatus" Grid.Column="1" FontWeight="Bold"/></Grid></Border>
+      <Border Grid.Row="1" Grid.Column="0" Background="#111A2B" CornerRadius="8" Padding="14"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="Steam installation" Foreground="#F5F7FB"/><TextBlock x:Name="SteamStatus" Grid.Column="1" FontWeight="Bold"/></Grid></Border>
+      <Border Grid.Row="1" Grid.Column="1" Background="#111A2B" CornerRadius="8" Padding="14"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="Steam Proton" Foreground="#F5F7FB"/><TextBlock x:Name="ProtonStatus" Grid.Column="1" FontWeight="Bold"/></Grid></Border>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Spacing="6" Margin="0,0,0,16">
+      <TextBlock Text="INSTALLATION LOCATION" FontWeight="Bold" Foreground="#91A0B8" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBox x:Name="InstallPathBox" Grid.Column="0" />
+        <Button Grid.Column="1" Content="BROWSE" Click="BrowseClicked" Padding="18,10" />
+      </Grid>
+    </StackPanel>
+
+    <StackPanel Grid.Row="3" Spacing="8">
+      <TextBlock x:Name="StatusText" Text="Ready" Foreground="#91A0B8" />
+      <ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="12" />
+      <TextBlock x:Name="ProgressText" Text="Ready" Foreground="#91A0B8" FontSize="12" />
+    </StackPanel>
+
+    <TextBlock Grid.Row="4" x:Name="DetailText" Foreground="#91A0B8" TextWrapping="Wrap" Margin="0,16,0,0" />
+
+    <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto" Margin="0,24,0,0">
+      <Button x:Name="ActionButton" Grid.Column="0" Content="INSTALL" Click="ActionClicked" Padding="34,13" FontWeight="Bold" />
+      <Button Grid.Column="2" Content="CLOSE INSTALLER" Click="CloseClicked" Padding="24,13" />
+    </Grid>
+  </Grid>
+</Window>
