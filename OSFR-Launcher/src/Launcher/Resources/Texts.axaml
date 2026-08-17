@@ -17,13 +17,8 @@
   <!-- Main Window -->
   <x:String x:Key="Text.Servers" xml:space="preserve">Server List</x:String>
   <x:String x:Key="Text.Title" xml:space="preserve">OSFR Launcher</x:String>
-  <x:String x:Key="Text.Main.Relaunching" xml:space="preserve">Relaunching...</x:String>
-  <x:String x:Key="Text.Main.NoUpdatesFound" xml:space="preserve">No Updates Found! Launcher is up-to-date.</x:String>
-  <x:String x:Key="Text.Main.Downloading" xml:space="preserve">>Downloading Update {0}... ({1}%)</x:String>
-  <x:String x:Key="Text.Main.CheckingForUpdates" xml:space="preserve">Checking For Updates...</x:String>
-  <x:String x:Key="Text.Main.UpdateError" xml:space="preserve">Error checking for updates.</x:String>
-  <x:String x:Key="Text.Main.CheckingForUpdatesToolTip" xml:space="preserve">Check For Updates</x:String>
   <x:String x:Key="Text.Main.Error" xml:space="preserve">Oops :( We hit a roadblock...</x:String>
+  <x:String x:Key="Text.Main.Info" xml:space="preserve">Information</x:String>
   <x:String x:Key="Text.Main.AddServer" xml:space="preserve">Add Server</x:String>
 
   <!-- Server Window -->
