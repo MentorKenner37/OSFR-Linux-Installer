@@ -101,7 +101,7 @@
             <StackPanel x:Name="SummaryPanel" IsVisible="False" Spacing="20">
               <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Review the detected environment and selected options before installation begins." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
               <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
-              <CheckBox x:Name="SummaryAcceptCheck" Content="I accept these installation settings and want to continue" IsChecked="False" Checked="SummaryAcceptanceChanged" Unchecked="SummaryAcceptanceChanged"/>
+              <CheckBox x:Name="SummaryAcceptCheck" Content="I accept these installation settings and want to continue" IsChecked="False" Click="SummaryAcceptanceChanged"/>
             </StackPanel>
 
             <StackPanel x:Name="InstallPanel" IsVisible="False" Spacing="20">
