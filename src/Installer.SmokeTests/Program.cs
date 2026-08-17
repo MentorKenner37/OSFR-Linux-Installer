@@ -12,6 +12,7 @@ var normalized = InstallService.NormalizeInstallRoot("~/OSFR-Smoke-Test");
 Assert(normalized == Path.GetFullPath(Path.Combine(home, "OSFR-Smoke-Test")), "Tilde install paths must resolve under the user home directory.");
 Assert(InstallService.GetInstallDestinationError(home) is not null, "The home directory must not be accepted as an install root.");
 Assert(InstallService.GetInstallDestinationError(Path.GetPathRoot(home)!) is not null, "The filesystem root must not be accepted as an install root.");
+Assert(InstallService.IsPathInside(InstallService.DesktopIconPath, home), "The installed application icon must stay inside the user home directory.");
 
 Assert(InstallService.IsSafeArchiveEntry("OSFRLauncher"), "Normal archive entries must be accepted.");
 Assert(InstallService.IsSafeArchiveEntry("runtimes/linux-x64/native/libSkiaSharp.so"), "Nested archive entries must be accepted.");
@@ -45,23 +46,23 @@ Assert(!notReady.Ready, "Steam is required for readiness.");
 var protonLibrary = Path.Combine(Path.GetTempPath(), $"osfr-proton-ranking-{Guid.NewGuid():N}");
 try
 {
-    foreach (var name in new[] { "Proton 9.0", "Proton 10.0", "Proton Experimental", "Custom Proton Build" })
+    foreach (var name in new[] { "Proton 9.0", "Proton 10.0", "Proton Experimental", "Custom-Proton-Build" })
     {
         var dir = Path.Combine(protonLibrary, "steamapps", "common", name);
         Directory.CreateDirectory(dir);
         await File.WriteAllTextAsync(Path.Combine(dir, "proton"), string.Empty);
     }
 
-    var geDir = Path.Combine(protonLibrary, "compatibilitytools.d", "GE-Proton10-30");
-    Directory.CreateDirectory(geDir);
-    await File.WriteAllTextAsync(Path.Combine(geDir, "proton"), string.Empty);
+    var toolsDir = Path.Combine(protonLibrary, "compatibilitytools.d", "GE-Proton10-30");
+    Directory.CreateDirectory(toolsDir);
+    await File.WriteAllTextAsync(Path.Combine(toolsDir, "proton"), string.Empty);
 
     var candidates = SystemDetector.FindProtonCandidates([protonLibrary]);
-    Assert(candidates.Count >= 5, "Proton discovery must expose official, custom-named, and compatibility-tool builds.");
+    Assert(candidates.Count >= 5, "Proton discovery must find standard, custom-named, and compatibility-tool builds.");
     Assert(candidates[0].Name.Contains("Experimental", StringComparison.OrdinalIgnoreCase), "Proton Experimental must remain the default recommendation when installed.");
     Assert(candidates.Any(p => p.Name == "Proton 10.0"), "Proton 10.0 must be exposed as a selectable candidate.");
-    Assert(candidates.Any(p => p.Name == "Custom Proton Build"), "Custom-named Steam compatibility builds with a proton launcher must be selectable.");
-    Assert(candidates.Any(p => p.Name == "GE-Proton10-30"), "GE-Proton compatibility-tool builds must be selectable.");
+    Assert(candidates.Any(p => p.Name == "Custom-Proton-Build"), "Custom-named Steam compatibility tools with a proton launcher must be exposed.");
+    Assert(candidates.Any(p => p.Name == "GE-Proton10-30"), "GE-Proton compatibility tools must be exposed.");
 }
 finally
 {
@@ -131,9 +132,13 @@ if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringCompar
     var createDesktopEntries = typeof(InstallService).GetMethod("CreateDesktopEntries", BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException("Could not locate desktop-entry generator for validation.");
 
-    createDesktopEntries.Invoke(null, ["/tmp/OSFR Test/OSFRLauncher", "/tmp/OSFR Test/OSFRLauncher.png"]);
+    createDesktopEntries.Invoke(null, ["/tmp/OSFR Test/OSFRLauncher"]);
     var generatedDesktop = Path.Combine(home, ".local", "share", "applications", "OSFR-Linux.desktop");
     Assert(File.Exists(generatedDesktop), "CI desktop-entry generation must produce an application-menu entry.");
+
+    var desktopText = await File.ReadAllTextAsync(generatedDesktop);
+    Assert(desktopText.Contains("Icon=osfr-linux", StringComparison.Ordinal), "Desktop entry must use the stable icon-theme name.");
+    Assert(desktopText.Contains("StartupWMClass=OSFRLauncher", StringComparison.Ordinal), "Desktop entry must declare the launcher window class for taskbar grouping.");
     Console.WriteLine($"Generated desktop entry: {generatedDesktop}");
 }
 
