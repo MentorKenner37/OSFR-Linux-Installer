@@ -6,7 +6,7 @@
     <InformationalVersion>1.0.0-alpha.1</InformationalVersion>
     <Authors>MentorKenner</Authors>
     <Product>Sanctuary Linux Installer</Product>
-    <RepositoryUrl>https://github.com/MentorKenner37/Sanctuary-Linux-Launcher</RepositoryUrl>
+    <RepositoryUrl>https://github.com/MentorKenner37/OSFR-Linux-Installer</RepositoryUrl>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 </Project>
