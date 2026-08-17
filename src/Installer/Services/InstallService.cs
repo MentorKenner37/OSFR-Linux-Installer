@@ -60,6 +60,9 @@ public sealed class InstallService
         if (File.Exists(installRoot))
             return "The selected path is a file. Choose a folder instead.";
 
+        if (IsSymbolicLink(installRoot))
+            return "The installation folder cannot be a symbolic link.";
+
         if (!Directory.Exists(installRoot) || IsOwnedInstallRoot(installRoot))
             return null;
 
@@ -98,56 +101,83 @@ public sealed class InstallService
 
         installRoot = NormalizeInstallRoot(installRoot);
         ValidateInstallDestination(installRoot);
+        InstallerLog.Info($"Starting installation to {installRoot} using Proton {state.ProtonPath}");
 
         var launcherDir = Path.Combine(installRoot, "Launcher");
         var prefixDir = Path.Combine(installRoot, "ProtonPrefix");
+        var stagingDir = Path.Combine(installRoot, $".launcher-staging-{Guid.NewGuid():N}");
 
-        progress.Report(new(5, "Preparing installation..."));
-        Directory.CreateDirectory(installRoot);
+        try
+        {
+            progress.Report(new(5, "Preparing installation..."));
+            Directory.CreateDirectory(installRoot);
+            RefuseSymbolicLink(installRoot, "installation folder");
 
-        await File.WriteAllTextAsync(
-            Path.Combine(installRoot, OwnershipMarker),
-            "Open Source Free Realms Linux Installer\n",
-            cancellationToken);
+            await File.WriteAllTextAsync(
+                Path.Combine(installRoot, OwnershipMarker),
+                "Open Source Free Realms Linux Installer\n",
+                cancellationToken);
 
-        Directory.CreateDirectory(prefixDir);
+            Directory.CreateDirectory(prefixDir);
+            RefuseSymbolicLink(prefixDir, "Proton prefix folder");
 
-        if (Directory.Exists(launcherDir))
-            Directory.Delete(launcherDir, true);
-        Directory.CreateDirectory(launcherDir);
+            progress.Report(new(15, "Extracting OSFR Launcher..."));
+            Directory.CreateDirectory(stagingDir);
+            await ExtractLauncherPayloadAsync(stagingDir, cancellationToken);
 
-        progress.Report(new(15, "Extracting OSFR Launcher..."));
-        await ExtractLauncherPayloadAsync(launcherDir, cancellationToken);
+            var stagedLauncher = Path.Combine(stagingDir, "OSFRLauncher");
+            if (!File.Exists(stagedLauncher))
+                throw new InvalidDataException("The embedded launcher payload did not contain OSFRLauncher.");
+            EnsureExecutable(stagedLauncher, "OSFR Launcher");
+            VerifyLauncher(stagingDir, stagedLauncher);
 
-        var launcher = Path.Combine(launcherDir, "OSFRLauncher");
-        if (!File.Exists(launcher))
-            throw new InvalidDataException("The embedded launcher payload did not contain OSFRLauncher.");
+            if (Directory.Exists(launcherDir) || IsSymbolicLink(launcherDir))
+                DeleteDirectoryTreeNoFollow(launcherDir);
+            Directory.Move(stagingDir, launcherDir);
 
-        EnsureExecutable(launcher, "OSFR Launcher");
+            var launcher = Path.Combine(launcherDir, "OSFRLauncher");
 
-        progress.Report(new(55, "Configuring Steam Proton..."));
-        await File.WriteAllTextAsync(Path.Combine(launcherDir, "proton-path.txt"), state.ProtonPath + Environment.NewLine, cancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(launcherDir, "steam-path.txt"), state.SteamRoot + Environment.NewLine, cancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(launcherDir, "prefix-path.txt"), prefixDir + Environment.NewLine, cancellationToken);
+            progress.Report(new(55, "Configuring Steam Proton..."));
+            await File.WriteAllTextAsync(Path.Combine(launcherDir, "proton-path.txt"), state.ProtonPath + Environment.NewLine, cancellationToken);
+            await File.WriteAllTextAsync(Path.Combine(launcherDir, "steam-path.txt"), state.SteamRoot + Environment.NewLine, cancellationToken);
+            await File.WriteAllTextAsync(Path.Combine(launcherDir, "prefix-path.txt"), prefixDir + Environment.NewLine, cancellationToken);
 
-        progress.Report(new(70, "Creating desktop integration..."));
-        var iconPath = await ExtractIconAsync(launcherDir, cancellationToken);
-        CreateDesktopEntries(launcher, iconPath);
+            progress.Report(new(70, "Creating desktop integration..."));
+            var iconPath = await ExtractIconAsync(launcherDir, cancellationToken);
+            CreateDesktopEntries(launcher, iconPath);
 
-        progress.Report(new(85, "Verifying installation..."));
-        VerifyLauncher(launcherDir, launcher);
+            progress.Report(new(85, "Verifying installation..."));
+            VerifyLauncher(launcherDir, launcher);
 
-        var info = $"""
-                   OSFR Linux Installation
+            var info = $"""
+                       OSFR Linux Installation
 
-                   Launcher: {launcher}
-                   Steam: {state.SteamRoot}
-                   Proton: {state.ProtonPath}
-                   Proton Prefix: {prefixDir}
-                   """;
-        await File.WriteAllTextAsync(Path.Combine(installRoot, LegacyInstallInfo), info, cancellationToken);
+                       Launcher: {launcher}
+                       Steam: {state.SteamRoot}
+                       Proton: {state.ProtonPath}
+                       Proton Prefix: {prefixDir}
+                       """;
+            await File.WriteAllTextAsync(Path.Combine(installRoot, LegacyInstallInfo), info, cancellationToken);
 
-        progress.Report(new(100, "Installation complete"));
+            progress.Report(new(100, "Installation complete"));
+            InstallerLog.Info("Installation completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            InstallerLog.Error("Installation failed", ex);
+            throw;
+        }
+        finally
+        {
+            if (Directory.Exists(stagingDir) || IsSymbolicLink(stagingDir))
+            {
+                try { DeleteDirectoryTreeNoFollow(stagingDir); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    InstallerLog.Warn($"Could not remove temporary staging directory {stagingDir}: {ex.Message}");
+                }
+            }
+        }
     }
 
     public Task UninstallAsync(
@@ -157,26 +187,26 @@ public sealed class InstallService
     {
         installRoot = NormalizeInstallRoot(installRoot);
 
+        if (IsSymbolicLink(installRoot))
+            throw new InvalidOperationException("The selected installation folder is a symbolic link and will not be recursively deleted.");
+
         if (Directory.Exists(installRoot) && !IsOwnedInstallRoot(installRoot))
-        {
-            throw new InvalidOperationException(
-                "The selected folder is not recognized as an OSFR Linux installation, so it will not be deleted.");
-        }
+            throw new InvalidOperationException("The selected folder is not recognized as an OSFR Linux installation, so it will not be deleted.");
 
         return Task.Run(() =>
         {
-            progress.Report(new(10, "Stopping OSFR processes..."));
-            StopProcesses();
+            InstallerLog.Info($"Starting uninstall from {installRoot}");
+            progress.Report(new(10, "Preparing OSFR removal..."));
 
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var home = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
             var targets = new[]
             {
-                installRoot,
-                LauncherDataRoot,
-                Path.Combine(home, ".cache", "OSFRLauncher"),
-                Path.Combine(home, ".cache", "OSFR-Linux"),
-                Path.Combine(home, ".local", "share", "applications", "OSFR-Linux.desktop"),
-                Path.Combine(home, "Desktop", "OSFR-Linux.desktop")
+                (Path: installRoot, RequireHome: false),
+                (Path: LauncherDataRoot, RequireHome: true),
+                (Path: Path.Combine(home, ".cache", "OSFRLauncher"), RequireHome: true),
+                (Path: Path.Combine(home, ".cache", "OSFR-Linux"), RequireHome: true),
+                (Path: Path.Combine(home, ".local", "share", "applications", "OSFR-Linux.desktop"), RequireHome: true),
+                (Path: Path.Combine(home, "Desktop", "OSFR-Linux.desktop"), RequireHome: true)
             };
 
             for (var i = 0; i < targets.Length; i++)
@@ -184,20 +214,24 @@ public sealed class InstallService
                 cancellationToken.ThrowIfCancellationRequested();
                 var target = targets[i];
                 var percent = 20 + (int)(70.0 * (i + 1) / targets.Length);
-                progress.Report(new(percent, $"Removing {Path.GetFileName(target)}..."));
+                progress.Report(new(percent, $"Removing {Path.GetFileName(target.Path)}..."));
+
+                if (target.RequireHome && !IsPathInside(target.Path, home))
+                    throw new InvalidOperationException($"Refusing to delete a path outside the user home directory: {target.Path}");
 
                 try
                 {
-                    if (Directory.Exists(target))
-                        Directory.Delete(target, true);
-                    else if (File.Exists(target))
-                        File.Delete(target);
+                    if (Directory.Exists(target.Path) || IsSymbolicLink(target.Path))
+                        DeleteDirectoryTreeNoFollow(target.Path);
+                    else if (File.Exists(target.Path))
+                        File.Delete(target.Path);
                 }
                 catch (DirectoryNotFoundException) { }
                 catch (FileNotFoundException) { }
             }
 
             progress.Report(new(100, "Uninstallation complete"));
+            InstallerLog.Info("Uninstallation completed successfully.");
         }, cancellationToken);
     }
 
@@ -207,13 +241,49 @@ public sealed class InstallService
         var launcher = Path.Combine(installRoot, "Launcher", "OSFRLauncher");
         if (!File.Exists(launcher))
             throw new FileNotFoundException("OSFRLauncher was not found.", launcher);
+        RefuseSymbolicLink(launcher, "OSFR Launcher executable");
 
+        InstallerLog.Info($"Launching OSFR Launcher from {launcher}");
         Process.Start(new ProcessStartInfo
         {
             FileName = launcher,
             WorkingDirectory = Path.GetDirectoryName(launcher)!,
             UseShellExecute = false
         });
+    }
+
+    public static bool IsPathInside(string path, string parent)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullParent = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return fullPath.StartsWith(fullParent, StringComparison.Ordinal);
+    }
+
+    public static bool IsSymbolicLink(string path)
+    {
+        try
+        {
+            FileSystemInfo info = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
+            return info.Exists && (info.LinkTarget is not null || info.Attributes.HasFlag(FileAttributes.ReparsePoint));
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    public static bool IsSafeArchiveEntry(string entryName)
+    {
+        if (string.IsNullOrWhiteSpace(entryName) || Path.IsPathRooted(entryName) || entryName.StartsWith('/', StringComparison.Ordinal) || entryName.StartsWith('\\'))
+            return false;
+
+        var normalized = entryName.Replace('\\', '/');
+        return normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .All(segment => segment is not "." and not "..");
     }
 
     private static void ValidateInstallDestination(string installRoot)
@@ -225,41 +295,55 @@ public sealed class InstallService
 
     private static bool IsOwnedInstallRoot(string installRoot)
     {
-        if (!Directory.Exists(installRoot))
+        if (!Directory.Exists(installRoot) || IsSymbolicLink(installRoot))
             return false;
 
-        if (File.Exists(Path.Combine(installRoot, OwnershipMarker)))
+        var marker = Path.Combine(installRoot, OwnershipMarker);
+        if (File.Exists(marker) && !IsSymbolicLink(marker))
             return true;
 
-        return File.Exists(Path.Combine(installRoot, LegacyInstallInfo)) &&
-               File.Exists(Path.Combine(installRoot, "Launcher", "OSFRLauncher"));
+        var info = Path.Combine(installRoot, LegacyInstallInfo);
+        var launcher = Path.Combine(installRoot, "Launcher", "OSFRLauncher");
+        return File.Exists(info) && !IsSymbolicLink(info) && File.Exists(launcher) && !IsSymbolicLink(launcher);
     }
 
-    private static async Task ExtractLauncherPayloadAsync(string launcherDir, CancellationToken cancellationToken)
+    private static async Task ExtractLauncherPayloadAsync(string stagingDir, CancellationToken cancellationToken)
     {
         var assembly = Assembly.GetExecutingAssembly();
         await using var payload = assembly.GetManifestResourceStream(PayloadResource)
-            ?? throw new InvalidOperationException(
-                "This installer build does not contain the launcher payload. Download a packaged GitHub Release build.");
+            ?? throw new InvalidOperationException("This installer build does not contain the launcher payload. Download the packaged installer from this repository's GitHub Releases page.");
 
         using var archive = new ZipArchive(payload, ZipArchiveMode.Read, leaveOpen: false);
+        var root = Path.GetFullPath(stagingDir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
         foreach (var entry in archive.Entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var destination = Path.GetFullPath(Path.Combine(launcherDir, entry.FullName));
-            var root = Path.GetFullPath(launcherDir) + Path.DirectorySeparatorChar;
+            if (!IsSafeArchiveEntry(entry.FullName))
+                throw new InvalidDataException($"Unsafe path in launcher payload: {entry.FullName}");
+
+            // Unix file-type bits are stored in the high 16 bits. 0xA000 denotes a symbolic link.
+            var unixType = (entry.ExternalAttributes >> 16) & 0xF000;
+            if (unixType == 0xA000)
+                throw new InvalidDataException($"Symbolic links are not allowed in the launcher payload: {entry.FullName}");
+
+            var destination = Path.GetFullPath(Path.Combine(stagingDir, entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
             if (!destination.StartsWith(root, StringComparison.Ordinal))
                 throw new InvalidDataException("Invalid path in launcher payload.");
 
             if (string.IsNullOrEmpty(entry.Name))
             {
                 Directory.CreateDirectory(destination);
+                RefuseSymbolicLink(destination, "launcher payload directory");
                 continue;
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            var parent = Path.GetDirectoryName(destination)!;
+            Directory.CreateDirectory(parent);
+            RefuseSymbolicLink(parent, "launcher payload directory");
+
             await using var source = entry.Open();
-            await using var output = File.Create(destination);
+            await using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
             await source.CopyToAsync(output, cancellationToken);
         }
     }
@@ -272,7 +356,7 @@ public sealed class InstallService
         if (stream is null)
             return iconPath;
 
-        await using var output = File.Create(iconPath);
+        await using var output = new FileStream(iconPath, FileMode.Create, FileAccess.Write, FileShare.None);
         await stream.CopyToAsync(output, cancellationToken);
         return iconPath;
     }
@@ -282,6 +366,7 @@ public sealed class InstallService
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var applications = Path.Combine(home, ".local", "share", "applications");
         Directory.CreateDirectory(applications);
+        RefuseSymbolicLink(applications, "applications directory");
 
         var desktopEntry = $"""
                            [Desktop Entry]
@@ -300,7 +385,7 @@ public sealed class InstallService
         EnsureExecutable(applicationFile, "application-menu shortcut");
 
         var desktop = Path.Combine(home, "Desktop");
-        if (Directory.Exists(desktop))
+        if (Directory.Exists(desktop) && !IsSymbolicLink(desktop))
         {
             var desktopFile = Path.Combine(desktop, "OSFR-Linux.desktop");
             File.WriteAllText(desktopFile, desktopEntry);
@@ -316,7 +401,6 @@ public sealed class InstallService
             .Replace("`", "\\`")
             .Replace("$", "\\$")
             .Replace("%", "%%");
-
         return $"\"{escaped}\"";
     }
 
@@ -336,49 +420,69 @@ public sealed class InstallService
             var mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
                        UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
                        UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
-
             File.SetUnixFileMode(path, mode);
             var actual = File.GetUnixFileMode(path);
             if ((actual & UnixFileMode.UserExecute) == 0)
                 throw new IOException("The execute permission was not applied.");
         }
-        catch (Exception ex)
+        catch (UnauthorizedAccessException ex)
         {
-            throw new InvalidOperationException(
-                $"The installer could not make the {description} executable: {path}", ex);
+            throw new InvalidOperationException($"The installer could not make the {description} executable. Check permissions for {path}.", ex);
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException($"The installer could not make the {description} executable. The filesystem may not support Unix execute permissions; use a local Linux filesystem or adjust its mount options. Path: {path}", ex);
         }
     }
 
     private static void VerifyLauncher(string launcherDir, string launcher)
     {
-        if (!File.Exists(launcher))
+        if (!File.Exists(launcher) || IsSymbolicLink(launcher))
             throw new FileNotFoundException("Launcher verification failed.", launcher);
 
-        if (OperatingSystem.IsLinux() &&
-            (File.GetUnixFileMode(launcher) & UnixFileMode.UserExecute) == 0)
-        {
+        if (OperatingSystem.IsLinux() && (File.GetUnixFileMode(launcher) & UnixFileMode.UserExecute) == 0)
             throw new InvalidOperationException("Launcher verification failed because OSFRLauncher is not executable.");
-        }
 
         var skia = Path.Combine(launcherDir, "libSkiaSharp.so");
-        if (!File.Exists(skia))
+        if (!File.Exists(skia) || IsSymbolicLink(skia))
             throw new FileNotFoundException("Linux x64 libSkiaSharp.so is missing from the launcher payload.", skia);
     }
 
-    private static void StopProcesses()
+    private static void RefuseSymbolicLink(string path, string description)
     {
-        foreach (var name in new[] { "OSFRLauncher", "FreeRealms", "FreeRealms.exe" })
+        if (IsSymbolicLink(path))
+            throw new InvalidOperationException($"Refusing to use a symbolic link as the {description}: {path}");
+    }
+
+    private static void DeleteDirectoryTreeNoFollow(string path)
+    {
+        if (!Directory.Exists(path) && !IsSymbolicLink(path))
+            return;
+
+        var rootInfo = new DirectoryInfo(path);
+        if (rootInfo.LinkTarget is not null || rootInfo.Attributes.HasFlag(FileAttributes.ReparsePoint))
         {
-            try
-            {
-                foreach (var process in Process.GetProcessesByName(name))
-                {
-                    try { process.Kill(entireProcessTree: true); }
-                    catch { }
-                    finally { process.Dispose(); }
-                }
-            }
-            catch { }
+            rootInfo.Delete(false);
+            return;
         }
+
+        foreach (var entry in rootInfo.EnumerateFileSystemInfos())
+        {
+            if (entry.LinkTarget is not null || entry.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                if (entry is DirectoryInfo linkDirectory)
+                    linkDirectory.Delete(false);
+                else
+                    entry.Delete();
+                continue;
+            }
+
+            if (entry is DirectoryInfo directory)
+                DeleteDirectoryTreeNoFollow(directory.FullName);
+            else
+                entry.Delete();
+        }
+
+        rootInfo.Delete(false);
     }
 }
