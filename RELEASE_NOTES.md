@@ -1,26 +1,25 @@
-# OSFR Linux Installer v0.2.1-alpha
+# OSFR Linux Installer v0.2.2-alpha
 
-This alpha focuses on portability, safety, cleanup, and a more polished Linux installation experience.
+This alpha is a security, robustness, and diagnostics hardening release.
 
 ## Highlights
 
-- Refreshed professional dark installer interface with restrained gaming-inspired styling.
-- Pure C# / Avalonia installer; no Python or Bash installer runtime is required.
-- Self-contained Linux x64 distribution.
-- Native and Flatpak Steam detection, including both common Flatpak data paths.
-- Proton Experimental, standard Proton, custom Steam-library, and GE-Proton discovery with version-aware selection.
-- Dedicated Proton prefix and explicit Steam/Proton path handoff to the launcher.
-- Linux-only launcher path cleaned of obsolete Wine, Windows, macOS, DirectX, and Velopack updater code.
-- Removed unused packages, platform binaries, build scripts, workflows, and stale documentation.
-- Safer custom installation folders: unrelated non-empty directories are rejected.
-- Uninstall refuses to recursively delete a directory unless it can verify that the directory belongs to OSFR.
-- Hardened server/client filesystem boundaries against path traversal from manifests or tampered settings.
-- Session IDs are no longer written to launcher logs.
-- Remembered-password storage uses current-user-only permissions on Linux.
-- Desktop launcher paths are safely quoted for custom install locations.
-- Added installer and launcher path-safety smoke tests to CI.
-- GitHub Actions build/test jobs use read-only repository permissions; write access is isolated to release publishing.
-- Added an optional, enabled-by-default close-after-success setting in the installer.
+- Added a Proton version selector while keeping the recommended detected build selected by default.
+- Added `--diagnose` and `--dry-run` command-line modes.
+- Added a per-user installer log at `~/.local/share/OSFR-Linux/installer.log`.
+- Replaced silent Steam/Proton detection failures with targeted error handling and diagnostics.
+- Improved Steam library parsing and added coverage for custom library paths.
+- Added version-aware Proton candidate testing and manual Proton override support.
+- Rejects symbolic links as installation roots and critical launcher paths.
+- Stages launcher extraction and verifies it before replacing an existing launcher.
+- Rejects rooted, traversal, and symbolic-link entries in the embedded launcher archive.
+- Uses no-follow recursive deletion so symlinks are removed as links rather than traversed.
+- Verifies fixed uninstall targets remain inside the user's home directory.
+- Removed broad process-name killing from uninstall.
+- Improved errors for filesystems that cannot provide required Unix execute permissions.
+- Expanded installer security smoke tests for traversal, symlink, Steam VDF, and Proton-selection cases.
+- Keeps existing launcher path-safety tests, credential protections, session-token redaction, and least-privilege CI permissions.
+- Added Discord Rich Presence attribution/disclaimer information to the project documentation.
 
 ## Requirements
 
@@ -35,4 +34,4 @@ Linux Mint x86_64 with a working Steam + Proton setup remains the primary tested
 
 ## Alpha status
 
-This is still a prerelease. Additional real-machine testing on other Linux distributions, Flatpak Steam installations, custom Steam libraries, and varied GPU/driver combinations is encouraged before a stable release.
+This is still a prerelease. Additional real-machine testing on other Linux distributions, Flatpak Steam installations, custom Steam libraries, SteamOS, and varied GPU/driver combinations is encouraged before a stable release.
