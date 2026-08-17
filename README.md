@@ -10,12 +10,13 @@ A self-contained C# Linux installer for Open Source Free Realms using Steam Prot
 
 The packaged GitHub Actions build is self-contained. End users do **not** need Python, Bash installer scripts, or the .NET SDK to run it.
 
+The installer does **not** install, update, or modify Steam or Proton.
+
 ## What it does
 
 - Detects Linux and CPU architecture
 - Detects native and Flatpak Steam installations
 - Detects Proton Experimental, standard Proton releases, and compatibility tools such as GE-Proton
-- Detects additional Steam library folders
 - Installs the patched native Linux OSFR Launcher from an embedded payload
 - Creates a dedicated Proton prefix
 - Records the exact Steam and Proton paths for the launcher
