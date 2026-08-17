@@ -13,55 +13,66 @@ A self-contained C# Linux installer for Open Source Free Realms using Steam Prot
 - Enough free disk space for the launcher, Proton prefix, and downloaded OSFR server clients
 - Permission to write to your home directory and chosen installation location
 
-Linux Mint users should normally already have the required Steam/graphics components when Steam and Proton are working correctly.
+Linux Mint users should normally already have the required Steam and graphics components when Steam and Proton are working correctly.
 
-The packaged GitHub Actions build is self-contained. End users do **not** need Python, Bash installer scripts, or the .NET SDK to run it.
+Release builds are self-contained. End users do **not** need Python, Bash installer scripts, or the .NET SDK.
 
 The installer does **not** install, update, or modify Steam, Proton, or graphics drivers.
 
 ## What it does
 
-- Detects Linux and CPU architecture
+- Detects Linux and x86_64 architecture
 - Detects native and Flatpak Steam installations
 - Detects Proton Experimental, standard Proton releases, and compatibility tools such as GE-Proton
 - Installs the patched native Linux OSFR Launcher from an embedded payload
 - Creates a dedicated Proton prefix
-- Records the exact Steam and Proton paths for the launcher
+- Records the exact Steam and Proton paths used by the launcher
 - Verifies the Linux x64 Skia runtime
-- Creates desktop integration
-- Launches OSFR after installation
-- Completely uninstalls the launcher, Proton prefix, downloaded server clients, OSFR data, and shortcuts
+- Creates desktop and application-menu integration
+- Launches the OSFR Launcher after installation
+- Completely uninstalls the installer-owned launcher, Proton prefix, downloaded server clients, OSFR data, caches, and shortcuts
+- Refuses to recursively delete an installation folder unless it can verify that the folder belongs to OSFR
+
+## Downloading
+
+For normal use, download the latest prerelease or release from this repository's **Releases** page. The downloadable file is named `OSFR-Linux-Installer`.
+
+GitHub Actions also produces an `OSFR-Linux-Installer-linux-x64` workflow artifact for development and CI testing. That artifact is not the preferred end-user download when a GitHub Release is available.
+
+## Running
+
+1. Download `OSFR-Linux-Installer` from Releases.
+2. If your browser removed the executable bit, run `chmod +x OSFR-Linux-Installer`.
+3. Run `./OSFR-Linux-Installer`.
+4. Confirm that Linux, x86_64, Steam, and Proton are detected.
+5. Choose a dedicated install folder and click **Install**.
+6. The OSFR Launcher opens and downloads each selected server's client files normally.
+
+The installer will reject a non-empty unrelated folder rather than risk overwriting or deleting user data.
 
 ## Project structure
 
-- `src/Installer/` - pure C# Avalonia Linux installer
+- `src/Installer/` - C# Avalonia installer
+- `src/Installer.SmokeTests/` - dependency-free C# safety smoke tests
 - `OSFR-Launcher/` - modified C# OSFR Launcher source
-- `.github/workflows/build-linux-installer.yml` - builds the launcher payload and self-contained installer
+- `Directory.Build.props` - shared installer/launcher version metadata
+- `.github/workflows/build-linux-installer.yml` - CI, packaging, artifact, and release pipeline
 
 ## Building
 
 Development builds require the .NET SDK specified by `OSFR-Launcher/src/global.json`.
 
-The release pipeline publishes the patched launcher for `linux-x64`, embeds it into the installer, then publishes the installer as a self-contained single-file application.
+The pipeline runs installer safety smoke tests, publishes the patched launcher for `linux-x64`, embeds that launcher into the installer, and publishes the installer as a self-contained single-file Linux application.
 
-## Distribution
+## Compatibility status
 
-Download the `OSFR-Linux-Installer-linux-x64` artifact produced by the **Build Linux Installer** GitHub Actions workflow.
+Linux Mint x86_64 with a working Steam + Proton setup is the primary tested environment.
 
-The intended user flow is:
+The code also includes detection for Flatpak Steam, custom Steam library folders, Proton Experimental, standard Proton releases, and GE-Proton. Those paths are supported by the implementation but should continue to receive real-machine testing across Ubuntu, Fedora, Arch-based distributions, different desktop environments, and different GPU/driver combinations before the project is described as universally compatible.
 
-1. Download `OSFR-Linux-Installer`.
-2. Make it executable if the browser removed the executable bit.
-3. Run it.
-4. The installer detects Steam and Proton.
-5. Click **Install**.
-6. The OSFR Launcher opens and downloads the selected server clients normally.
+## Versioning and releases
 
-## Status
-
-Early development and cross-distribution testing.
-
-The original implementation was tested on Linux Mint. The installer has now been redesigned to avoid distro-specific package-manager logic and machine-specific paths. Additional real-machine testing on Ubuntu, Fedora, Arch-based distributions, Steam Flatpak, and custom Steam libraries is still recommended before declaring a stable release.
+The installer and launcher share one version from `Directory.Build.props`. CI builds every push and pull request. A new GitHub prerelease is created only when the shared version does not already have a matching release tag.
 
 ## Credits
 
