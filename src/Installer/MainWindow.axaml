@@ -87,7 +87,7 @@
             <StackPanel Spacing="8"><TextBlock Text="Proton Version" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged"><ComboBox.ItemTemplate><DataTemplate x:DataType="services:ProtonCandidate"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
             <StackPanel Spacing="8">
               <TextBlock Text="Graphics Backend" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/>
-              <ComboBox x:Name="GraphicsBackendComboBox" SelectedIndex="0" SelectionChanged="GraphicsBackendSelectionChanged">
+              <ComboBox x:Name="GraphicsBackendComboBox" SelectedIndex="0">
                 <ComboBoxItem Content="Vulkan (DXVK) — Recommended"/>
                 <ComboBoxItem Content="OpenGL (WineD3D) — For systems without usable Vulkan"/>
               </ComboBox>
