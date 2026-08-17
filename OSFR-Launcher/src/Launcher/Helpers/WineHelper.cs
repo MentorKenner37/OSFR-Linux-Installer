@@ -8,6 +8,23 @@ namespace Launcher.Helpers;
 
 public static class WineHelper
 {
+    public static string GetConfiguredPath(string fileName)
+    {
+        try
+        {
+            string file = Path.Combine(AppContext.BaseDirectory, fileName);
+            if (!File.Exists(file))
+                return string.Empty;
+
+            string value = File.ReadAllText(file).Trim();
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
     private static IEnumerable<string> SteamRoots()
     {
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -17,6 +34,7 @@ public static class WineHelper
             Path.Combine(home, ".steam/debian-installation"),
             Path.Combine(home, ".local/share/Steam"),
             Path.Combine(home, ".steam/steam"),
+            Path.Combine(home, ".var/app/com.valvesoftware.Steam/data/Steam"),
             Path.Combine(home, ".var/app/com.valvesoftware.Steam/.local/share/Steam")
         ];
 
@@ -48,10 +66,7 @@ public static class WineHelper
                         libraries.Add(path);
                 }
             }
-            catch
-            {
-                // Ignore an unreadable Steam library file and continue scanning.
-            }
+            catch { }
         }
 
         return libraries;
@@ -59,6 +74,10 @@ public static class WineHelper
 
     public static string GetPath()
     {
+        string configured = GetConfiguredPath("proton-path.txt");
+        if (File.Exists(configured))
+            return configured;
+
         var preferred = new[] { "Proton - Experimental", "Proton Hotfix" };
 
         foreach (string library in SteamLibraries())
@@ -80,22 +99,29 @@ public static class WineHelper
                 {
                     string name = Path.GetFileName(directory);
                     string candidate = Path.Combine(directory, "proton");
-
                     if (name.Contains("Proton", StringComparison.OrdinalIgnoreCase) && File.Exists(candidate))
                         return candidate;
                 }
             }
-            catch
+            catch { }
+        }
+
+        foreach (string root in SteamRoots())
+        {
+            string tools = Path.Combine(root, "compatibilitytools.d");
+            if (!Directory.Exists(tools))
+                continue;
+
+            try
             {
-                // Continue to the next Steam library.
+                foreach (string candidate in Directory.EnumerateFiles(tools, "proton", SearchOption.AllDirectories))
+                    return candidate;
             }
+            catch { }
         }
 
         return string.Empty;
     }
 
-    public static bool IsInstalled()
-    {
-        return !string.IsNullOrEmpty(GetPath());
-    }
+    public static bool IsInstalled() => !string.IsNullOrEmpty(GetPath());
 }
