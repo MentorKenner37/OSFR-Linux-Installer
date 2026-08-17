@@ -10,7 +10,7 @@
   <Grid ColumnDefinitions="310,*">
     <Border Grid.Column="0" Background="#121212" BorderBrush="#2B2B2B" BorderThickness="0,0,1,0" Padding="24">
       <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="18">
-        <StackPanel Grid.Row="0" Spacing="4" HorizontalAlignment="Center" PointerPressed="WindowDragPointerPressed">
+        <StackPanel Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
           <Image x:Name="BrandIcon" Width="112" Height="112" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
           <TextBlock Text="SANCTUARY" FontSize="30" FontWeight="Bold" Foreground="#F4F4F4" HorizontalAlignment="Center" />
           <TextBlock Text="LINUX INSTALLER" FontSize="14" FontWeight="Bold" Foreground="#42B86B" LetterSpacing="1.5" HorizontalAlignment="Center" />
@@ -47,7 +47,7 @@
     </Border>
 
     <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Margin="30,18,30,26">
-      <Grid Grid.Row="0" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8" Margin="0,0,0,18" PointerPressed="WindowDragPointerPressed">
+      <Grid Grid.Row="0" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8" Margin="0,0,0,18">
         <StackPanel Grid.Column="0" Spacing="7"><Border x:Name="Step1Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step1Label" Text="Welcome" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
         <StackPanel Grid.Column="1" Spacing="7"><Border x:Name="Step2Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step2Label" Text="Location" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
         <StackPanel Grid.Column="2" Spacing="7"><Border x:Name="Step3Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step3Label" Text="Proton" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
