@@ -1,5 +1,3 @@
 # TODO
 
-## Linux desktop integration
-
-- Improve installer and launcher icon integration. See GitHub Issue #1.
+No current installer polish tasks.
