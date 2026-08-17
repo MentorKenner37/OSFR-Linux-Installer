@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:services="clr-namespace:OSFR.Linux.Installer.Services"
         x:Class="OSFR.Linux.Installer.MainWindow"
-        Title="OSFR Linux Installer"
+        Title="Sanctuary Linux Installer"
         Width="1180" Height="760" MinWidth="980" MinHeight="700"
         Background="#101010">
 
@@ -11,32 +11,33 @@
       <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="18">
         <StackPanel Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
           <Image x:Name="BrandIcon" Width="112" Height="112" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
-          <TextBlock Text="OSFR" FontSize="38" FontWeight="Bold" Foreground="#F4F4F4" HorizontalAlignment="Center" />
-          <TextBlock Text="LINUX INSTALLER" FontSize="14" FontWeight="Bold" Foreground="#D53B3B" LetterSpacing="1.5" HorizontalAlignment="Center" />
+          <TextBlock Text="SANCTUARY" FontSize="30" FontWeight="Bold" Foreground="#F4F4F4" HorizontalAlignment="Center" />
+          <TextBlock Text="LINUX INSTALLER" FontSize="14" FontWeight="Bold" Foreground="#42B86B" LetterSpacing="1.5" HorizontalAlignment="Center" />
         </StackPanel>
 
         <Border Grid.Row="1" Background="#171717" BorderBrush="#313131" BorderThickness="1" CornerRadius="8" Padding="18">
           <StackPanel Spacing="14">
-            <TextBlock Text="System Readiness" FontSize="18" FontWeight="SemiBold" Foreground="#E64A4A" />
+            <TextBlock Text="System Compatibility" FontSize="18" FontWeight="SemiBold" Foreground="#4CCF7A" />
+            <TextBlock Text="Required components detected on this system." Foreground="#858585" FontSize="11" TextWrapping="Wrap" />
             <StackPanel Spacing="11">
               <StackPanel><TextBlock Text="Operating System" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="LinuxStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
-              <StackPanel><TextBlock Text="Processor" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="CpuStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
-              <StackPanel><TextBlock Text="Steam" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="SteamStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
-              <StackPanel><TextBlock Text="Proton" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="ProtonStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
+              <StackPanel><TextBlock Text="Processor Architecture" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="CpuStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
+              <StackPanel><TextBlock Text="Steam Installation" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="SteamStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
+              <StackPanel><TextBlock Text="Proton Compatibility Layer" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="ProtonStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
             </StackPanel>
           </StackPanel>
         </Border>
 
         <Border Grid.Row="2" Background="#171717" BorderBrush="#313131" BorderThickness="1" CornerRadius="8" Padding="18">
           <StackPanel Spacing="8">
-            <TextBlock Text="About" FontSize="17" FontWeight="SemiBold" Foreground="#E64A4A" />
-            <TextBlock Text="Installs and configures Open Source Free Realms on Linux using Steam Proton." TextWrapping="Wrap" Foreground="#B6B6B6" FontSize="12" LineHeight="18" />
+            <TextBlock Text="About" FontSize="17" FontWeight="SemiBold" Foreground="#4CCF7A" />
+            <TextBlock Text="Installs and configures Sanctuary for Open Source Free Realms on Linux using Steam Proton." TextWrapping="Wrap" Foreground="#B6B6B6" FontSize="12" LineHeight="18" />
           </StackPanel>
         </Border>
 
         <StackPanel Grid.Row="4" Spacing="7">
-          <TextBlock x:Name="HeroStatus" Text="Checking system..." FontWeight="SemiBold" FontSize="12" Foreground="#45D483" />
-          <TextBlock Text="Steam and Proton are detected only. They are not modified by this installer." TextWrapping="Wrap" Foreground="#707070" FontSize="11" />
+          <TextBlock x:Name="HeroStatus" Text="Checking system compatibility..." FontWeight="SemiBold" FontSize="12" Foreground="#45D483" />
+          <TextBlock Text="Steam and Proton are detected for configuration purposes only and are not modified by Sanctuary Linux Installer." TextWrapping="Wrap" Foreground="#707070" FontSize="11" />
         </StackPanel>
       </Grid>
     </Border>
@@ -45,11 +46,11 @@
       <Border Grid.Row="0" Background="#141414" BorderBrush="#2B2B2B" BorderThickness="0,0,0,1" Padding="28,22">
         <Grid ColumnDefinitions="*,Auto">
           <StackPanel Spacing="3">
-            <TextBlock Text="OSFR Linux Installer" FontSize="25" FontWeight="SemiBold" Foreground="#F5F5F5" />
+            <TextBlock Text="Sanctuary Linux Installer" FontSize="25" FontWeight="SemiBold" Foreground="#F5F5F5" />
             <TextBlock Text="Configure Open Source Free Realms for Steam Proton" Foreground="#8D8D8D" FontSize="12" />
           </StackPanel>
           <Border Grid.Column="1" Background="#1C1C1C" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="15" Padding="12,6" VerticalAlignment="Center">
-            <TextBlock Text="ALPHA" Foreground="#E64A4A" FontWeight="Bold" FontSize="11" />
+            <TextBlock Text="ALPHA" Foreground="#4CCF7A" FontWeight="Bold" FontSize="11" />
           </Border>
         </Grid>
       </Border>
@@ -66,33 +67,33 @@
         <Border Grid.Row="1" Background="#151515" BorderBrush="#2D2D2D" BorderThickness="1" CornerRadius="8" Padding="28">
           <Grid>
             <StackPanel x:Name="WelcomePanel" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Welcome to OSFR Linux Installer" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="This installer will prepare Open Source Free Realms to run through your existing Steam Proton installation." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
-              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="10"><TextBlock Text="Before continuing" Foreground="#E64A4A" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Linux x86_64, Steam, and at least one Proton build must be detected. The readiness panel on the left shows your current status." Foreground="#B6B6B6" TextWrapping="Wrap"/><TextBlock Text="The installer will not install, update, or modify Steam or Proton." Foreground="#777777" FontSize="12" TextWrapping="Wrap"/></StackPanel></Border>
+              <StackPanel Spacing="6"><TextBlock Text="Welcome to Sanctuary Linux Installer" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="This installer prepares Open Source Free Realms to run through an existing Steam Proton installation." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="10"><TextBlock Text="Installation Requirements" Foreground="#4CCF7A" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Before installation can continue, Sanctuary must detect a supported x86_64 Linux environment, Steam, and at least one installed Proton version. The compatibility panel on the left displays the status of each required component." Foreground="#B6B6B6" TextWrapping="Wrap"/><TextBlock Text="Sanctuary only reads the information required to configure Open Source Free Realms. Your Steam installation and Proton builds are not installed, updated, or modified." Foreground="#858585" FontSize="12" TextWrapping="Wrap"/></StackPanel></Border>
               <TextBlock x:Name="DetailText" Foreground="#8B8B8B" TextWrapping="Wrap" FontSize="12" />
             </StackPanel>
 
             <StackPanel x:Name="LocationPanel" IsVisible="False" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Choose installation location" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Choose where the OSFR launcher and its dedicated Free Realms Proton prefix should be stored." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
-              <StackPanel Spacing="8"><TextBlock Text="Installation Directory" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="15"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><TextBox x:Name="InstallPathBox" TextChanged="InstallPathChanged"/><Button Grid.Column="1" Content="Browse..." Click="BrowseClicked" MinWidth="105"/></Grid><TextBlock x:Name="InstallPathStatus" FontSize="11" Foreground="#45D483" TextWrapping="Wrap"/></StackPanel>
-              <TextBlock Text="Use a dedicated empty folder or an existing OSFR installation. The installer will refuse unsafe or unrelated non-empty locations." Foreground="#777777" FontSize="12" TextWrapping="Wrap"/>
+              <StackPanel Spacing="6"><TextBlock Text="Choose installation location" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Choose where Sanctuary and its dedicated Free Realms Proton prefix should be stored." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel Spacing="8"><TextBlock Text="Installation Directory" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><TextBox x:Name="InstallPathBox" TextChanged="InstallPathChanged"/><Button Grid.Column="1" Content="Browse..." Click="BrowseClicked" MinWidth="105"/></Grid><TextBlock x:Name="InstallPathStatus" FontSize="11" Foreground="#45D483" TextWrapping="Wrap"/></StackPanel>
+              <TextBlock Text="Select a dedicated empty folder or an existing Sanctuary installation. Unsafe locations and unrelated non-empty directories are rejected automatically." Foreground="#777777" FontSize="12" TextWrapping="Wrap"/>
             </StackPanel>
 
             <StackPanel x:Name="ProtonPanel" IsVisible="False" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Choose Proton version" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="The recommended detected Proton build is selected automatically. You can override it here." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
-              <StackPanel Spacing="8"><TextBlock Text="Proton Version" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="15"/><ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged"><ComboBox.ItemTemplate><DataTemplate x:DataType="services:ProtonCandidate"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
-              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><TextBlock Text="OSFR uses a dedicated Proton prefix. Changing this selection does not alter your Steam or Proton installation." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/></Border>
+              <StackPanel Spacing="6"><TextBlock Text="Choose Proton version" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="The recommended detected Proton build is selected automatically. You may choose another detected version if needed." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel Spacing="8"><TextBlock Text="Proton Version" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged"><ComboBox.ItemTemplate><DataTemplate x:DataType="services:ProtonCandidate"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
+              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><TextBlock Text="Sanctuary uses a dedicated Proton prefix for Free Realms. Selecting a Proton version here does not modify that Proton installation." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/></Border>
             </StackPanel>
 
             <StackPanel x:Name="SummaryPanel" IsVisible="False" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Confirm the detected environment and your choices before installation." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
+              <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Review the detected environment and selected options before installation begins." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
               <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
-              <CheckBox x:Name="CloseAfterInstallCheck" Content="Close installer after a successful installation" IsChecked="True"/>
+              <CheckBox x:Name="CloseAfterInstallCheck" Content="Close Sanctuary Linux Installer after a successful installation" IsChecked="True"/>
             </StackPanel>
 
             <StackPanel x:Name="InstallPanel" IsVisible="False" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Install Open Source Free Realms" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Everything is ready. Start installation below and keep this window open until it completes." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
-              <StackPanel Spacing="10"><Grid ColumnDefinitions="*,Auto"><TextBlock x:Name="StatusText" Text="Ready to install" Foreground="#B6B6B6" FontSize="12"/><TextBlock x:Name="ProgressText" Grid.Column="1" Text="Ready" Foreground="#E64A4A" FontWeight="SemiBold" FontSize="12"/></Grid><ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="10"/></StackPanel>
-              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><TextBlock Text="Installer logs are stored under ~/.local/state/OSFR-Linux and do not occupy the installation directory." Foreground="#777777" FontSize="11" TextWrapping="Wrap"/></Border>
+              <StackPanel Spacing="6"><TextBlock Text="Install Sanctuary" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Configuration is complete. Begin installation below and keep this window open until the process finishes." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel Spacing="10"><Grid ColumnDefinitions="*,Auto"><TextBlock x:Name="StatusText" Text="Ready to install" Foreground="#B6B6B6" FontSize="12"/><TextBlock x:Name="ProgressText" Grid.Column="1" Text="Ready" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="12"/></Grid><ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="10"/></StackPanel>
+              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><TextBlock Text="Installer logs are stored separately under ~/.local/state/OSFR-Linux and do not occupy the selected installation directory." Foreground="#777777" FontSize="11" TextWrapping="Wrap"/></Border>
             </StackPanel>
           </Grid>
         </Border>
