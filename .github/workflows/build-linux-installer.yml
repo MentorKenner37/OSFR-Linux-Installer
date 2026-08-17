@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-linux-x64:
     runs-on: ubuntu-latest
@@ -19,6 +22,11 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           global-json-file: OSFR-Launcher/src/global.json
+
+      - name: Run installer safety smoke tests
+        run: |
+          set -euo pipefail
+          dotnet run --project src/Installer.SmokeTests/Installer.SmokeTests.csproj -c Release
 
       - name: Publish patched OSFR Launcher
         run: |
@@ -74,3 +82,25 @@ jobs:
           name: OSFR-Linux-Installer-linux-x64
           path: build/installer/OSFR-Linux-Installer
           if-no-files-found: error
+
+      - name: Publish versioned prerelease
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n1)"
+          test -n "$VERSION"
+          TAG="v$VERSION"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; leaving it unchanged."
+            exit 0
+          fi
+
+          gh release create "$TAG" \
+            build/installer/OSFR-Linux-Installer \
+            --target "$GITHUB_SHA" \
+            --title "OSFR Linux Installer $TAG" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease
