@@ -21,14 +21,16 @@ Release builds are self-contained. You do **not** need Python, installer scripts
 - Checks Linux and x86_64 compatibility
 - Detects native and Flatpak Steam installations
 - Detects Proton Experimental, standard Proton releases, and compatibility tools such as GE-Proton
+- Automatically recommends a Proton build while allowing you to choose another detected version
 - Installs the Linux OSFR Launcher
 - Creates a dedicated Proton prefix for Free Realms
-- Configures the launcher to use the detected Steam and Proton installation
+- Configures the launcher to use the selected Steam and Proton installation
 - Creates application-menu and desktop shortcuts
 - Starts the OSFR Launcher when installation finishes
+- Writes installer diagnostics to `~/.local/share/OSFR-Linux/installer.log`
 - Safely removes OSFR, its dedicated Proton prefix, downloaded clients, data, caches, and shortcuts when uninstalling
 
-The installer will not recursively delete a selected installation directory unless it can verify that the directory belongs to this OSFR installation.
+The installer rejects symbolic-link install roots, stages launcher extraction before replacing an existing launcher, rejects unsafe archive paths and archive symlinks, and will not recursively delete an installation directory unless it can verify that the directory belongs to this OSFR installation.
 
 ## Download and install
 
@@ -46,10 +48,31 @@ The installer will not recursively delete a selected installation directory unle
    ```
 
 4. Confirm that Linux, x86_64, Steam, and Proton are detected.
-5. Choose an installation folder and select **Install**.
-6. The OSFR Launcher will open when installation completes.
+5. Choose the Proton version you want to use. The recommended detected version is selected automatically.
+6. Choose an installation folder and select **Install**.
+7. The OSFR Launcher will open when installation completes.
 
 The launcher handles OSFR login and downloads the client files required by the selected server.
+
+## Diagnostics
+
+Run a read-only system check from a terminal:
+
+```bash
+./OSFR-Linux-Installer --diagnose
+```
+
+Preview the default installation plan without changing files:
+
+```bash
+./OSFR-Linux-Installer --dry-run
+```
+
+Installation and detection errors are also written to:
+
+```text
+~/.local/share/OSFR-Linux/installer.log
+```
 
 ## Compatibility
 
@@ -71,13 +94,7 @@ The installer already supports common native Steam locations, Flatpak Steam loca
 
 Development builds require the .NET SDK specified by `OSFR-Launcher/src/global.json`.
 
-The GitHub Actions pipeline:
-
-1. Runs installer and launcher safety tests.
-2. Builds the patched OSFR Launcher for `linux-x64`.
-3. Embeds the launcher into the installer.
-4. Builds a self-contained single-file Linux installer.
-5. Publishes the release artifact.
+The GitHub Actions pipeline runs installer and launcher safety tests, builds the patched OSFR Launcher for `linux-x64`, embeds it into the installer, builds the self-contained installer, and publishes the release artifact.
 
 End users should download the packaged installer from **Releases** rather than build the project themselves.
 
@@ -85,6 +102,7 @@ End users should download the packaged installer from **Releases** rather than b
 
 - `src/Installer/` — C# Avalonia installer
 - `src/Installer.SmokeTests/` — installer safety tests
+- `src/Launcher.SmokeTests/` — launcher path-safety tests
 - `OSFR-Launcher/` — modified OSFR Launcher source
 - `Directory.Build.props` — shared version information
 - `.github/workflows/build-linux-installer.yml` — Linux build and release workflow
@@ -95,6 +113,6 @@ This project is currently in **alpha**. Linux Mint is the primary tested platfor
 
 ## Credits
 
-Based on the Open Source Free Realms Launcher project.
+Based on the Open Source Free Realms Launcher project. See `OSFR-Launcher/LICENSE` for the upstream launcher license.
 
-See `OSFR-Launcher/LICENSE` for the upstream launcher license.
+The launcher includes Discord Rich Presence integration using the Discord Game SDK. This project is not endorsed by or created by Discord.
