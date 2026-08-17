@@ -4,15 +4,19 @@
         x:Class="OSFR.Linux.Installer.MainWindow"
         Title="Sanctuary Linux Installer"
         Width="1180" Height="790" CanResize="False"
+        SystemDecorations="None"
         Background="#101010">
 
   <Grid ColumnDefinitions="310,*">
     <Border Grid.Column="0" Background="#121212" BorderBrush="#2B2B2B" BorderThickness="0,0,1,0" Padding="24">
       <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="18">
-        <StackPanel Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
+        <StackPanel Grid.Row="0" Spacing="4" HorizontalAlignment="Center" PointerPressed="WindowDragPointerPressed">
           <Image x:Name="BrandIcon" Width="112" Height="112" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
           <TextBlock Text="SANCTUARY" FontSize="30" FontWeight="Bold" Foreground="#F4F4F4" HorizontalAlignment="Center" />
           <TextBlock Text="LINUX INSTALLER" FontSize="14" FontWeight="Bold" Foreground="#42B86B" LetterSpacing="1.5" HorizontalAlignment="Center" />
+          <Border Background="#1C1C1C" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="15" Padding="12,5" Margin="0,7,0,0" HorizontalAlignment="Center">
+            <TextBlock Text="ALPHA" Foreground="#4CCF7A" FontWeight="Bold" FontSize="10" />
+          </Border>
         </StackPanel>
 
         <Border Grid.Row="1" Background="#171717" BorderBrush="#313131" BorderThickness="1" CornerRadius="8" Padding="18">
@@ -42,84 +46,70 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Column="1" RowDefinitions="Auto,*">
-      <Border Grid.Row="0" Background="#141414" BorderBrush="#2B2B2B" BorderThickness="0,0,0,1" Padding="28,22">
-        <Grid ColumnDefinitions="*,Auto">
-          <StackPanel Spacing="3">
-            <TextBlock Text="Sanctuary Linux Installer" FontSize="25" FontWeight="SemiBold" Foreground="#F5F5F5" />
-            <TextBlock Text="Configure Open Source Free Realms for Steam Proton" Foreground="#8D8D8D" FontSize="12" />
+    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Margin="30,18,30,26">
+      <Grid Grid.Row="0" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8" Margin="0,0,0,18" PointerPressed="WindowDragPointerPressed">
+        <StackPanel Grid.Column="0" Spacing="7"><Border x:Name="Step1Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step1Label" Text="Welcome" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
+        <StackPanel Grid.Column="1" Spacing="7"><Border x:Name="Step2Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step2Label" Text="Location" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
+        <StackPanel Grid.Column="2" Spacing="7"><Border x:Name="Step3Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step3Label" Text="Proton" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
+        <StackPanel Grid.Column="3" Spacing="7"><Border x:Name="Step4Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="4" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step4Label" Text="Summary" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
+        <StackPanel Grid.Column="4" Spacing="7"><Border x:Name="Step5Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step5Label" Text="Install" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
+      </Grid>
+
+      <Border Grid.Row="1" Background="#151515" BorderBrush="#2D2D2D" BorderThickness="1" CornerRadius="8" Padding="28">
+        <Grid>
+          <StackPanel x:Name="WelcomePanel" Spacing="20">
+            <StackPanel Spacing="6"><TextBlock Text="Welcome to Sanctuary Linux Installer" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="This installer prepares Open Source Free Realms to run through an existing Steam Proton installation." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20">
+              <StackPanel Spacing="10">
+                <TextBlock Text="Installation Requirements" Foreground="#4CCF7A" FontSize="16" FontWeight="SemiBold"/>
+                <ScrollViewer MaxHeight="190" VerticalScrollBarVisibility="Auto">
+                  <StackPanel Spacing="9">
+                    <TextBlock Text="• 64-bit x86_64 Linux operating system" Foreground="#B6B6B6" TextWrapping="Wrap"/>
+                    <TextBlock Text="• Steam installed and available for your user account" Foreground="#B6B6B6" TextWrapping="Wrap"/>
+                    <TextBlock Text="• At least one installed Steam Proton compatibility tool" Foreground="#B6B6B6" TextWrapping="Wrap"/>
+                    <TextBlock Text="• Working graphics drivers with 32-bit Vulkan support" Foreground="#B6B6B6" TextWrapping="Wrap"/>
+                    <TextBlock Text="• A dedicated empty installation folder or an existing Sanctuary installation" Foreground="#B6B6B6" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </ScrollViewer>
+                <TextBlock Text="The compatibility panel on the left shows what Sanctuary detects. Steam and Proton are only read for configuration and are not installed, updated, or modified." Foreground="#858585" FontSize="12" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+            <TextBlock x:Name="DetailText" Foreground="#8B8B8B" TextWrapping="Wrap" FontSize="12" />
           </StackPanel>
-          <Border Grid.Column="1" Background="#1C1C1C" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="15" Padding="12,6" VerticalAlignment="Center">
-            <TextBlock Text="ALPHA" Foreground="#4CCF7A" FontWeight="Bold" FontSize="11" />
-          </Border>
+
+          <StackPanel x:Name="LocationPanel" IsVisible="False" Spacing="20">
+            <StackPanel Spacing="6"><TextBlock Text="Choose installation location" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Choose where Sanctuary and its dedicated Free Realms Proton prefix should be stored." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+            <StackPanel Spacing="8"><TextBlock Text="Installation Directory" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><TextBox x:Name="InstallPathBox" TextChanged="InstallPathChanged"/><Button Grid.Column="1" Content="Browse..." Click="BrowseClicked" MinWidth="105"/></Grid><TextBlock x:Name="InstallPathStatus" FontSize="11" Foreground="#45D483" TextWrapping="Wrap"/></StackPanel>
+            <TextBlock Text="Select a dedicated empty folder or an existing Sanctuary installation. Unsafe locations and unrelated non-empty directories are rejected automatically." Foreground="#777777" FontSize="12" TextWrapping="Wrap"/>
+          </StackPanel>
+
+          <StackPanel x:Name="ProtonPanel" IsVisible="False" Spacing="18">
+            <StackPanel Spacing="6"><TextBlock Text="Choose Proton version" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="The recommended detected Proton build is selected automatically. You may choose another detected version if needed." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+            <StackPanel Spacing="8"><TextBlock Text="Proton Version" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged"><ComboBox.ItemTemplate><DataTemplate x:DataType="services:ProtonCandidate"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><StackPanel Spacing="8"><TextBlock Text="Need another official Proton version?" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Search for Proton in your Steam Library and install the version you want. Restart Sanctuary Linux Installer afterward and the newly installed Proton version should appear here." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="Sanctuary uses a dedicated Proton prefix. Selecting a version here does not modify the Proton installation itself." Foreground="#777777" TextWrapping="Wrap" FontSize="11"/></StackPanel></Border>
+          </StackPanel>
+
+          <StackPanel x:Name="SummaryPanel" IsVisible="False" Spacing="20">
+            <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Review the detected environment and selected options before installation begins." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
+            <CheckBox x:Name="SummaryAcceptCheck" Content="I accept these installation settings and want to continue" IsChecked="False" Click="SummaryAcceptanceChanged"/>
+          </StackPanel>
+
+          <StackPanel x:Name="InstallPanel" IsVisible="False" Spacing="20">
+            <StackPanel Spacing="6"><TextBlock Text="Install Sanctuary" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Configuration is complete. Begin installation below and keep this window open until the process finishes." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
+            <StackPanel Spacing="10"><Grid ColumnDefinitions="*,Auto"><TextBlock x:Name="StatusText" Text="Ready to install" Foreground="#B6B6B6" FontSize="12"/><TextBlock x:Name="ProgressText" Grid.Column="1" Text="Ready" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="12"/></Grid><ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="10"/></StackPanel>
+            <CheckBox x:Name="CloseAfterInstallCheck" Content="Close Sanctuary Linux Installer after a successful installation" IsChecked="True"/>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><TextBlock Text="Installer logs are stored separately under ~/.local/state/OSFR-Linux and do not occupy the selected installation directory." Foreground="#777777" FontSize="11" TextWrapping="Wrap"/></Border>
+          </StackPanel>
         </Grid>
       </Border>
 
-      <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto" Margin="30,24,30,26">
-        <Grid Grid.Row="0" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8" Margin="0,0,0,22">
-          <StackPanel Grid.Column="0" Spacing="7"><Border x:Name="Step1Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step1Label" Text="Welcome" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
-          <StackPanel Grid.Column="1" Spacing="7"><Border x:Name="Step2Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step2Label" Text="Location" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
-          <StackPanel Grid.Column="2" Spacing="7"><Border x:Name="Step3Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step3Label" Text="Proton" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
-          <StackPanel Grid.Column="3" Spacing="7"><Border x:Name="Step4Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="4" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step4Label" Text="Summary" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
-          <StackPanel Grid.Column="4" Spacing="7"><Border x:Name="Step5Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="5" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step5Label" Text="Install" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
-        </Grid>
-
-        <Border Grid.Row="1" Background="#151515" BorderBrush="#2D2D2D" BorderThickness="1" CornerRadius="8" Padding="28">
-          <Grid>
-            <StackPanel x:Name="WelcomePanel" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Welcome to Sanctuary Linux Installer" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="This installer prepares Open Source Free Realms to run through an existing Steam Proton installation." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
-              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20">
-                <StackPanel Spacing="10">
-                  <TextBlock Text="Installation Requirements" Foreground="#4CCF7A" FontSize="16" FontWeight="SemiBold"/>
-                  <ScrollViewer MaxHeight="190" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="9">
-                      <TextBlock Text="• 64-bit x86_64 Linux operating system" Foreground="#B6B6B6" TextWrapping="Wrap"/>
-                      <TextBlock Text="• Steam installed and available for your user account" Foreground="#B6B6B6" TextWrapping="Wrap"/>
-                      <TextBlock Text="• At least one installed Steam Proton compatibility tool" Foreground="#B6B6B6" TextWrapping="Wrap"/>
-                      <TextBlock Text="• Working graphics drivers with 32-bit Vulkan support" Foreground="#B6B6B6" TextWrapping="Wrap"/>
-                      <TextBlock Text="• A dedicated empty installation folder or an existing Sanctuary installation" Foreground="#B6B6B6" TextWrapping="Wrap"/>
-                    </StackPanel>
-                  </ScrollViewer>
-                  <TextBlock Text="The compatibility panel on the left shows what Sanctuary detects. Steam and Proton are only read for configuration and are not installed, updated, or modified." Foreground="#858585" FontSize="12" TextWrapping="Wrap"/>
-                </StackPanel>
-              </Border>
-              <TextBlock x:Name="DetailText" Foreground="#8B8B8B" TextWrapping="Wrap" FontSize="12" />
-            </StackPanel>
-
-            <StackPanel x:Name="LocationPanel" IsVisible="False" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Choose installation location" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Choose where Sanctuary and its dedicated Free Realms Proton prefix should be stored." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
-              <StackPanel Spacing="8"><TextBlock Text="Installation Directory" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><TextBox x:Name="InstallPathBox" TextChanged="InstallPathChanged"/><Button Grid.Column="1" Content="Browse..." Click="BrowseClicked" MinWidth="105"/></Grid><TextBlock x:Name="InstallPathStatus" FontSize="11" Foreground="#45D483" TextWrapping="Wrap"/></StackPanel>
-              <TextBlock Text="Select a dedicated empty folder or an existing Sanctuary installation. Unsafe locations and unrelated non-empty directories are rejected automatically." Foreground="#777777" FontSize="12" TextWrapping="Wrap"/>
-            </StackPanel>
-
-            <StackPanel x:Name="ProtonPanel" IsVisible="False" Spacing="18">
-              <StackPanel Spacing="6"><TextBlock Text="Choose Proton version" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="The recommended detected Proton build is selected automatically. You may choose another detected version if needed." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
-              <StackPanel Spacing="8"><TextBlock Text="Proton Version" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged"><ComboBox.ItemTemplate><DataTemplate x:DataType="services:ProtonCandidate"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
-              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><StackPanel Spacing="8"><TextBlock Text="Need another official Proton version?" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Open Steam → Library, enable Tools in the library filter, search for Proton, then install the Proton version you want. Restart this installer afterward and the installed version should appear here." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="Sanctuary uses a dedicated Proton prefix. Selecting a version here does not modify the Proton installation itself." Foreground="#777777" TextWrapping="Wrap" FontSize="11"/></StackPanel></Border>
-            </StackPanel>
-
-            <StackPanel x:Name="SummaryPanel" IsVisible="False" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Review the detected environment and selected options before installation begins." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
-              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
-              <CheckBox x:Name="SummaryAcceptCheck" Content="I accept these installation settings and want to continue" IsChecked="False" Click="SummaryAcceptanceChanged"/>
-            </StackPanel>
-
-            <StackPanel x:Name="InstallPanel" IsVisible="False" Spacing="20">
-              <StackPanel Spacing="6"><TextBlock Text="Install Sanctuary" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Configuration is complete. Begin installation below and keep this window open until the process finishes." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
-              <StackPanel Spacing="10"><Grid ColumnDefinitions="*,Auto"><TextBlock x:Name="StatusText" Text="Ready to install" Foreground="#B6B6B6" FontSize="12"/><TextBlock x:Name="ProgressText" Grid.Column="1" Text="Ready" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="12"/></Grid><ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="10"/></StackPanel>
-              <CheckBox x:Name="CloseAfterInstallCheck" Content="Close Sanctuary Linux Installer after a successful installation" IsChecked="True"/>
-              <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><TextBlock Text="Installer logs are stored separately under ~/.local/state/OSFR-Linux and do not occupy the selected installation directory." Foreground="#777777" FontSize="11" TextWrapping="Wrap"/></Border>
-            </StackPanel>
-          </Grid>
-        </Border>
-
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10" Margin="0,20,0,0">
-          <Button Grid.Column="0" Classes="ghost" Content="Close" Click="CloseClicked" MinWidth="105"/>
-          <TextBlock Grid.Column="1" x:Name="StepHint" Text="Step 1 of 5" Foreground="#666666" VerticalAlignment="Center" FontSize="11" Margin="10,0"/>
-          <Button x:Name="BackButton" Grid.Column="2" Classes="ghost" Content="Back" Click="BackClicked" MinWidth="105" IsEnabled="False"/>
-          <Button x:Name="NextButton" Grid.Column="3" Classes="primary" Content="Next" Click="NextClicked" MinWidth="130"/>
-          <Button x:Name="ActionButton" Grid.Column="3" Classes="primary" Content="INSTALL" Click="ActionClicked" MinWidth="145" IsVisible="False"/>
-        </Grid>
+      <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10" Margin="0,20,0,0">
+        <Button Grid.Column="0" Classes="ghost" Content="Close" Click="CloseClicked" MinWidth="105"/>
+        <TextBlock Grid.Column="1" x:Name="StepHint" Text="Step 1 of 5" Foreground="#666666" VerticalAlignment="Center" FontSize="11" Margin="10,0"/>
+        <Button x:Name="BackButton" Grid.Column="2" Classes="ghost" Content="Back" Click="BackClicked" MinWidth="105" IsEnabled="False"/>
+        <Button x:Name="NextButton" Grid.Column="3" Classes="primary" Content="Next" Click="NextClicked" MinWidth="130"/>
+        <Button x:Name="ActionButton" Grid.Column="3" Classes="primary" Content="INSTALL" Click="ActionClicked" MinWidth="145" IsVisible="False"/>
       </Grid>
     </Grid>
   </Grid>
