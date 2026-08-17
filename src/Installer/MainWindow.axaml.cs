@@ -33,8 +33,18 @@ public partial class MainWindow : Window
         SetCheck(SteamStatus, _state.SteamRoot is not null, _state.SteamRoot is not null ? "DETECTED" : "NOT FOUND");
         SetCheck(ProtonStatus, _state.ProtonPath is not null, _state.ProtonPath is not null ? "DETECTED" : "NOT FOUND");
 
+        DetailText.Text = _state.Ready
+            ? $"Steam: {_state.SteamRoot}\nProton: {_state.ProtonPath}"
+            : "This installer requires x86_64 Linux, Steam, and an installed Proton build.";
+
+        RefreshInstallUi();
+    }
+
+    private void RefreshInstallUi()
+    {
         var pathError = RefreshInstallPathState();
         var installed = false;
+
         if (pathError is null)
         {
             try
@@ -44,7 +54,7 @@ public partial class MainWindow : Window
             catch
             {
                 pathError = "The installation path is not valid.";
-                InstallPathStatus.Text = pathError;
+                InstallPathStatus.Text = $"✗ {pathError}";
                 InstallPathStatus.Foreground = Bad;
             }
         }
@@ -54,12 +64,12 @@ public partial class MainWindow : Window
 
         HeroStatus.Text = installed
             ? "OSFR IS INSTALLED"
-            : _state.Ready && pathError is null ? "READY TO INSTALL" : "SYSTEM REQUIREMENTS NOT MET";
+            : !_state.Ready
+                ? "SYSTEM REQUIREMENTS NOT MET"
+                : pathError is not null
+                    ? "INSTALL LOCATION NEEDS ATTENTION"
+                    : "READY TO INSTALL";
         HeroStatus.Foreground = installed || (_state.Ready && pathError is null) ? Good : Bad;
-
-        DetailText.Text = _state.Ready
-            ? $"Steam: {_state.SteamRoot}\nProton: {_state.ProtonPath}"
-            : "This installer requires x86_64 Linux, Steam, and an installed Proton build.";
 
         if (!_busy)
         {
@@ -109,10 +119,8 @@ public partial class MainWindow : Window
 
     private void InstallPathChanged(object? sender, TextChangedEventArgs e)
     {
-        if (_busy)
-            return;
-
-        RefreshState();
+        if (!_busy)
+            RefreshInstallUi();
     }
 
     private async void BrowseClicked(object? sender, RoutedEventArgs e)
