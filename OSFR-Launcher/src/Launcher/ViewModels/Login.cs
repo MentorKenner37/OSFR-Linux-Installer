@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http.Json;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,7 +12,6 @@ using CommunityToolkit.Mvvm.Input;
 
 using Launcher.Helpers;
 using Launcher.Models;
-using Launcher.Services;
 
 using NLog;
 
@@ -104,7 +102,7 @@ public partial class Login : Popup
 
             if (!httpResponse.IsSuccessStatusCode)
             {
-                App.AddNotification("Login failed. Please check your username and password and try again", true);
+                App.AddNotification("Login failed. Please check your username and password and try again.", true);
                 _logger.Warn("Login failed for server: '{Name}'. API returned {StatusCode}: {Reason}.", _server.Info.Name, httpResponse.StatusCode, httpResponse.ReasonPhrase);
                 return false;
             }
@@ -118,12 +116,12 @@ public partial class Login : Popup
             }
 
             SaveRememberedCredentials();
-            await LaunchClientAsync(loginResponse.SessionId, loginResponse.LaunchArguments);
+            LaunchClient(loginResponse.SessionId, loginResponse.LaunchArguments);
             return true;
         }
         catch (Exception ex)
         {
-            App.AddNotification("Login failed. Please check your username and password and try again", true);
+            App.AddNotification("Login failed. Please check your username and password and try again.", true);
             _logger.Error(ex, "An exception occurred logging into server: '{Name}'.", _server.Info.Name);
             return false;
         }
@@ -157,14 +155,8 @@ public partial class Login : Popup
         Settings.Instance.Save();
     }
 
-    private async Task LaunchClientAsync(string sessionId, string? serverArguments)
+    private void LaunchClient(string sessionId, string? serverArguments)
     {
-        if (OperatingSystem.IsWindows() && !Dx9Helper.IsInstalled())
-        {
-            await NotifyDirectX9MissingAsync();
-            return;
-        }
-
         var launcherArguments = new List<string>
         {
             $"Server={_server.Info.LoginServer}",
@@ -186,93 +178,56 @@ public partial class Login : Popup
             return;
         }
 
-        string fileName;
-        string processArguments;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        var protonPath = ProtonHelper.GetPath();
+        if (string.IsNullOrEmpty(protonPath))
         {
-            var protonPath = WineHelper.GetPath();
-            if (string.IsNullOrEmpty(protonPath))
-            {
-                App.AddNotification("Unable to launch the game, Proton is not installed.", true);
-                return;
-            }
-
-            fileName = protonPath;
-            processArguments = $"run \"{Constants.ClientExecutableName}\" {arguments}";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            fileName = executablePath;
-            processArguments = arguments;
-        }
-        else
-        {
-            App.AddNotification("Unable to launch the game, your operating system is not supported.", true);
+            App.AddNotification("Unable to launch the game because Proton could not be found.", true);
             return;
         }
 
-        _server.Process = new Process();
-        _server.Process.StartInfo.WorkingDirectory = workingDirectory;
-        _server.Process.StartInfo.FileName = fileName;
-        _server.Process.StartInfo.Arguments = processArguments;
-        _server.Process.StartInfo.UseShellExecute = false;
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var protonPrefix = ProtonHelper.GetConfiguredPath("prefix-path.txt");
+        if (string.IsNullOrWhiteSpace(protonPrefix))
+            protonPrefix = Path.Combine(home, ".local", "share", "OSFR-Linux", "ProtonPrefix");
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        var steamRoot = ProtonHelper.GetSteamRoot();
+        if (string.IsNullOrWhiteSpace(steamRoot))
         {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var protonPrefix = WineHelper.GetConfiguredPath("prefix-path.txt");
-            if (string.IsNullOrWhiteSpace(protonPrefix))
-                protonPrefix = Path.Combine(home, ".local", "share", "OSFR-Linux", "ProtonPrefix");
-
-            var steamRoot = WineHelper.GetSteamRoot();
-            if (string.IsNullOrWhiteSpace(steamRoot))
-            {
-                App.AddNotification("Unable to launch the game because the Steam installation path could not be determined.", true);
-                return;
-            }
-
-            Directory.CreateDirectory(protonPrefix);
-            _server.Process.StartInfo.Environment["STEAM_COMPAT_DATA_PATH"] = protonPrefix;
-            _server.Process.StartInfo.Environment["STEAM_COMPAT_CLIENT_INSTALL_PATH"] = steamRoot;
-            _server.Process.StartInfo.Environment["PROTON_LOG"] = "0";
+            App.AddNotification("Unable to launch the game because the Steam installation path could not be determined.", true);
+            return;
         }
 
-        _server.Process.EnableRaisingEvents = true;
+        Directory.CreateDirectory(protonPrefix);
+
+        _server.Process = new Process
+        {
+            StartInfo =
+            {
+                WorkingDirectory = workingDirectory,
+                FileName = protonPath,
+                Arguments = $"run \"{Constants.ClientExecutableName}\" {arguments}",
+                UseShellExecute = false
+            },
+            EnableRaisingEvents = true
+        };
+
+        _server.Process.StartInfo.Environment["STEAM_COMPAT_DATA_PATH"] = protonPrefix;
+        _server.Process.StartInfo.Environment["STEAM_COMPAT_CLIENT_INSTALL_PATH"] = steamRoot;
+        _server.Process.StartInfo.Environment["PROTON_LOG"] = "0";
         _server.Process.Exited += _server.ClientProcessExited;
 
         try
         {
-            _logger.Info("Launching FreeRealms through Proton: {Proton}", fileName);
-            _logger.Info("Proton arguments: {Arguments}", processArguments);
+            _logger.Info("Launching FreeRealms through Proton: {Proton}", protonPath);
+            _logger.Info("Proton arguments: {Arguments}", _server.Process.StartInfo.Arguments);
             _server.Process.Start();
         }
         catch (Exception ex)
         {
             App.AddNotification("An error occurred while launching the game. Please try again.", true);
             _logger.Error(ex, "Failed to start the client process for server: {Name}.", _server.Info.Name);
-            _server.Process?.Dispose();
+            _server.Process.Dispose();
             _server.Process = null;
-        }
-    }
-
-    private async Task NotifyDirectX9MissingAsync()
-    {
-        App.AddNotification("Unable to launch the game, DirectX 9 is not available.", true);
-        await Task.Delay(500);
-
-        try
-        {
-            var window = App.GetWindow();
-            await window.Launcher.LaunchUriAsync(new Uri(Constants.DirectXDownloadUrl));
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Failed to open the DirectX download page automatically.");
-            App.AddNotification($"""
-                                 Could not open the DirectX download page.
-                                 Please open this URL manually: {Constants.DirectXDownloadUrl}
-                                 """, true);
         }
     }
 }
