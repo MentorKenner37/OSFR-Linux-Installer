@@ -1,17 +1,17 @@
-# OSFR Linux Installer v0.2.6-alpha
+# Sanctuary Linux Installer v0.2.7-alpha
 
-This alpha turns the redesigned installer into a true five-step setup flow and introduces the official OSFR Linux Installer icon throughout the application.
+This alpha rebrands the Linux installer as Sanctuary Linux Installer and refreshes the interface with a green visual identity and more professional setup language.
 
 ## Highlights
 
-- Reworked the installer into a real five-step wizard: Welcome/System Check, Install Location, Proton, Summary, and Install.
-- Added working Back/Next navigation and step validation so users cannot advance past unmet requirements or invalid paths.
-- Preserves the user's manually selected Proton version when installation starts.
-- Added the official OSFR icon as the single branding asset used by the installer.
-- Uses the official icon inside the installer UI and as the installer window/taskbar icon.
-- Installs the same official icon for the OSFR application-menu and desktop shortcuts.
-- Removed the obsolete split/base64 icon assets and updated CI to validate the real PNG asset directly.
-- Retains the hardened install/uninstall flow, staged ZIP extraction, symlink protections, dedicated Proton prefix, safe path validation, and installer logging under `~/.local/state/OSFR-Linux`.
+- Rebranded the installer UI, window title, product metadata, diagnostics, and release artifacts as Sanctuary Linux Installer.
+- Replaced the previous red accent color with a consistent green accent across buttons, progress indicators, focus states, step navigation, headings, and status elements.
+- Renamed the system status area to **System Compatibility** and clarified the detected requirements.
+- Reworked the introductory requirements panel with more professional language explaining the supported environment and what the installer does and does not modify.
+- Retains the real five-step setup flow: Welcome, Location, Proton, Summary, and Install.
+- Preserves manual Proton selection, custom install locations, dedicated Proton prefixes, safe uninstall boundaries, staged extraction, symlink protections, and path validation.
+- Continues using the official installer icon in the application window, installer UI, application menu, and desktop shortcut.
+- Keeps internal OSFR data paths and launcher identifiers for compatibility with existing installations while presenting Sanctuary branding to users.
 - Keeps NuGet vulnerability scanning, installer/launcher safety tests, desktop-entry validation, packaged installer smoke tests, SHA-256 generation, and release-time checksum verification.
 
 ## Verify the download
@@ -19,10 +19,10 @@ This alpha turns the redesigned installer into a true five-step setup flow and i
 Download both release files into the same directory and run:
 
 ```bash
-sha256sum -c OSFR-Linux-Installer.sha256
+sha256sum -c Sanctuary-Linux-Installer.sha256
 ```
 
-A successful verification reports `OSFR-Linux-Installer: OK`.
+A successful verification reports `Sanctuary-Linux-Installer: OK`.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ A successful verification reports `OSFR-Linux-Installer: OK`.
 - Steam installed and working
 - An installed Proton build
 - Working graphics drivers with the 32-bit Vulkan support needed by Steam Proton
-- Internet connection and enough disk space for downloaded OSFR clients
+- Internet connection and enough disk space for downloaded Open Source Free Realms clients
 
 Linux Mint x86_64 with a working Steam + Proton setup remains the primary tested environment.
 
