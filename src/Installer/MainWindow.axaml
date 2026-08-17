@@ -9,9 +9,10 @@
   <Grid ColumnDefinitions="310,*">
     <Border Grid.Column="0" Background="#121212" BorderBrush="#2B2B2B" BorderThickness="0,0,1,0" Padding="24">
       <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="18">
-        <StackPanel Grid.Row="0" Spacing="2">
-          <TextBlock Text="OSFR" FontSize="42" FontWeight="Bold" Foreground="#F4F4F4" />
-          <TextBlock Text="LINUX INSTALLER" FontSize="15" FontWeight="Bold" Foreground="#D53B3B" LetterSpacing="1.5" />
+        <StackPanel Grid.Row="0" Spacing="4" HorizontalAlignment="Center">
+          <Image x:Name="BrandIcon" Width="112" Height="112" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
+          <TextBlock Text="OSFR" FontSize="38" FontWeight="Bold" Foreground="#F4F4F4" HorizontalAlignment="Center" />
+          <TextBlock Text="LINUX INSTALLER" FontSize="14" FontWeight="Bold" Foreground="#D53B3B" LetterSpacing="1.5" HorizontalAlignment="Center" />
         </StackPanel>
 
         <Border Grid.Row="1" Background="#171717" BorderBrush="#313131" BorderThickness="1" CornerRadius="8" Padding="18">
