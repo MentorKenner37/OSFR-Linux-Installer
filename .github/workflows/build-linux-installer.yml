@@ -103,12 +103,13 @@ jobs:
             cp "$SKIA" build/launcher/libSkiaSharp.so
           fi
 
-      - name: Embed launcher payload
+      - name: Embed launcher payload and OSFR icon
         run: |
           set -euo pipefail
           mkdir -p src/Installer/Resources
           (cd build/launcher && zip -qr ../../src/Installer/Resources/launcher-linux-x64.zip .)
-          cp OSFR-Launcher/assets/icon.png src/Installer/Resources/icon.png
+          cat src/Installer/Branding/osfr-icon.b64.* | base64 --decode > src/Installer/Resources/icon.png
+          file src/Installer/Resources/icon.png | grep -q 'PNG image data'
 
       - name: Publish self-contained C# installer
         run: |
