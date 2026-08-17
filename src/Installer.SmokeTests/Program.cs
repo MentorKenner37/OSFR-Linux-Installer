@@ -24,25 +24,31 @@ await File.WriteAllTextAsync(sentinel, "unrelated user data");
 
 try
 {
+    var installRejected = false;
     try
     {
         await service.InstallAsync(tempRoot, ready, new Progress<InstallProgress>());
-        throw new InvalidOperationException("Install must reject a non-empty unrelated directory.");
     }
     catch (InvalidOperationException)
     {
-        Assert(File.Exists(sentinel), "Rejected install destinations must remain untouched.");
+        installRejected = true;
     }
 
+    Assert(installRejected, "Install must reject a non-empty unrelated directory.");
+    Assert(File.Exists(sentinel), "Rejected install destinations must remain untouched.");
+
+    var uninstallRejected = false;
     try
     {
         await service.UninstallAsync(tempRoot, new Progress<InstallProgress>());
-        throw new InvalidOperationException("Uninstall must reject a directory it does not own.");
     }
     catch (InvalidOperationException)
     {
-        Assert(File.Exists(sentinel), "Uninstall must never delete unowned user data.");
+        uninstallRejected = true;
     }
+
+    Assert(uninstallRejected, "Uninstall must reject a directory it does not own.");
+    Assert(File.Exists(sentinel), "Uninstall must never delete unowned user data.");
 }
 finally
 {
