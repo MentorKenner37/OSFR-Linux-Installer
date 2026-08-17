@@ -33,6 +33,7 @@ public static class SystemDetector
         yield return Path.Combine(home, ".local", "share", "Steam");
         yield return Path.Combine(home, ".steam", "steam");
         yield return Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", "data", "Steam");
+        yield return Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam");
     }
 
     public static IEnumerable<string> FindSteamLibraries()
