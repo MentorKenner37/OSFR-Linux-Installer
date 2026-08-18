@@ -6,6 +6,17 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 
 > **Alpha 1** — Tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. More distributions, graphics configurations, and hardware are being tested as development continues.
 
+## What is Sanctuary?
+
+**Sanctuary** is the open-source server emulator at the heart of the Open Source Free Realms project. It recreates the server-side systems needed for the original Free Realms client to connect to and interact with a community-run Free Realms environment.
+
+This repository is **not the Sanctuary emulator itself**. The Sanctuary Linux Installer focuses on the other side of the equation: getting the Windows Free Realms client and OSFR launcher running cleanly on Linux through Steam Proton so Linux players can connect to a server powered by Sanctuary.
+
+- **Sanctuary emulator:** https://github.com/Open-Source-Free-Realms/Sanctuary
+- **Open Source Free Realms launcher:** https://github.com/Open-Source-Free-Realms/Launcher
+
+In simple terms: **Sanctuary emulates the Free Realms server, the OSFR launcher gets the client ready to connect, and the Sanctuary Linux Installer makes that Windows client/launcher stack practical to run on Linux through Proton.**
+
 ## Why the Linux Installer?
 
 Sanctuary brings Free Realms back through an open-source emulator, but running its Windows game client on Linux introduces another compatibility layer. Proton prefixes, executable paths, environment variables, graphics translation, 32-bit libraries, and distro differences can quickly turn installation into its own project.
@@ -175,6 +186,13 @@ If you just want to play, use the packaged installer from **Releases** instead o
 
 ## Credits and licensing
 
-This project provides the Linux installation and compatibility layer for **Sanctuary / Open Source Free Realms** and uses an adapted version of the Open Source Free Realms launcher. See `OSFR-Launcher/LICENSE` for the upstream launcher license.
+This project provides the Linux installation and compatibility layer for **Sanctuary / Open Source Free Realms** and uses an adapted version of the Open Source Free Realms launcher.
+
+Upstream projects:
+
+- Sanctuary emulator: https://github.com/Open-Source-Free-Realms/Sanctuary
+- Open Source Free Realms launcher: https://github.com/Open-Source-Free-Realms/Launcher
+
+See `OSFR-Launcher/LICENSE` for the upstream launcher license.
 
 The launcher includes Discord Rich Presence integration through the Discord Game SDK. This project is not created by or endorsed by Discord.
