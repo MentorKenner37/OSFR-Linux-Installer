@@ -2,7 +2,7 @@
 
 Sanctuary Linux Launcher is a Linux-focused installer and launcher setup for **Open Source Free Realms**, built to run the game through **Steam Proton** without requiring users to manually configure Wine prefixes or launcher paths.
 
-> **Status:** Alpha 1. Linux Mint and Debian x86_64 have both successfully launched Open Source Free Realms through Sanctuary; broader distro and hardware testing continues.
+> **Status:** Alpha 1. Linux Mint and Debian 13 x86_64 have both successfully launched Open Source Free Realms through Sanctuary; broader distro and hardware testing continues.
 
 ## What it does
 
@@ -126,7 +126,9 @@ GitHub Actions additionally checks NuGet dependencies for known vulnerabilities,
 ### Tested
 
 - Linux Mint x86_64 with Steam and Proton
-- Debian x86_64 with Steam and Proton after installing the required 32-bit runtime libraries
+- Debian 13 x86_64 with Steam and Proton after installing the required 32-bit runtime libraries
+
+A second Debian 13 validation on hardware already known to run Sanctuary successfully under Linux Mint confirmed that Free Realms launches and that in-game mouse/camera controls behave normally. This makes the separate camera-control problem observed on another Debian tester's machine unlikely to be a Debian-wide issue.
 
 ### Known compatibility notes
 
@@ -134,6 +136,7 @@ GitHub Actions additionally checks NuGet dependencies for known vulnerabilities,
 - A missing `libfreetype6:i386` can produce the `Wine cannot find the FreeType font library` warning.
 - Missing 32-bit OpenGL/Mesa packages can prevent the 32-bit game stack from launching correctly.
 - Proton-version differences may affect legacy input behavior such as mouse capture or in-game camera control on some systems. If rendering works but input does not, testing another installed Proton version is a reasonable compatibility step.
+- Wayland/XWayland, desktop compositor behavior, hardware/input differences, and prefix state remain possible machine-specific causes when camera input fails on one system but works on another.
 - Systems with incomplete or unavailable Vulkan support can use Sanctuary's WineD3D/OpenGL backend instead of DXVK/Vulkan.
 
 ### In testing
