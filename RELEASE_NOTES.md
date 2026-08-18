@@ -44,10 +44,39 @@ chmod +x Sanctuary-Linux-Installer
 - Graphical Linux desktop
 - Steam installed and working
 - A compatible Proton version installed
+- 32-bit Linux runtime support for Free Realms
 - Working graphics drivers
 - Vulkan support is recommended for DXVK; OpenGL/WineD3D is available as a compatibility fallback
 - Internet connection and sufficient disk space
 
+### Debian / 32-bit runtime note
+
+Real-machine Debian x86_64 testing confirmed that Sanctuary can launch Open Source Free Realms successfully once the required 32-bit runtime stack is present.
+
+A fresh Debian setup initially showed:
+
+```text
+Wine cannot find the FreeType font library.
+```
+
+and later stopped after Proton reported `fsync: up and running.`. Enabling i386 multiarch and installing the following packages resolved the launch blocker:
+
+```bash
+sudo dpkg --add-architecture i386
+sudo apt update
+sudo apt install libfreetype6:i386 libgl1:i386 libgl1-mesa-dri:i386 libglx-mesa0:i386
+```
+
+These are system dependencies and are not bundled into Sanctuary.
+
+## Compatibility notes
+
+- **Linux Mint x86_64:** confirmed working with Steam and Proton.
+- **Debian x86_64:** confirmed launching Open Source Free Realms with Steam and Proton after the required 32-bit runtime libraries were installed.
+- Free Realms is a 32-bit Windows title, so fresh 64-bit Linux installations may need additional 32-bit userspace libraries.
+- Systems without reliable Vulkan support can select the WineD3D/OpenGL graphics backend.
+- Proton-version differences may affect legacy mouse capture or in-game camera behavior on some hardware. If the game renders correctly but camera/input behavior is broken, test another installed Proton version before changing unrelated system settings.
+
 ## Alpha status
 
-Linux Mint x86_64 is the primary tested environment. Debian and additional Linux distributions, Steam layouts, desktop environments, filesystems, and GPU/driver combinations are still being validated before beta status.
+Linux Mint and Debian x86_64 have now both been validated far enough to launch Open Source Free Realms through Sanctuary. Ubuntu, Fedora, Arch-based systems, SteamOS/Steam Deck, additional desktop environments, filesystems, input devices, and GPU/driver combinations are still being validated before beta status.
