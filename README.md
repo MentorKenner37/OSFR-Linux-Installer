@@ -2,7 +2,7 @@
 
 Sanctuary Linux Launcher is a Linux-focused installer and launcher setup for **Open Source Free Realms**, built to run the game through **Steam Proton** without requiring users to manually configure Wine prefixes or launcher paths.
 
-> **Status:** Alpha 1. Linux Mint and Debian 13 x86_64 are tested and working. Broader distro and hardware testing continues.
+> **Status:** Alpha 1. Linux Mint, Debian 13, and Fedora Workstation x86_64 are tested and working. Broader distro and hardware testing continues.
 
 ## What it does
 
@@ -127,6 +127,7 @@ GitHub Actions additionally checks NuGet dependencies for known vulnerabilities,
 
 - **Linux Mint x86_64** — Steam + Proton, Free Realms launches and plays normally
 - **Debian 13 x86_64** — Steam + Proton, Free Realms launches and plays normally after installing the required 32-bit runtime libraries
+- **Fedora Workstation x86_64** — Steam + Proton + DXVK/Vulkan, Sanctuary installs successfully and Free Realms launches into the game world and plays normally
 
 Debian 13 has been validated on more than one machine. A second Debian 13 test on hardware already known to run Sanctuary successfully under Linux Mint confirmed that Free Realms launches and that in-game mouse/camera controls behave normally.
 
@@ -144,8 +145,8 @@ A separate Debian tester experienced abnormal camera/relative-mouse behavior, bu
 ### In testing
 
 - Ubuntu
-- Fedora
 - Arch-based distributions
+- openSUSE
 - SteamOS / Steam Deck
 - Additional desktop environments, Steam layouts, filesystems, input devices, and GPU/driver combinations
 
