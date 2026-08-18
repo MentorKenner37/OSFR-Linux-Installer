@@ -1,52 +1,86 @@
 # Sanctuary Linux Launcher
 
-Sanctuary Linux Launcher is a Linux-focused installer and launcher setup for **Open Source Free Realms**, built to run the game through **Steam Proton** without requiring users to manually configure Wine prefixes or launcher paths.
+**Free Realms on Linux, without turning Proton setup into a project of its own.**
 
-> **Status:** Alpha 1. Linux Mint, Debian 13, and Fedora Workstation x86_64 are tested and working. Broader distro and hardware testing continues.
+Sanctuary Linux Launcher is a Linux-first installer for **Open Source Free Realms**. It finds your Steam and Proton setup, prepares a dedicated Free Realms prefix, installs the patched OSFR launcher, and gives you a straightforward way to launch the game through Proton.
 
-## What it does
+> **Alpha 1** — Tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. More distributions, graphics configurations, and hardware are being tested as development continues.
 
-- Detects native and Flatpak Steam installations
-- Detects Proton Experimental, standard Proton releases, and GE-Proton builds
-- Verifies Proton architecture compatibility before use
-- Lets you choose which detected Proton version Sanctuary should use
-- Lets you choose between **DXVK/Vulkan** and **WineD3D/OpenGL** graphics backends
-- Installs the patched Open Source Free Realms launcher
-- Creates and manages a dedicated Proton prefix for Free Realms
-- Creates desktop and application-menu shortcuts
-- Supports safe upgrades, rollback, interrupted-install recovery, and uninstall
-- Validates install paths, symlinks, ownership metadata, archive paths, and launcher integrity
-- Writes diagnostics to `~/.local/state/OSFR-Linux/installer.log`
+## Why Sanctuary?
 
-Sanctuary does **not** install, update, or modify Steam, Proton, graphics drivers, Linux users, system services, or package-manager configuration.
+Running an older Windows game on Linux can involve prefixes, compatibility layers, paths, environment variables, graphics translation, and plenty of trial and error. Sanctuary is designed to handle that setup while still leaving control of Steam, Proton, and your system in your hands.
 
-## Requirements
+With Sanctuary you can:
 
-- x86_64 / AMD64 Linux
-- Graphical desktop environment
-- Steam installed and working
-- At least one compatible Proton version installed
-- 32-bit Linux runtime support for Free Realms
-- Working graphics drivers
-- Vulkan support is recommended for DXVK; WineD3D/OpenGL is available as a fallback
-- Internet connection
-- Enough disk space for the launcher, Proton prefix, and downloaded game files
+- Detect **native Steam** and **Flatpak Steam** installations
+- Find **Proton Experimental**, standard Proton releases, and **GE-Proton** builds
+- Choose which compatible Proton installation Free Realms should use
+- Choose **DXVK/Vulkan** or **WineD3D/OpenGL** for rendering
+- Install and launch the patched Open Source Free Realms launcher
+- Keep Free Realms isolated in its own dedicated Proton prefix
+- Create desktop and application-menu shortcuts
+- Safely upgrade, recover, roll back, or uninstall Sanctuary
+- Generate useful diagnostics when something goes wrong
 
-Release builds are self-contained. End users do **not** need Python, build scripts, or the .NET SDK.
+Sanctuary does **not** replace Steam, install graphics drivers, modify Linux users or services, or silently change your package-manager configuration.
 
-### 32-bit runtime requirements
+## Quick start
 
-Free Realms is a 32-bit Windows game. On a fresh 64-bit Linux installation, the required 32-bit runtime and graphics libraries may not be installed by default.
+You need an **x86_64 / AMD64 Linux system**, a graphical desktop, Steam, at least one compatible Proton version, working graphics drivers, an internet connection, and the 32-bit Linux runtime support required by Free Realms.
 
-A Debian x86_64 test initially reached Proton prefix startup but failed to display the launcher/game. The first visible symptom was:
+Release builds are self-contained. You do **not** need Python, the .NET SDK, or the repository source to use Sanctuary.
+
+Download these files from the latest release:
+
+```text
+Sanctuary-Linux-Installer
+Sanctuary-Linux-Installer.sha256
+```
+
+Verify the download:
+
+```bash
+sha256sum -c Sanctuary-Linux-Installer.sha256
+```
+
+Then make the installer executable and run it:
+
+```bash
+chmod +x Sanctuary-Linux-Installer
+./Sanctuary-Linux-Installer
+```
+
+Sanctuary will walk you through Steam/Proton detection, installation location, Proton selection, graphics backend, and a final summary before anything is installed.
+
+Need another official Proton release? Install it through your Steam Library, restart Sanctuary, and it should appear as an available option.
+
+## Choose your graphics backend
+
+Sanctuary stays Proton-based regardless of which graphics option you select.
+
+### DXVK / Vulkan — Recommended
+
+Free Realms' Direct3D rendering is translated through **DXVK to Vulkan**. This is the primary graphics path and is recommended when your GPU and drivers have usable Vulkan support.
+
+### WineD3D / OpenGL — Compatibility mode
+
+Direct3D is translated through **WineD3D to OpenGL**. This gives older systems and machines with missing or incomplete Vulkan support another route into the game.
+
+Selecting OpenGL does **not** switch Sanctuary to system Wine.
+
+## 32-bit runtime support
+
+Free Realms is a **32-bit Windows game**, so a 64-bit Linux installation still needs the appropriate 32-bit userspace and graphics libraries. Some distributions do not install these by default.
+
+During Debian testing, Proton successfully initialized but the launcher/game initially failed to appear. The useful clue was:
 
 ```text
 Wine cannot find the FreeType font library.
 ```
 
-After enabling i386 multiarch and installing the required 32-bit FreeType/OpenGL/Mesa libraries, Free Realms successfully launched through Sanctuary on Debian.
+After enabling Debian's i386 architecture and installing the required 32-bit FreeType/OpenGL/Mesa libraries, Free Realms launched successfully.
 
-For Debian-based systems, the known working package set is:
+The currently confirmed Debian package set is:
 
 ```bash
 sudo dpkg --add-architecture i386
@@ -54,109 +88,77 @@ sudo apt update
 sudo apt install libfreetype6:i386 libgl1:i386 libgl1-mesa-dri:i386 libglx-mesa0:i386
 ```
 
-These packages are system dependencies and are intentionally not bundled into Sanctuary. Future installer diagnostics should detect missing 32-bit runtime components and report the required distro-specific packages without silently modifying the user's system.
+These are operating-system dependencies, so Sanctuary intentionally does not bundle or silently install them. Better distro-specific prerequisite detection is planned as testing expands.
 
-## Install
+## Compatibility
 
-Download these two files from the latest GitHub release:
+### ✅ Tested and working
 
-```text
-Sanctuary-Linux-Installer
-Sanctuary-Linux-Installer.sha256
-```
+| Distribution | Result | Tested path |
+| --- | --- | --- |
+| **Linux Mint x86_64** | ✅ Working | Steam + Proton; Free Realms launches and plays normally |
+| **Debian 13 x86_64** | ✅ Working | Steam + Proton; launches and plays normally with required 32-bit runtime libraries |
+| **Fedora Workstation x86_64** | ✅ Working | Steam + Proton + DXVK/Vulkan; installer, launcher, and in-game play confirmed |
 
-Verify the installer:
+Debian 13 has been validated on more than one machine. Testing on hardware previously known to run Sanctuary under Linux Mint also confirmed normal in-game mouse and camera behavior on Debian.
 
-```bash
-sha256sum -c Sanctuary-Linux-Installer.sha256
-```
+One separate Debian machine showed abnormal relative-mouse/camera behavior. Because that problem has not reproduced on the other Debian system, it is being tracked as a **machine/session/Proton-specific compatibility issue**, not a Debian-wide failure.
 
-Make it executable and launch it:
+### 🧪 Next in the test queue
 
-```bash
-chmod +x Sanctuary-Linux-Installer
-./Sanctuary-Linux-Installer
-```
+- Arch-based distributions
+- Ubuntu
+- openSUSE
+- SteamOS / Steam Deck
+- More GPUs and integrated graphics
+- DXVK/Vulkan and WineD3D/OpenGL across different hardware
+- Additional desktop environments, Steam layouts, filesystems, and input devices
 
-Inside the installer, confirm Steam and Proton detection, choose an install location, Proton version, and graphics backend, review the summary, accept the installation settings, and install.
+Support in the codebase already includes native Steam, Flatpak Steam, custom Steam libraries, standard Proton, Proton Experimental, and GE-Proton detection. Real-machine validation is continuing throughout Alpha.
 
-To install another official Proton version, search for **Proton** in your Steam Library, install the version you want, then restart Sanctuary Linux Installer.
+## Troubleshooting and diagnostics
 
-## Graphics backends
-
-Sanctuary remains Proton-based in both modes:
-
-- **Vulkan (DXVK) — Recommended:** translates Free Realms' Direct3D rendering through DXVK to Vulkan.
-- **OpenGL (WineD3D) — Compatibility fallback:** translates Direct3D through WineD3D to OpenGL for systems without usable Vulkan support.
-
-The OpenGL option is intended for older or incomplete Vulkan implementations and does not switch Sanctuary to system Wine.
-
-## Diagnostics
-
-Run a read-only compatibility check:
-
-```bash
-./Sanctuary-Linux-Installer --diagnose
-```
-
-Preview the default installation plan without changing files:
-
-```bash
-./Sanctuary-Linux-Installer --dry-run
-```
-
-Installer logs are stored at:
+Sanctuary keeps an installer log at:
 
 ```text
 ~/.local/state/OSFR-Linux/installer.log
 ```
 
-If Proton initializes (`fsync: up and running.`) but nothing visible opens, verify the 32-bit runtime libraries above before changing other system components.
+Run a read-only compatibility check with:
 
-## Safety and reliability
+```bash
+./Sanctuary-Linux-Installer --diagnose
+```
 
-Sanctuary uses staged installation, transactional launcher replacement, rollback, crash recovery, structured ownership metadata, launcher SHA-256 verification, archive traversal protection, symlink checks, conservative recursive deletion, and dedicated install-state validation.
+Or preview the default installation plan without modifying files:
 
-The repository also contains xUnit regression tests and smoke tests for installation transactions, recovery, ownership rejection, path traversal, symlink handling, install-path validation, Proton runtime architecture detection, launcher path safety, graphics-backend selection, and packaged-installer behavior.
+```bash
+./Sanctuary-Linux-Installer --dry-run
+```
 
-GitHub Actions additionally checks NuGet dependencies for known vulnerabilities, validates the generated `.desktop` entry, builds the patched launcher and self-contained installer, runs packaged diagnostics/dry-run checks, and verifies the published SHA-256 checksum.
+A few things we've learned from real-machine testing:
 
-## Compatibility
+- Free Realms needs **32-bit runtime support** even on x86_64 Linux.
+- Missing 32-bit FreeType can produce `Wine cannot find the FreeType font library`.
+- Missing 32-bit OpenGL/Mesa libraries can stop the 32-bit game stack from launching correctly.
+- If Proton reaches `fsync: up and running.` but nothing visible opens, check the 32-bit runtime before changing unrelated components.
+- Proton-version differences can affect older input behavior such as relative mouse capture on some machines.
+- Wayland/XWayland, compositor behavior, hardware/input differences, and prefix state can also matter when an issue appears on only one system.
+- If Vulkan is unavailable or unreliable, try Sanctuary's **WineD3D/OpenGL** backend.
 
-### Tested and working
+## Built to be safe to test
 
-- **Linux Mint x86_64** — Steam + Proton, Free Realms launches and plays normally
-- **Debian 13 x86_64** — Steam + Proton, Free Realms launches and plays normally after installing the required 32-bit runtime libraries
-- **Fedora Workstation x86_64** — Steam + Proton + DXVK/Vulkan, Sanctuary installs successfully and Free Realms launches into the game world and plays normally
+Sanctuary isn't supposed to get Free Realms running by throwing files around your home directory and hoping for the best.
 
-Debian 13 has been validated on more than one machine. A second Debian 13 test on hardware already known to run Sanctuary successfully under Linux Mint confirmed that Free Realms launches and that in-game mouse/camera controls behave normally.
+The installer includes staged installation, transactional launcher replacement, rollback, interrupted-install recovery, ownership metadata, SHA-256 launcher verification, archive traversal protection, symlink checks, conservative recursive deletion, and install-state validation.
 
-A separate Debian tester experienced abnormal camera/relative-mouse behavior, but because that issue is not reproducible on the other Debian 13 system it is currently tracked as a machine/session/Proton-specific compatibility issue rather than a Debian-wide problem.
+The repository also contains **xUnit regression tests and smoke tests** covering installation transactions, recovery, ownership rejection, archive/path traversal, symlinks, install-path validation, Proton architecture detection, launcher path safety, graphics-backend selection, and packaged-installer behavior.
 
-### Known compatibility notes
-
-- Free Realms requires 32-bit userspace/runtime support even on a 64-bit Linux host.
-- A missing `libfreetype6:i386` can produce the `Wine cannot find the FreeType font library` warning.
-- Missing 32-bit OpenGL/Mesa packages can prevent the 32-bit game stack from launching correctly.
-- Proton-version differences may affect legacy input behavior such as mouse capture or in-game camera control on some systems. If rendering works but input does not, testing another installed Proton version is a reasonable compatibility step.
-- Wayland/XWayland, desktop compositor behavior, hardware/input differences, and prefix state remain possible machine-specific causes when camera input fails on one system but works on another.
-- Systems with incomplete or unavailable Vulkan support can use Sanctuary's WineD3D/OpenGL backend instead of DXVK/Vulkan.
-
-### In testing
-
-- Ubuntu
-- Arch-based distributions
-- openSUSE
-- SteamOS / Steam Deck
-- Additional desktop environments, Steam layouts, filesystems, input devices, and GPU/driver combinations
-
-Native Steam, Flatpak Steam, custom Steam libraries, standard Proton, Proton Experimental, and GE-Proton detection are supported by the current codebase, but real-machine validation is still expanding during alpha.
+GitHub Actions checks dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, runs packaged diagnostics and dry-run checks, and verifies the published SHA-256 checksum.
 
 ## Building from source
 
 Development builds require the .NET SDK specified by `OSFR-Launcher/src/global.json`.
-
-The main components are:
 
 ```text
 src/Installer/                  Avalonia Sanctuary installer
@@ -167,10 +169,10 @@ OSFR-Launcher/                  Patched upstream launcher source
 .github/workflows/              Build, test, verification, and release automation
 ```
 
-End users should use the packaged installer from **Releases** rather than building from source.
+If you just want to play, use the packaged installer from **Releases** instead of building from source.
 
 ## Credits and licensing
 
-Sanctuary uses and adapts the Open Source Free Realms launcher. See `OSFR-Launcher/LICENSE` for the upstream launcher license.
+Sanctuary uses and adapts the **Open Source Free Realms** launcher. See `OSFR-Launcher/LICENSE` for the upstream launcher license.
 
-The launcher includes Discord Rich Presence integration using the Discord Game SDK. This project is not created by or endorsed by Discord.
+The launcher includes Discord Rich Presence integration through the Discord Game SDK. This project is not created by or endorsed by Discord.
