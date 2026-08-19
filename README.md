@@ -4,7 +4,7 @@
 
 Sanctuary Linux Installer is a Linux-first installation and compatibility tool for **Sanctuary**, the Open Source Free Realms emulator. The installer finds your Steam and Proton setup, prepares a dedicated Free Realms prefix, installs the patched OSFR launcher used to connect to Sanctuary, and handles the Linux-specific setup needed to get into the game.
 
-> **Alpha 1** — Tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. More distributions, graphics configurations, and hardware are being tested as development continues.
+> **Alpha 1** — Tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so the environments that have been confirmed in-game are documented below.
 
 ## What is Sanctuary?
 
@@ -107,11 +107,24 @@ These are operating-system dependencies, so the Linux installer intentionally do
 
 ### ✅ Tested and working
 
-| Distribution | Result | Tested path |
+The following are **real tested environments**, not assumptions based only on distro family. "Working" means the installer and OSFR launcher ran, Free Realms reached the game world, and normal in-game controls were confirmed in the tested session unless a caveat is listed.
+
+| Distribution / environment | Result | Tested path |
 | --- | --- | --- |
-| **Linux Mint x86_64** | ✅ Working | Steam + Proton; Sanctuary/Free Realms launches and plays normally |
-| **Debian 13 x86_64** | ✅ Working | Steam + Proton; Sanctuary/Free Realms launches and plays normally with required 32-bit runtime libraries |
-| **Fedora Workstation x86_64** | ✅ Working | Steam + Proton + DXVK/Vulkan; installer, OSFR launcher, and in-game play confirmed |
+| **Linux Mint x86_64 — Cinnamon / X11** | ✅ Confirmed working | Steam + Proton; Free Realms launches, enters the world, and controls work normally |
+| **Debian 13 x86_64** | ✅ Confirmed working | Steam + Proton; Free Realms launches and Shift-walk works with the required 32-bit runtime libraries installed |
+| **Fedora Workstation x86_64 — GNOME Classic / Wayland** | ✅ Confirmed working | Proton 11 + DXVK/Vulkan; installer, OSFR launcher, in-game play, and Shift-walk confirmed |
+| **Fedora Workstation x86_64 — Cinnamon / Wayland** | ⚠️ Playable with input caveat | Proton 11 + DXVK/Vulkan launches and plays, but Shift + movement does not trigger walking |
+
+### Desktop/session compatibility note
+
+Desktop environment and display session can matter independently of the Linux distribution.
+
+Current Fedora testing is especially useful: **GNOME Classic on Wayland works correctly with Proton 11**, including Shift-walk, while **Cinnamon on Wayland on the same Fedora installation launches and plays but does not recognize Shift-walk correctly**. Because Wayland and Proton 11 both work in the GNOME Classic test, neither should currently be considered globally incompatible with Free Realms.
+
+For Fedora users who encounter the Shift-walk problem under Cinnamon/Wayland, the currently confirmed workaround is to use **GNOME Classic / Wayland**. Fedora Cinnamon/X11 has not yet been tested, so the exact cause remains under investigation.
+
+Linux Mint has been confirmed working with **Cinnamon / X11**. This also means Cinnamon itself is not known to be generally incompatible; the current problem is specifically associated with the tested Cinnamon/Wayland combination.
 
 Debian 13 has been validated on more than one machine. Testing on hardware previously known to run the Sanctuary client under Linux Mint also confirmed normal in-game mouse and camera behavior on Debian.
 
@@ -123,6 +136,7 @@ One separate Debian machine showed abnormal relative-mouse/camera behavior. Beca
 - Ubuntu
 - openSUSE
 - SteamOS / Steam Deck
+- Fedora Cinnamon / X11
 - More GPUs and integrated graphics
 - DXVK/Vulkan and WineD3D/OpenGL across different hardware
 - Additional desktop environments, Steam layouts, filesystems, and input devices
@@ -155,8 +169,11 @@ A few things we've learned from real-machine testing:
 - Missing 32-bit FreeType can produce `Wine cannot find the FreeType font library`.
 - Missing 32-bit OpenGL/Mesa libraries can stop the 32-bit game stack from launching correctly.
 - If Proton reaches `fsync: up and running.` but nothing visible opens, check the 32-bit runtime before changing unrelated components.
-- Proton-version differences can affect older input behavior such as relative mouse capture on some machines.
-- Wayland/XWayland, compositor behavior, hardware/input differences, and prefix state can also matter when an issue appears on only one system.
+- Desktop environment and session type can affect old-game input behavior even when the same Proton version is used.
+- **Fedora GNOME Classic / Wayland + Proton 11** is currently confirmed working, including Shift-walk.
+- **Fedora Cinnamon / Wayland + Proton 11** currently has a Shift-walk input issue.
+- **Linux Mint Cinnamon / X11** is confirmed working with normal controls.
+- Proton-version differences, compositor behavior, hardware/input differences, and prefix state can also matter when an issue appears on only one system.
 - If Vulkan is unavailable or unreliable, use the installer's **WineD3D/OpenGL** backend.
 
 ## Built to be safe to test
