@@ -1,12 +1,12 @@
-name: Clean Alpha Releases
+name: Clean Superseded Prereleases
 
 on:
   workflow_run:
-    workflows: ["Build Linux Installer"]
+    workflows: ["Publish versioned release"]
     types: [completed]
 
 concurrency:
-  group: alpha-release-cleanup
+  group: prerelease-cleanup
   cancel-in-progress: true
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
         with:
           ref: main
 
-      - name: Keep only current Alpha prerelease
+      - name: Keep only current prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -32,33 +32,26 @@ jobs:
           VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n1)"
           test -n "$VERSION"
           case "$VERSION" in
-            *alpha*|*Alpha*) ;;
-            *) echo "Current version is not an Alpha; no Alpha cleanup required."; exit 0 ;;
+            *-*) ;;
+            *) echo "Current version is stable; no prerelease cleanup required."; exit 0 ;;
           esac
           KEEP_TAG="v$VERSION"
 
-          echo "Keeping current Alpha release: $KEEP_TAG"
+          echo "Keeping current prerelease: $KEEP_TAG"
 
           gh release edit "$KEEP_TAG" \
             --title "Sanctuary Linux Installer $KEEP_TAG" \
             --notes-file RELEASE_NOTES.md \
             --prerelease
 
-          # Only remove superseded Alpha prereleases. Never delete stable/beta/other release tags.
+          # Remove only older releases explicitly marked as prereleases. Stable releases are never touched.
           gh release list --limit 100 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease == true) | .tagName' | while read -r TAG; do
             [ -n "$TAG" ] || continue
             if [ "$TAG" = "$KEEP_TAG" ]; then
               continue
             fi
-            case "$TAG" in
-              *alpha*|*Alpha*)
-                echo "Removing superseded Alpha release and tag: $TAG"
-                gh release delete "$TAG" --cleanup-tag --yes
-                ;;
-              *)
-                echo "Leaving non-Alpha prerelease untouched: $TAG"
-                ;;
-            esac
+            echo "Removing superseded prerelease and tag: $TAG"
+            gh release delete "$TAG" --cleanup-tag --yes
           done
 
-          echo "Alpha release cleanup complete."
+          echo "Prerelease cleanup complete."
