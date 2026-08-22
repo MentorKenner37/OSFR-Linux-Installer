@@ -1,7 +1,8 @@
 name: Bug report
-about: Report an installer, launcher, graphics, input, or compatibility problem
+description: Report an installer, launcher, graphics, input, or compatibility problem
 title: "[Bug] "
 labels: []
+assignees: []
 body:
   - type: markdown
     attributes:
