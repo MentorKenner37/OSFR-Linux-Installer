@@ -129,6 +129,8 @@ public partial class MainWindow : Window
             $"Proton: {_state.ProtonPath ?? "not found"}"
         };
 
+        lines.Add($"curl fallback: {_state.CurlPath ?? "not found (normal downloads remain available)"}");
+
         if (!string.IsNullOrWhiteSpace(_state.ProtonCompatibilityMessage))
             lines.Add(_state.ProtonCompatibilityMessage);
 
