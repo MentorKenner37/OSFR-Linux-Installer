@@ -545,7 +545,7 @@ public partial class Server : ObservableObject
             startInfo.ArgumentList.Add(file.Size.ToString(System.Globalization.CultureInfo.InvariantCulture));
             startInfo.ArgumentList.Add("--output");
             startInfo.ArgumentList.Add(temporaryPath);
-            startInfo.ArgumentList.Add(clientFileUri.AbsoluteUri);
+            startInfo.ArgumentList.Add(clientFileUri);
 
             using var process = Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Failed to start curl.");
