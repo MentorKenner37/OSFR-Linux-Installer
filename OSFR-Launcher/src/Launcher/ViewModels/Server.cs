@@ -515,7 +515,7 @@ public partial class Server : ObservableObject
             if (string.IsNullOrEmpty(Info.Url))
                 return false;
 
-            var curlPath = File.Exists("/usr/bin/curl") ? "/usr/bin/curl" : File.Exists("/bin/curl") ? "/bin/curl" : null;
+            var curlPath = CurlDownloadHelper.FindExecutable();
             if (curlPath is null)
             {
                 _logger.Error("curl fallback is unavailable for {Path}.", downloadFilePath);
@@ -528,57 +528,8 @@ public partial class Server : ObservableObject
             var clientFileUri = UriHelper.JoinUriPaths(Info.Url, "client", file.Path, file.Name);
             temporaryPath = Path.Combine(fileDirectory, $".{Path.GetFileName(filePath)}.{Guid.NewGuid():N}.curl-download");
 
-            var startInfo = new ProcessStartInfo(curlPath)
-            {
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-            startInfo.ArgumentList.Add("--fail");
-            startInfo.ArgumentList.Add("--silent");
-            startInfo.ArgumentList.Add("--show-error");
-            startInfo.ArgumentList.Add("--location");
-            startInfo.ArgumentList.Add("--proto");
-            startInfo.ArgumentList.Add("=https");
-            startInfo.ArgumentList.Add("--tlsv1.2");
-            startInfo.ArgumentList.Add("--max-filesize");
-            startInfo.ArgumentList.Add(file.Size.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            startInfo.ArgumentList.Add("--output");
-            startInfo.ArgumentList.Add(temporaryPath);
-            startInfo.ArgumentList.Add(clientFileUri);
-
-            using var process = Process.Start(startInfo)
-                ?? throw new InvalidOperationException("Failed to start curl.");
-            using var cancellationRegistration = cancellationToken.Register(() =>
-            {
-                try
-                {
-                    if (!process.HasExited)
-                        process.Kill(entireProcessTree: true);
-                }
-                catch (InvalidOperationException)
-                {
-                    // The process exited between HasExited and Kill.
-                }
-            });
-            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken);
-            var error = await errorTask;
-
-            if (process.ExitCode != 0)
-                throw new InvalidDataException($"curl exited with code {process.ExitCode}: {error.Trim()}");
-
-            await using (var verifyStream = File.OpenRead(temporaryPath))
-            {
-                var receivedSize = verifyStream.Length;
-                var receivedHash = XXHash.Hash64(verifyStream);
-                if (receivedSize != file.Size || receivedHash != file.Hash)
-                {
-                    throw new InvalidDataException(
-                        $"curl download failed verification: {downloadFilePath}; expected-size={file.Size}, received-size={receivedSize}, " +
-                        $"expected-xxhash64={file.Hash}, received-xxhash64={receivedHash}.");
-                }
-            }
+            await CurlDownloadHelper.DownloadAndVerifyAsync(
+                curlPath, clientFileUri, temporaryPath, file.Size, file.Hash, cancellationToken);
 
             File.Move(temporaryPath, filePath, overwrite: true);
             temporaryPath = null;
