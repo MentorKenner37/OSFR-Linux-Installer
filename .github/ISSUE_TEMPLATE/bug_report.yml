@@ -1,0 +1,66 @@
+name: Bug report
+about: Report an installer, launcher, graphics, input, or compatibility problem
+title: "[Bug] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Sanctuary Linux Installer. Please include the read-only diagnostics output below so distro, hardware, desktop/session, Steam, Proton, and runtime differences can be compared accurately.
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanctuary Linux Installer diagnostics
+      description: Run `./Sanctuary-Linux-Installer --diagnose` and paste the complete output here. Review it before posting if your local paths contain anything you do not want public.
+      render: text
+      placeholder: Sanctuary Linux Installer diagnostics
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you were doing when it occurred.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the selected Proton version, graphics backend, desktop/session changes, and whether this was a fresh install or an existing prefix when relevant.
+      placeholder: |
+        1. Launch installer
+        2. Select ...
+        3. Launch Free Realms
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant installer or launcher logs
+      description: Installer logs are normally under `~/.local/state/OSFR-Linux/installer.log`. Paste only the relevant section if the file is large.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I used the latest available Sanctuary Linux Installer prerelease before filing this issue.
+          required: true
+        - label: I checked the existing issues for the same problem.
+          required: true
