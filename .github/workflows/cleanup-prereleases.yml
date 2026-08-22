@@ -1,0 +1,57 @@
+name: Clean Superseded Prereleases
+
+on:
+  workflow_run:
+    workflows: ["Publish versioned release"]
+    types: [completed]
+
+concurrency:
+  group: prerelease-cleanup
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  clean-releases:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+
+      - name: Keep only current prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n1)"
+          test -n "$VERSION"
+          case "$VERSION" in
+            *-*) ;;
+            *) echo "Current version is stable; no prerelease cleanup required."; exit 0 ;;
+          esac
+          KEEP_TAG="v$VERSION"
+
+          echo "Keeping current prerelease: $KEEP_TAG"
+
+          gh release edit "$KEEP_TAG" \
+            --title "Sanctuary Linux Installer $KEEP_TAG" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease
+
+          # Remove only older releases explicitly marked as prereleases. Stable releases are never touched.
+          gh release list --limit 100 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease == true) | .tagName' | while read -r TAG; do
+            [ -n "$TAG" ] || continue
+            if [ "$TAG" = "$KEEP_TAG" ]; then
+              continue
+            fi
+            echo "Removing superseded prerelease and tag: $TAG"
+            gh release delete "$TAG" --cleanup-tag --yes
+          done
+
+          echo "Prerelease cleanup complete."
