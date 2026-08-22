@@ -50,7 +50,6 @@ public static class HttpHelper
         var httpClient = new HttpClient(new SocketsHttpHandler()
         {
             AllowAutoRedirect = true,
-            ConnectCallback = HappyEyeballsConnectAsync,
             PooledConnectionLifetime = TimeSpan.FromMinutes(10),
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
             MaxConnectionsPerServer = Settings.Instance.DownloadThreads,
