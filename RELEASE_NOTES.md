@@ -1,10 +1,11 @@
-# Sanctuary Linux Installer 1.0.7
+# Sanctuary Linux Installer 1.0.8
 
-Version 1.0.7 adds verified retry handling for transient CDN responses after diagnostics showed Cloudflare occasionally returning a mismatched chunked body with HTTP 200 during a large parallel download batch.
+Version 1.0.8 fixes the persistent `loading.html` download failure observed with the launcher's .NET HTTP path on Linux.
 
 ## Security and data-safety improvements
 
-- Uses direct HTTP response streaming for client files, eliminating the stream behavior that caused an erroneous `Failed to download ... loading.html` result.
+- Uses .NET's native connection management for client downloads instead of the launcher's custom socket callback.
+- Automatically falls back to the system `curl` binary on Linux after repeated .NET download verification failures. The fallback is argument-safe, HTTPS-only, size-bounded, cancellable, and must pass the same manifest size and XXHash64 checks before installation.
 - Records the final URL, HTTP version, expected and received byte counts, content length, content encoding, and transfer encoding for failed downloads.
 - Explicitly requests an uncompressed identity response to match the known-working command-line download behavior.
 - Retries size, hash, and transient HTTP failures up to three times with cache bypass while preserving atomic installation and verification.
