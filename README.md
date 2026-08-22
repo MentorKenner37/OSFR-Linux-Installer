@@ -61,11 +61,11 @@ Steam: <detected Steam root>
 Proton: <selected stable-first Proton build>
 ```
 
-This information is especially important for Alpha bug reports because old-game behavior can differ by distro, desktop environment, display session, graphics stack, and Proton build.
+Host parsing is separated into deterministic parsers for `/etc/os-release`, `/proc/cpuinfo`, `/proc/meminfo`, and `lspci` graphics output so the detection logic can be regression-tested without depending on the CI runner's actual hardware.
 
 ## Proton recommendation policy
 
-When multiple compatible Proton builds are installed, Sanctuary Linux Installer now prefers the newest standard stable Proton release first. If no standard stable release is available, it falls back to the newest compatible GE-Proton build, then Proton Experimental, then another compatible candidate.
+When multiple compatible Proton builds are installed, Sanctuary Linux Installer prefers the newest standard stable Proton release first. If no standard stable release is available, it falls back to the newest compatible GE-Proton build, then Proton Experimental, then another compatible candidate.
 
 This is only the default selection. Users can still explicitly choose another detected Proton build from the installer.
 
@@ -99,7 +99,7 @@ sudo apt update
 sudo apt install libfreetype6:i386 libgl1:i386 libgl1-mesa-dri:i386 libglx-mesa0:i386
 ```
 
-These are operating-system dependencies and are not silently installed by Sanctuary Linux Installer. The compatibility advisor probes the installed 32-bit FreeType/OpenGL runtime and provides distro-family package guidance when required components are known to be missing.
+These are operating-system dependencies and are not silently installed by Sanctuary Linux Installer. The compatibility advisor probes the installed 32-bit FreeType/OpenGL runtime and provides distro-family package guidance when required components are known to be missing. Its `ldconfig` parsing and ELF32/ELF64 library-class checks also have deterministic regression coverage.
 
 ## Compatibility
 
@@ -155,17 +155,17 @@ Useful findings from real-machine testing:
 
 The repository contains xUnit regression tests plus installer and launcher smoke tests. Pushes to `main` and pull requests into `main` run the full unit/smoke suite, and the packaged installer build is gated on the xUnit suite before an artifact can be published.
 
-CI also checks NuGet dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, exercises packaged `--diagnose` and `--dry-run`, verifies that hardware/OS diagnostics are present, and verifies the published SHA-256 checksum.
+CI also checks NuGet dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, exercises packaged `--diagnose` and `--dry-run`, verifies hardware/OS/runtime/graphics diagnostic fields are present, and verifies the published SHA-256 checksum.
 
-Regression coverage now includes Steam-layout detection, Cinnamon/Wayland warning logic, graphics-backend recommendation behavior, and stable-first Proton selection in addition to the existing installer safety and Proton tests.
+Regression coverage includes install/uninstall safety, ownership and rollback behavior, Steam-library parsing, Proton runtime architecture, Steam type detection, Cinnamon/Wayland warning logic, graphics-backend recommendation behavior, stable-first Proton selection, OS/CPU/RAM/GPU text parsing, `ldconfig` parsing, and ELF32/ELF64 runtime probing.
 
 Release cleanup is handled by the dedicated Alpha cleanup workflow rather than old version-specific cleanup logic embedded in the build workflow.
 
 ## Current Alpha compatibility work
 
-The active work list is tracked in `TODO.md`. Most code-side compatibility intelligence is now in place. Remaining work is primarily deeper deterministic parser/runtime-probe test coverage and real-machine validation.
+The active work list is tracked in `TODO.md`. The code-side compatibility and diagnostics pass is now largely complete. The remaining Alpha work is primarily **real-machine validation**.
 
-Real-machine work still includes Arch, Ubuntu, openSUSE, SteamOS/Steam Deck, Fedora Cinnamon/X11, integrated graphics, more AMD/Intel/NVIDIA hardware, clean WineD3D/OpenGL validation, and broader outside-user Alpha testing.
+That includes Arch, Ubuntu, openSUSE, SteamOS/Steam Deck, Fedora Cinnamon/X11, integrated graphics, more AMD/Intel/NVIDIA hardware, clean WineD3D/OpenGL validation, more desktop/session combinations, and broader outside-user testing.
 
 ## Building from source
 
