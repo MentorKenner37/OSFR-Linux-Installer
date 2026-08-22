@@ -77,8 +77,11 @@ try
     var curlOutput = Path.Combine(curlSmokeRoot, "download.bin");
     const string payload = "verified-curl-smoke";
     File.WriteAllText(fakeCurl, "#!/bin/sh\noutput=''\nwhile [ \"$#\" -gt 0 ]; do\n  if [ \"$1\" = '--output' ]; then shift; output=\"$1\"; fi\n  shift\ndone\nprintf 'verified-curl-smoke' > \"$output\"\n");
-    File.SetUnixFileMode(fakeCurl,
-        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD())
+    {
+        File.SetUnixFileMode(fakeCurl,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    }
 
     Assert(CurlDownloadHelper.FindExecutable(curlSmokeRoot) == fakeCurl,
         "curl resolution must honor PATH instead of assuming /usr/bin.");
