@@ -164,11 +164,13 @@ Useful findings from real-machine testing:
 
 The repository contains xUnit regression tests plus installer and launcher smoke tests. Pushes to `main` and pull requests into `main` run the full unit/smoke suite without publishing. Releases are built again from an immutable version tag, and publishing is allowed only when that tag exactly matches the project version.
 
+Repository owners must set **Settings → Actions → General → Workflow permissions** to **Read and write permissions** so the tag workflow can publish release assets.
+
 CI also checks NuGet dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, exercises packaged `--diagnose` and `--dry-run`, verifies hardware/OS/runtime/graphics diagnostic fields are present, and verifies the published SHA-256 checksum. Versioned releases are immutable: publishing fails if the version tag already exists.
 
 Regression coverage includes install/uninstall safety, ownership and rollback behavior, Steam-library parsing, Proton runtime architecture, Steam type detection, Cinnamon/Wayland warning logic, graphics-backend recommendation behavior, stable-first Proton selection, OS/CPU/RAM/GPU text parsing, `ldconfig` parsing, and ELF32/ELF64 runtime probing.
 
-Release cleanup is handled by the dedicated Alpha cleanup workflow rather than old version-specific cleanup logic embedded in the build workflow.
+Release cleanup is handled by a dedicated prerelease cleanup workflow. Stable releases are never removed by that automation.
 
 ## Current compatibility work
 
