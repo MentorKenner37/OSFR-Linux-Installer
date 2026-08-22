@@ -13,7 +13,12 @@ public partial class MainWindow
         var compatibility = CompatibilityAdvisor.Detect(_state);
         GraphicsBackendComboBox.SelectedIndex = compatibility.RecommendedGraphicsBackend == GraphicsBackendConfig.WineD3D ? 1 : 0;
 
+        // The original XAML did not wire the graphics SelectionChanged handler, so do it here.
+        // This keeps the review summary in sync when the user overrides the automatic recommendation.
+        GraphicsBackendComboBox.SelectionChanged += GraphicsBackendSelectionChanged;
         ProtonComboBox.SelectionChanged += (_, _) => RefreshCompatibilityDetails();
+
+        RefreshSummary();
         RefreshCompatibilityDetails();
     }
 
