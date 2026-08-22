@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -11,9 +13,20 @@ public partial class MainWindow : Window
 {
     private readonly InstallService _installService = new();
     private SystemState _state = SystemDetector.Detect();
+    private HostSnapshot _host = DetectHost();
     private bool _busy;
     private bool _updatingProtonSelection;
     private int _step = 1;
+
+    private sealed record HostSnapshot(
+        string OperatingSystem,
+        string Kernel,
+        string Architecture,
+        string Cpu,
+        string Memory,
+        string Gpu,
+        string Desktop,
+        string Session);
 
     private static readonly IBrush Good = new SolidColorBrush(Color.Parse("#45D483"));
     private static readonly IBrush Bad = new SolidColorBrush(Color.Parse("#E05252"));
@@ -71,15 +84,17 @@ public partial class MainWindow : Window
     {
         var previousProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         _state = SystemDetector.Detect();
+        _host = DetectHost();
         var compatibleCandidates = _state.ProtonCandidates?.Where(candidate => candidate.Compatible).ToList() ?? [];
 
         _updatingProtonSelection = true;
+        ProtonCandidate? selected = null;
         try
         {
             ProtonComboBox.ItemsSource = compatibleCandidates;
-            var selected = compatibleCandidates.FirstOrDefault(candidate => candidate.Path == previousProton)
-                           ?? compatibleCandidates.FirstOrDefault(candidate => candidate.Recommended)
-                           ?? compatibleCandidates.FirstOrDefault();
+            selected = compatibleCandidates.FirstOrDefault(candidate => candidate.Path == previousProton)
+                       ?? compatibleCandidates.FirstOrDefault(candidate => candidate.Recommended)
+                       ?? compatibleCandidates.FirstOrDefault();
             ProtonComboBox.SelectedItem = selected;
             ProtonComboBox.IsEnabled = !_busy && compatibleCandidates.Count > 0;
             if (selected is not null)
@@ -90,16 +105,200 @@ public partial class MainWindow : Window
             _updatingProtonSelection = false;
         }
 
-        SetCheck(LinuxStatus, _state.IsLinux, _state.IsLinux ? "SUPPORTED" : "REQUIRED");
-        SetCheck(CpuStatus, _state.IsX64, _state.IsX64 ? "SUPPORTED" : "REQUIRED");
+        SetCheck(LinuxStatus, _state.IsLinux, _state.IsLinux ? _host.OperatingSystem : "Linux required");
+        SetCheck(CpuStatus, _state.IsX64, _state.IsX64 ? $"{_host.Cpu} ({_host.Architecture})" : $"{_host.Architecture} — x86_64 required");
         SetCheck(SteamStatus, _state.SteamRoot is not null, _state.SteamRoot is not null ? "DETECTED" : "NOT FOUND");
-        SetCheck(ProtonStatus, _state.ProtonCompatible, _state.ProtonCompatible ? "COMPATIBLE" : "NOT FOUND / INCOMPATIBLE");
+        SetCheck(ProtonStatus, _state.ProtonCompatible, selected?.Name ?? (_state.ProtonCompatible ? "COMPATIBLE" : "NOT FOUND / INCOMPATIBLE"));
 
-        DetailText.Text = _state.Ready
-            ? $"Steam: {_state.SteamRoot}\nProton: {_state.ProtonPath}\n{_state.ProtonCompatibilityMessage}"
-            : "A supported x86_64 Linux environment, Steam, and a compatible installed Proton build are required before installation can continue.";
+        DetailText.Text = BuildHostDetails();
 
         RefreshInstallUi();
+    }
+
+    private string BuildHostDetails()
+    {
+        var lines = new List<string>
+        {
+            $"OS: {_host.OperatingSystem}",
+            $"Kernel: {_host.Kernel}",
+            $"Desktop: {_host.Desktop} ({_host.Session})",
+            $"CPU: {_host.Cpu}",
+            $"Memory: {_host.Memory}",
+            $"GPU: {_host.Gpu}",
+            $"Steam: {_state.SteamRoot ?? "not found"}",
+            $"Proton: {_state.ProtonPath ?? "not found"}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(_state.ProtonCompatibilityMessage))
+            lines.Add(_state.ProtonCompatibilityMessage);
+
+        if (!_state.Ready)
+            lines.Add("A supported x86_64 Linux environment, Steam, and a compatible installed Proton build are required before installation can continue.");
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static HostSnapshot DetectHost()
+    {
+        return new HostSnapshot(
+            ReadOperatingSystemName(),
+            RuntimeInformation.OSDescription,
+            RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant(),
+            ReadCpuModel(),
+            ReadMemoryTotal(),
+            ReadGpuModel(),
+            ReadDesktop(),
+            Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") ?? "unknown");
+    }
+
+    private static string ReadOperatingSystemName()
+    {
+        const string osRelease = "/etc/os-release";
+        try
+        {
+            if (!File.Exists(osRelease))
+                return RuntimeInformation.OSDescription;
+
+            foreach (var line in File.ReadLines(osRelease))
+            {
+                if (!line.StartsWith("PRETTY_NAME=", StringComparison.Ordinal))
+                    continue;
+
+                return line["PRETTY_NAME=".Length..].Trim().Trim('"');
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            InstallerLog.Warn($"Could not read /etc/os-release: {ex.Message}");
+        }
+
+        return RuntimeInformation.OSDescription;
+    }
+
+    private static string ReadCpuModel()
+    {
+        const string cpuInfo = "/proc/cpuinfo";
+        try
+        {
+            if (File.Exists(cpuInfo))
+            {
+                foreach (var line in File.ReadLines(cpuInfo))
+                {
+                    if (!line.StartsWith("model name", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    var separator = line.IndexOf(':');
+                    if (separator >= 0 && separator + 1 < line.Length)
+                        return line[(separator + 1)..].Trim();
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            InstallerLog.Warn($"Could not read CPU information: {ex.Message}");
+        }
+
+        return RuntimeInformation.ProcessArchitecture.ToString();
+    }
+
+    private static string ReadMemoryTotal()
+    {
+        const string memInfo = "/proc/meminfo";
+        try
+        {
+            if (File.Exists(memInfo))
+            {
+                var line = File.ReadLines(memInfo).FirstOrDefault(value => value.StartsWith("MemTotal:", StringComparison.Ordinal));
+                if (line is not null)
+                {
+                    var digits = new string(line.Where(char.IsDigit).ToArray());
+                    if (long.TryParse(digits, out var kib))
+                        return $"{kib / 1024d / 1024d:0.0} GiB RAM";
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            InstallerLog.Warn($"Could not read memory information: {ex.Message}");
+        }
+
+        return "unknown";
+    }
+
+    private static string ReadGpuModel()
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = "lspci",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
+
+            if (process is not null)
+            {
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit(1500);
+
+                var gpuLines = output
+                    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(line => line.Contains("VGA compatible controller", StringComparison.OrdinalIgnoreCase)
+                                   || line.Contains("3D controller", StringComparison.OrdinalIgnoreCase)
+                                   || line.Contains("Display controller", StringComparison.OrdinalIgnoreCase))
+                    .Select(line =>
+                    {
+                        var separator = line.IndexOf(": ", StringComparison.Ordinal);
+                        return separator >= 0 ? line[(separator + 2)..].Trim() : line.Trim();
+                    })
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                if (gpuLines.Length > 0)
+                    return string.Join("; ", gpuLines);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or IOException)
+        {
+            InstallerLog.Warn($"Could not query GPU information with lspci: {ex.Message}");
+        }
+
+        try
+        {
+            var drmRoot = "/sys/class/drm";
+            if (Directory.Exists(drmRoot))
+            {
+                var drivers = Directory.EnumerateDirectories(drmRoot, "card*")
+                    .Where(path => !Path.GetFileName(path).Contains('-', StringComparison.Ordinal))
+                    .Select(path => Path.Combine(path, "device", "driver", "module"))
+                    .Where(Directory.Exists)
+                    .Select(path => new DirectoryInfo(path).ResolveLinkTarget(true)?.Name)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                if (drivers.Length > 0)
+                    return $"Detected graphics driver: {string.Join(", ", drivers!)}";
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            InstallerLog.Warn($"Could not read DRM GPU information: {ex.Message}");
+        }
+
+        return "not detected";
+    }
+
+    private static string ReadDesktop()
+    {
+        var desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
+        if (!string.IsNullOrWhiteSpace(desktop))
+            return desktop;
+
+        desktop = Environment.GetEnvironmentVariable("DESKTOP_SESSION");
+        return string.IsNullOrWhiteSpace(desktop) ? "unknown" : desktop;
     }
 
     private void RefreshInstallUi()
@@ -268,7 +467,9 @@ public partial class MainWindow : Window
             return;
 
         _state = _state.WithProton(selected);
-        DetailText.Text = $"Steam: {_state.SteamRoot}\nProton: {selected.Path}\n{selected.CompatibilityMessage}";
+        DetailText.Text = BuildHostDetails();
+        ProtonStatus.Text = $"✓ {selected.Name}";
+        ProtonStatus.Foreground = Good;
         InstallerLog.Info($"User selected Proton: {selected.Path} ({selected.RuntimeArchitecture}, compatible={selected.Compatible})");
         RefreshInstallUi();
     }
