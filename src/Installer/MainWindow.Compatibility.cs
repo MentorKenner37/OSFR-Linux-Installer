@@ -4,14 +4,16 @@ namespace OSFR.Linux.Installer;
 
 public partial class MainWindow
 {
+    private CompatibilitySnapshot? _compatibilitySnapshot;
+
     public void ApplyCompatibilityAdvisor()
     {
         var preferred = CompatibilityAdvisor.SelectPreferredProton(_state.ProtonCandidates ?? []);
         if (preferred is not null && ProtonComboBox.SelectedItem is ProtonCandidate selected && selected.Path != preferred.Path)
             ProtonComboBox.SelectedItem = preferred;
 
-        var compatibility = CompatibilityAdvisor.Detect(_state);
-        GraphicsBackendComboBox.SelectedIndex = compatibility.RecommendedGraphicsBackend == GraphicsBackendConfig.WineD3D ? 1 : 0;
+        _compatibilitySnapshot = CompatibilityAdvisor.Detect(_state);
+        GraphicsBackendComboBox.SelectedIndex = _compatibilitySnapshot.RecommendedGraphicsBackend == GraphicsBackendConfig.WineD3D ? 1 : 0;
 
         // The original XAML did not wire the graphics SelectionChanged handler, so do it here.
         // This keeps the review summary in sync when the user overrides the automatic recommendation.
@@ -24,7 +26,7 @@ public partial class MainWindow
 
     private void RefreshCompatibilityDetails()
     {
-        var compatibility = CompatibilityAdvisor.Detect(_state);
+        var compatibility = _compatibilitySnapshot ??= CompatibilityAdvisor.Detect(_state);
         var selectedProton = ProtonComboBox.SelectedItem as ProtonCandidate;
 
         SetCheck(
