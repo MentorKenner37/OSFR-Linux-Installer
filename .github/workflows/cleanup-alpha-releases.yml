@@ -5,6 +5,10 @@ on:
     workflows: ["Build Linux Installer"]
     types: [completed]
 
+concurrency:
+  group: alpha-release-cleanup
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -19,7 +23,7 @@ jobs:
         with:
           ref: main
 
-      - name: Keep only Alpha 1 release
+      - name: Keep only current Alpha prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -29,19 +33,28 @@ jobs:
           test -n "$VERSION"
           KEEP_TAG="v$VERSION"
 
-          echo "Keeping release: $KEEP_TAG"
+          echo "Keeping current Alpha release: $KEEP_TAG"
 
           gh release edit "$KEEP_TAG" \
-            --title "Sanctuary Linux Launcher — Alpha 1" \
+            --title "Sanctuary Linux Installer — Alpha 1" \
             --notes-file RELEASE_NOTES.md \
             --prerelease
 
-          gh release list --limit 100 --json tagName --jq '.[].tagName' | while read -r TAG; do
+          # Only remove superseded Alpha prereleases. Never delete stable/beta/other release tags.
+          gh release list --limit 100 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease == true) | .tagName' | while read -r TAG; do
             [ -n "$TAG" ] || continue
-            if [ "$TAG" != "$KEEP_TAG" ]; then
-              echo "Removing superseded release and tag: $TAG"
-              gh release delete "$TAG" --cleanup-tag --yes
+            if [ "$TAG" = "$KEEP_TAG" ]; then
+              continue
             fi
+            case "$TAG" in
+              *alpha*|*Alpha*)
+                echo "Removing superseded Alpha release and tag: $TAG"
+                gh release delete "$TAG" --cleanup-tag --yes
+                ;;
+              *)
+                echo "Leaving non-Alpha prerelease untouched: $TAG"
+                ;;
+            esac
           done
 
-          echo "Release cleanup complete."
+          echo "Alpha release cleanup complete."
