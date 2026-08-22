@@ -126,6 +126,41 @@ public static class CompatibilityAdvisor
         _ => "unknown"
     };
 
+    public static Dictionary<string, List<string>> ParseLdConfigOutput(string output)
+    {
+        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var arrow = line.IndexOf("=>", StringComparison.Ordinal);
+            if (arrow < 0)
+                continue;
+            var left = line[..arrow].Trim();
+            var name = left.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            var path = line[(arrow + 2)..].Trim();
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path))
+                continue;
+            if (!result.TryGetValue(name, out var paths))
+                result[name] = paths = [];
+            paths.Add(path);
+        }
+        return result;
+    }
+
+    public static ProbeState ProbeLibraryPaths(IEnumerable<string>? paths, byte elfClass)
+    {
+        if (paths is null)
+            return ProbeState.Unknown;
+
+        var any = false;
+        foreach (var path in paths.Distinct(StringComparer.Ordinal))
+        {
+            any = true;
+            if (TryReadElfClass(path) == elfClass)
+                return ProbeState.Available;
+        }
+        return any ? ProbeState.Missing : ProbeState.Missing;
+    }
+
     private static string? BuildPackageGuidance(string osName, ProbeState freeType32, ProbeState openGl32, ProbeState vulkan32)
     {
         if (freeType32 != ProbeState.Missing && openGl32 != ProbeState.Missing && vulkan32 != ProbeState.Missing)
@@ -152,47 +187,36 @@ public static class CompatibilityAdvisor
 
     private static Dictionary<string, List<string>>? ReadLdConfig()
     {
-        try
+        foreach (var executable in new[] { "ldconfig", "/usr/sbin/ldconfig", "/sbin/ldconfig" })
         {
-            using var process = Process.Start(new ProcessStartInfo
+            try
             {
-                FileName = "ldconfig",
-                Arguments = "-p",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            });
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = executable,
+                    Arguments = "-p",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
 
-            if (process is null)
-                return null;
-
-            var output = process.StandardOutput.ReadToEnd();
-            if (!process.WaitForExit(2000) || process.ExitCode != 0)
-                return null;
-
-            var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var arrow = line.IndexOf("=>", StringComparison.Ordinal);
-                if (arrow < 0)
+                if (process is null)
                     continue;
-                var left = line[..arrow].Trim();
-                var name = left.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                var path = line[(arrow + 2)..].Trim();
-                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path))
+
+                var output = process.StandardOutput.ReadToEnd();
+                if (!process.WaitForExit(2000) || process.ExitCode != 0)
                     continue;
-                if (!result.TryGetValue(name, out var paths))
-                    result[name] = paths = [];
-                paths.Add(path);
+
+                return ParseLdConfigOutput(output);
             }
-            return result;
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+                InstallerLog.Warn($"Could not query {executable} for compatibility diagnostics: {ex.Message}");
+            }
         }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException or UnauthorizedAccessException)
-        {
-            InstallerLog.Warn($"Could not query ldconfig for compatibility diagnostics: {ex.Message}");
-            return null;
-        }
+
+        return null;
     }
 
     private static ProbeState ProbeAnyLibrary(Dictionary<string, List<string>>? libraries, string[] names, byte elfClass)
@@ -213,13 +237,7 @@ public static class CompatibilityAdvisor
             return ProbeState.Unknown;
         if (!libraries.TryGetValue(name, out var paths))
             return ProbeState.Missing;
-
-        foreach (var path in paths.Distinct(StringComparer.Ordinal))
-        {
-            if (TryReadElfClass(path) == elfClass)
-                return ProbeState.Available;
-        }
-        return ProbeState.Missing;
+        return ProbeLibraryPaths(paths, elfClass);
     }
 
     private static byte? TryReadElfClass(string path)
