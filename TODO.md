@@ -13,8 +13,7 @@
 - [x] Detect Cinnamon + Wayland and emit a non-blocking warning for the known Shift/modifier input caveat without treating Wayland itself as incompatible.
 - [x] Surface runtime prerequisite checks, graphics recommendation, Steam type, and compatibility warnings directly in the graphical installer UI.
 - [x] Prefer the newest stable compatible Proton release by default; keep Experimental and GE-Proton available as troubleshooting choices/fallbacks.
-- [x] Add regression tests for Steam-layout detection, Cinnamon/Wayland warning logic, graphics-backend recommendation logic, and stable-first Proton selection.
-- [ ] Add deterministic regression coverage for distro/session parsing, hardware parsing, and ELF/runtime-library probing.
+- [x] Add regression tests for Steam-layout detection, Cinnamon/Wayland warning logic, graphics-backend recommendation logic, stable-first Proton selection, host-info parsing, ldconfig parsing, and ELF32/ELF64 runtime probing.
 
 ## Real-machine validation
 
