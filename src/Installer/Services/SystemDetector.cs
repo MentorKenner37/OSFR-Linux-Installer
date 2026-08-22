@@ -30,7 +30,8 @@ public sealed record SystemState(
     string Memory = "Unknown",
     string Gpu = "Not detected",
     string Desktop = "Unknown",
-    string SessionType = "Unknown")
+    string SessionType = "Unknown",
+    string? CurlPath = null)
 {
     public bool Ready => IsLinux && IsX64 && SteamRoot is not null && ProtonPath is not null && ProtonCompatible;
 
@@ -72,13 +73,14 @@ public static class SystemDetector
             DetectMemory(),
             DetectGpu(),
             DetectDesktop(),
-            DetectSessionType());
+            DetectSessionType(),
+            FindExecutable("curl"));
 
         InstallerLog.Info(
             $"System detection: Linux={state.IsLinux}, x64={state.IsX64}, OS={state.OsName}, Kernel={state.KernelVersion}, " +
             $"CPU={state.CpuModel}, RAM={state.Memory}, GPU={state.Gpu}, Desktop={state.Desktop}, Session={state.SessionType}, " +
             $"Steam={(state.SteamRoot ?? "not found")}, Proton={(state.ProtonPath ?? "not found")}, " +
-            $"ProtonCompatible={state.ProtonCompatible}, ProtonCandidates={candidates.Count}");
+            $"ProtonCompatible={state.ProtonCompatible}, ProtonCandidates={candidates.Count}, Curl={(state.CurlPath ?? "not found")}");
 
         return state;
     }
@@ -92,6 +94,22 @@ public static class SystemDetector
         yield return Path.Combine(home, ".steam", "root");
         yield return Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", "data", "Steam");
         yield return Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam");
+    }
+
+    public static string? FindExecutable(string name, string? pathValue = null)
+    {
+        if (string.IsNullOrWhiteSpace(name) || Path.GetFileName(name) != name)
+            throw new ArgumentException("Executable name must be a single file name.", nameof(name));
+
+        var path = pathValue ?? Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var candidate = Path.Combine(directory, name);
+            if (File.Exists(candidate))
+                return Path.GetFullPath(candidate);
+        }
+
+        return null;
     }
 
     public static IEnumerable<string> FindSteamLibraries() =>

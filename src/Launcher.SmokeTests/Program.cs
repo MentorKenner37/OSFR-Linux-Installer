@@ -1,5 +1,6 @@
 using Launcher.Extensions;
 using Launcher.Helpers;
+using HashDepot;
 
 static void Assert(bool condition, string message)
 {
@@ -66,6 +67,48 @@ finally
     File.Delete(graphicsConfig);
     File.Delete(protonConfig);
     File.Delete(fakeProton);
+}
+
+var curlSmokeRoot = Path.Combine(Path.GetTempPath(), $"sanctuary-curl-smoke-{Guid.NewGuid():N}");
+Directory.CreateDirectory(curlSmokeRoot);
+try
+{
+    var fakeCurl = Path.Combine(curlSmokeRoot, "curl");
+    var curlOutput = Path.Combine(curlSmokeRoot, "download.bin");
+    const string payload = "verified-curl-smoke";
+    File.WriteAllText(fakeCurl, "#!/bin/sh\noutput=''\nwhile [ \"$#\" -gt 0 ]; do\n  if [ \"$1\" = '--output' ]; then shift; output=\"$1\"; fi\n  shift\ndone\nprintf 'verified-curl-smoke' > \"$output\"\n");
+    File.SetUnixFileMode(fakeCurl,
+        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+    Assert(CurlDownloadHelper.FindExecutable(curlSmokeRoot) == fakeCurl,
+        "curl resolution must honor PATH instead of assuming /usr/bin.");
+    var startInfo = CurlDownloadHelper.CreateStartInfo(fakeCurl, "https://example.invalid/client.bin", curlOutput, (uint)payload.Length);
+    Assert(!startInfo.UseShellExecute && startInfo.ArgumentList.Contains("--proto-redir") && startInfo.ArgumentList.Contains("=https"),
+        "curl must run without a shell and restrict both initial and redirected requests to HTTPS.");
+    Assert(Throws<InvalidDataException>(() =>
+        CurlDownloadHelper.CreateStartInfo(fakeCurl, "http://example.invalid/client.bin", curlOutput, 1)),
+        "curl fallback must reject non-HTTPS URLs.");
+
+    var payloadBytes = System.Text.Encoding.UTF8.GetBytes(payload);
+    ulong payloadHash;
+    using (var payloadStream = new MemoryStream(payloadBytes))
+        payloadHash = XXHash.Hash64(payloadStream);
+
+    await CurlDownloadHelper.DownloadAndVerifyAsync(
+        fakeCurl,
+        "https://example.invalid/client.bin",
+        curlOutput,
+        (uint)payloadBytes.Length,
+        payloadHash,
+        CancellationToken.None);
+    Assert(File.ReadAllText(curlOutput) == payload,
+        "curl fallback must install only the verified payload.");
+    Assert(Throws<InvalidDataException>(() => CurlDownloadHelper.VerifyFile(curlOutput, (uint)payloadBytes.Length, payloadHash + 1)),
+        "curl fallback must reject a hash mismatch.");
+}
+finally
+{
+    Directory.Delete(curlSmokeRoot, recursive: true);
 }
 
 Console.WriteLine("Launcher path and graphics backend safety smoke tests passed.");

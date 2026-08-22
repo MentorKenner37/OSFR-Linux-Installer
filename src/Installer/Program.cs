@@ -46,6 +46,7 @@ internal static class Program
         Console.WriteLine($"Steam type: {compatibility.SteamInstallType}");
         Console.WriteLine($"Steam: {state.SteamRoot ?? "not found"}");
         Console.WriteLine($"Recommended Proton: {state.ProtonPath ?? "not found"}");
+        Console.WriteLine($"curl fallback: {state.CurlPath ?? "not found (normal downloads still available)"}");
         Console.WriteLine("Detected Proton builds:");
         foreach (var proton in state.ProtonCandidates ?? [])
             Console.WriteLine($"  - {proton.Name}: {proton.Path}{(state.ProtonPath == proton.Path ? " [recommended]" : string.Empty)}");
@@ -78,6 +79,7 @@ internal static class Program
         Console.WriteLine($"Would install to: {InstallService.DefaultInstallRoot}");
         Console.WriteLine($"Would use Steam: {state.SteamRoot ?? "not found"}");
         Console.WriteLine($"Would use Proton: {state.ProtonPath ?? "not found"}");
+        Console.WriteLine($"Would use curl fallback: {state.CurlPath ?? "not found"}");
         Console.WriteLine($"Would create dedicated prefix: {Path.Combine(InstallService.DefaultInstallRoot, "ProtonPrefix")}");
         Console.WriteLine($"Would create launcher data under: {InstallService.LauncherDataRoot}");
         Console.WriteLine("Would create application-menu integration and, when available, a Desktop shortcut.");

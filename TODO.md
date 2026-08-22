@@ -20,6 +20,8 @@
 - [x] Bound remote manifest downloads to 1 MiB.
 - [x] Make versioned releases immutable and pin GitHub Actions by commit SHA.
 - [x] Document installer licensing and bundled native-component provenance.
+- [x] Separate ordinary CI from tag-only release publishing.
+- [x] Detect curl through PATH and add regression coverage for the verified fallback.
 
 ## Real-machine validation
 
@@ -33,4 +35,4 @@
 - [ ] Clean-install WineD3D/OpenGL validation
 - [ ] More desktop environments and Wayland/X11 combinations
 - [ ] More native/Flatpak/custom-library Steam layouts
-- [ ] Broader outside-user Alpha testing
+- [ ] Broader outside-user Beta testing

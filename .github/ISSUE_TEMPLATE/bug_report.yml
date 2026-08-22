@@ -61,7 +61,7 @@ body:
     attributes:
       label: Checks
       options:
-        - label: I used the latest available Sanctuary Linux Installer prerelease before filing this issue.
+        - label: I used the latest available Sanctuary Linux Installer release or prerelease before filing this issue.
           required: true
         - label: I checked the existing issues for the same problem.
           required: true

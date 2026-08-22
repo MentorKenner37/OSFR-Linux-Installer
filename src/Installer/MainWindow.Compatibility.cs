@@ -49,6 +49,7 @@ public partial class MainWindow
             $"GPU: {_state.Gpu}",
             $"Steam: {compatibility.SteamInstallType} — {_state.SteamRoot ?? "not found"}",
             $"Proton: {selectedProton?.Name ?? "not found"}",
+            $"curl fallback: {_state.CurlPath ?? "not found (normal downloads remain available)"}",
             $"32-bit FreeType: {CompatibilityAdvisor.ProbeLabel(compatibility.FreeType32)}",
             $"32-bit OpenGL: {CompatibilityAdvisor.ProbeLabel(compatibility.OpenGl32)}",
             $"64-bit Vulkan loader: {CompatibilityAdvisor.ProbeLabel(compatibility.Vulkan64)}",

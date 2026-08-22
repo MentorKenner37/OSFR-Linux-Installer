@@ -4,7 +4,7 @@
 
 Sanctuary Linux Installer is a Linux-first installation and compatibility tool for **Sanctuary**, the Open Source Free Realms emulator. It finds Steam and Proton, prepares a dedicated Free Realms prefix, installs the patched OSFR launcher used to connect to Sanctuary, and handles the Linux-specific setup needed to get into the game.
 
-> **Version 1.0.7** — Tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
+> **Version 1.1.0-beta.1** — Beta software tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
 
 ## What the installer does
 
@@ -26,6 +26,7 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 - Stages and verifies every downloaded game file before atomically replacing the installed copy
 - Requires HTTPS for server manifests, login, and registration
 - Provides `--diagnose` and `--dry-run` troubleshooting modes
+- Detects the optional `curl` compatibility fallback through `PATH` and reports its availability in diagnostics
 
 The installer does **not** replace Steam, install graphics drivers, modify Linux users/services, or silently change package-manager configuration.
 
@@ -105,6 +106,12 @@ These are operating-system dependencies and are not silently installed by Sanctu
 
 ## Compatibility
 
+### Known beta issues
+
+- Fedora Cinnamon on Wayland can lose Shift+movement walking behavior; Fedora GNOME Classic on Wayland is confirmed working.
+- One Debian tester experienced machine-specific extreme camera/relative-mouse behavior that was not reproduced on a second Debian 13 system.
+- `curl` is an optional verified fallback for servers that return a different body to the .NET HTTP client; ordinary downloads do not require it.
+
 | Distribution / environment | Result | Tested path |
 | --- | --- | --- |
 | **Linux Mint x86_64 — Cinnamon / X11** | ✅ Confirmed working | Steam + Proton; launches, enters the world, controls work normally |
@@ -155,7 +162,7 @@ Useful findings from real-machine testing:
 
 ## Testing and release safety
 
-The repository contains xUnit regression tests plus installer and launcher smoke tests. Pushes to `main` and pull requests into `main` run the full unit/smoke suite, and the packaged installer build is gated on the xUnit suite before an artifact can be published.
+The repository contains xUnit regression tests plus installer and launcher smoke tests. Pushes to `main` and pull requests into `main` run the full unit/smoke suite without publishing. Releases are built again from an immutable version tag, and publishing is allowed only when that tag exactly matches the project version.
 
 CI also checks NuGet dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, exercises packaged `--diagnose` and `--dry-run`, verifies hardware/OS/runtime/graphics diagnostic fields are present, and verifies the published SHA-256 checksum. Versioned releases are immutable: publishing fails if the version tag already exists.
 

@@ -1,57 +1,35 @@
-# Sanctuary Linux Installer 1.0.8
+# Sanctuary Linux Installer 1.1.0-beta.1
 
-Version 1.0.8 fixes the persistent `loading.html` download failure observed with the launcher's .NET HTTP path on Linux.
+This is the first public beta of Sanctuary Linux Installer. It keeps the verified v1.0.8 client-download recovery while strengthening its tests, diagnostics, and release process.
 
-## Security and data-safety improvements
+## Beta changes
 
-- Uses .NET's native connection management for client downloads instead of the launcher's custom socket callback.
-- Automatically falls back to the system `curl` binary on Linux after repeated .NET download verification failures. The fallback is argument-safe, HTTPS-only, size-bounded, cancellable, and must pass the same manifest size and XXHash64 checks before installation.
-- Records the final URL, HTTP version, expected and received byte counts, content length, content encoding, and transfer encoding for failed downloads.
-- Explicitly requests an uncompressed identity response to match the known-working command-line download behavior.
-- Retries size, hash, and transient HTTP failures up to three times with cache bypass while preserving atomic installation and verification.
-- Uninstall now preserves shared OSFR launcher settings, downloaded clients, and credential storage.
-- Client files download to unique temporary files, pass their manifest size and hash checks, and only then replace installed files atomically.
-- Server manifests, login, and registration now require HTTPS.
-- Server and client manifests have a 1 MiB download limit.
-- Versioned GitHub releases are immutable and cannot silently replace assets attached to an existing tag.
-- GitHub Actions dependencies are pinned to exact reviewed commits.
-- Bundled Discord Game SDK provenance and SHA-256 are documented.
+- Resolves `curl` through `PATH` instead of assuming `/usr/bin` or `/bin`.
+- Restricts both initial curl requests and redirects to HTTPS.
+- Adds executable smoke coverage for curl argument safety, HTTPS rejection, PATH discovery, successful verified download, and hash-mismatch rejection.
+- Reports curl fallback availability in graphical details, `--diagnose`, and `--dry-run`.
+- Separates normal push/PR CI from immutable tag-triggered release publishing.
+- Requires release tags to exactly match the project version.
+- Generalizes superseded-prerelease cleanup without touching stable releases.
 
-## Existing installer protections
+## Existing protections
 
 - Transactional launcher replacement with rollback and interrupted-install recovery.
-- Structured installation ownership metadata with launcher SHA-256 verification.
-- Symlink, archive traversal, install-path, and conservative deletion protections.
-- A dedicated Proton prefix and selectable DXVK/Vulkan or WineD3D/OpenGL backend.
-- xUnit regression tests plus installer and launcher safety smoke tests.
-- A self-contained Linux x86_64 installer with a published SHA-256 checksum.
+- Structured ownership, symlink, traversal, install-path, and conservative deletion protections.
+- Dedicated Proton prefix with DXVK/Vulkan or WineD3D/OpenGL selection.
+- HTTPS-only manifests and credentials, bounded manifests, protected credential storage, and verified atomic client downloads.
+- xUnit regression tests, smoke tests, dependency vulnerability checks, self-contained packaging, and published SHA-256 checksums.
+
+## Known beta issues
+
+- Fedora Cinnamon/Wayland has a known Shift+movement caveat; Fedora GNOME Classic/Wayland is confirmed working.
+- A machine-specific Debian camera/relative-mouse issue remains under investigation and was not reproduced on a second Debian 13 system.
+- Hardware, Steam layout, Proton, desktop/session, and distribution coverage is still expanding.
 
 ## Install
-
-Download both release files:
-
-```text
-Sanctuary-Linux-Installer
-Sanctuary-Linux-Installer.sha256
-```
-
-Verify and launch:
 
 ```bash
 sha256sum -c Sanctuary-Linux-Installer.sha256
 chmod +x Sanctuary-Linux-Installer
 ./Sanctuary-Linux-Installer
 ```
-
-For a read-only compatibility report:
-
-```bash
-./Sanctuary-Linux-Installer --diagnose
-```
-
-## Confirmed compatibility
-
-- Linux Mint x86_64 — Cinnamon/X11.
-- Debian 13 x86_64 with the required 32-bit runtime libraries.
-- Fedora Workstation x86_64 — GNOME Classic/Wayland with Proton 11 and DXVK.
-- Fedora Workstation x86_64 — Cinnamon/Wayland launches and plays, with a known Shift+movement caveat.

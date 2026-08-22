@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
   group: installer-build-${{ github.workflow }}-${{ github.ref }}
@@ -122,6 +123,7 @@ jobs:
           grep -q "32-bit OpenGL:" /tmp/sanctuary-diagnose.txt
           grep -q "32-bit Vulkan loader:" /tmp/sanctuary-diagnose.txt
           grep -q "Recommended graphics backend:" /tmp/sanctuary-diagnose.txt
+          grep -q "curl fallback:" /tmp/sanctuary-diagnose.txt
           grep -q "no files will be changed" /tmp/sanctuary-dry-run.txt
           grep -q "$HOME/.local/state/OSFR-Linux/installer.log" /tmp/sanctuary-diagnose.txt
           test ! -e "$HOME/.local/share/OSFR-Linux"
@@ -140,40 +142,3 @@ jobs:
             build/installer/Sanctuary-Linux-Installer
             build/installer/Sanctuary-Linux-Installer.sha256
           if-no-files-found: error
-
-  publish-release:
-    needs: build-linux-x64
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout release metadata
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Download tested installer artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: Sanctuary-Linux-Installer-linux-x64
-          path: build/installer
-      - name: Verify downloaded checksum
-        run: cd build/installer && sha256sum -c Sanctuary-Linux-Installer.sha256
-      - name: Publish immutable versioned release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n1)"
-          test -n "$VERSION"
-          TAG="v$VERSION"
-          test -f build/installer/Sanctuary-Linux-Installer
-          test -f build/installer/Sanctuary-Linux-Installer.sha256
-          if gh release view "$TAG" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "Refusing to overwrite existing immutable release/tag $TAG. Bump the version first."
-            exit 1
-          fi
-          gh release create "$TAG" \
-            build/installer/Sanctuary-Linux-Installer \
-            build/installer/Sanctuary-Linux-Installer.sha256 \
-            --target "$GITHUB_SHA" \
-            --title "Sanctuary Linux Installer $TAG" \
-            --notes-file RELEASE_NOTES.md
