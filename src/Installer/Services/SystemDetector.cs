@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
@@ -21,7 +23,14 @@ public sealed record SystemState(
     string? ProtonPath,
     IReadOnlyList<ProtonCandidate>? ProtonCandidates = null,
     bool ProtonCompatible = false,
-    string? ProtonCompatibilityMessage = null)
+    string? ProtonCompatibilityMessage = null,
+    string OsName = "Unknown",
+    string KernelVersion = "Unknown",
+    string CpuModel = "Unknown",
+    string Memory = "Unknown",
+    string Gpu = "Not detected",
+    string Desktop = "Unknown",
+    string SessionType = "Unknown")
 {
     public bool Ready => IsLinux && IsX64 && SteamRoot is not null && ProtonPath is not null && ProtonCompatible;
 
@@ -50,8 +59,17 @@ public static class SystemDetector
         var steamRoot = selected?.SteamRoot ?? fallbackSteamRoot;
         var proton = selected?.Path;
 
+        var osName = DetectOsName();
+        var kernel = DetectKernelVersion();
+        var cpu = DetectCpuModel();
+        var memory = DetectMemory();
+        var gpu = DetectGpu();
+        var desktop = DetectDesktop();
+        var session = DetectSessionType();
+
         InstallerLog.Info(
-            $"System detection: Linux={isLinux}, x64={isX64}, Steam={(steamRoot ?? "not found")}, " +
+            $"System detection: Linux={isLinux}, x64={isX64}, OS={osName}, Kernel={kernel}, CPU={cpu}, RAM={memory}, " +
+            $"GPU={gpu}, Desktop={desktop}, Session={session}, Steam={(steamRoot ?? "not found")}, " +
             $"Proton={(proton ?? "not found")}, ProtonCompatible={selected?.Compatible ?? false}, ProtonCandidates={candidates.Count}");
 
         return new SystemState(
@@ -61,7 +79,14 @@ public static class SystemDetector
             proton,
             candidates,
             selected?.Compatible ?? false,
-            selected?.CompatibilityMessage);
+            selected?.CompatibilityMessage,
+            osName,
+            kernel,
+            cpu,
+            memory,
+            gpu,
+            desktop,
+            session);
     }
 
     public static IEnumerable<string> FindSteamRoots()
@@ -283,6 +308,206 @@ public static class SystemDetector
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             InstallerLog.Warn($"Could not inspect Proton runtime binary {path}: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static string DetectOsName()
+    {
+        if (!OperatingSystem.IsLinux())
+            return RuntimeInformation.OSDescription;
+
+        try
+        {
+            const string osRelease = "/etc/os-release";
+            if (File.Exists(osRelease))
+            {
+                var values = File.ReadLines(osRelease)
+                    .Select(line => line.Split('=', 2))
+                    .Where(parts => parts.Length == 2)
+                    .ToDictionary(parts => parts[0], parts => parts[1].Trim().Trim('"'), StringComparer.OrdinalIgnoreCase);
+
+                if (values.TryGetValue("PRETTY_NAME", out var prettyName) && !string.IsNullOrWhiteSpace(prettyName))
+                    return prettyName;
+
+                if (values.TryGetValue("NAME", out var name))
+                {
+                    values.TryGetValue("VERSION_ID", out var version);
+                    return string.IsNullOrWhiteSpace(version) ? name : $"{name} {version}";
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            InstallerLog.Warn($"Could not read Linux distribution information: {ex.Message}");
+        }
+
+        return RuntimeInformation.OSDescription;
+    }
+
+    private static string DetectKernelVersion()
+    {
+        try
+        {
+            const string kernelPath = "/proc/sys/kernel/osrelease";
+            return File.Exists(kernelPath) ? File.ReadAllText(kernelPath).Trim() : Environment.OSVersion.VersionString;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            InstallerLog.Warn($"Could not read kernel version: {ex.Message}");
+            return Environment.OSVersion.VersionString;
+        }
+    }
+
+    private static string DetectCpuModel()
+    {
+        try
+        {
+            const string cpuInfo = "/proc/cpuinfo";
+            if (File.Exists(cpuInfo))
+            {
+                foreach (var line in File.ReadLines(cpuInfo))
+                {
+                    if (!line.StartsWith("model name", StringComparison.OrdinalIgnoreCase) &&
+                        !line.StartsWith("Hardware", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    var separator = line.IndexOf(':');
+                    if (separator >= 0)
+                    {
+                        var model = line[(separator + 1)..].Trim();
+                        if (!string.IsNullOrWhiteSpace(model))
+                            return model;
+                    }
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            InstallerLog.Warn($"Could not read CPU model: {ex.Message}");
+        }
+
+        return RuntimeInformation.ProcessArchitecture.ToString();
+    }
+
+    private static string DetectMemory()
+    {
+        try
+        {
+            const string memInfo = "/proc/meminfo";
+            if (File.Exists(memInfo))
+            {
+                var line = File.ReadLines(memInfo).FirstOrDefault(value => value.StartsWith("MemTotal:", StringComparison.OrdinalIgnoreCase));
+                var match = line is null ? Match.Empty : Regex.Match(line, @"MemTotal:\s+(?<kb>\d+)\s+kB", RegexOptions.IgnoreCase);
+                if (match.Success && long.TryParse(match.Groups["kb"].Value, out var kb))
+                {
+                    var gib = kb / 1024d / 1024d;
+                    return $"{gib:0.#} GiB";
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            InstallerLog.Warn($"Could not read system memory: {ex.Message}");
+        }
+
+        return "Unknown";
+    }
+
+    private static string DetectGpu()
+    {
+        var lspci = TryRunCommand("lspci", "");
+        if (!string.IsNullOrWhiteSpace(lspci))
+        {
+            var adapters = lspci
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(line => line.Contains("VGA compatible controller", StringComparison.OrdinalIgnoreCase) ||
+                               line.Contains("3D controller", StringComparison.OrdinalIgnoreCase) ||
+                               line.Contains("Display controller", StringComparison.OrdinalIgnoreCase))
+                .Select(line =>
+                {
+                    var index = line.IndexOf(": ", StringComparison.Ordinal);
+                    return index >= 0 ? line[(index + 2)..].Trim() : line.Trim();
+                })
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (adapters.Count > 0)
+                return string.Join(" | ", adapters);
+        }
+
+        try
+        {
+            const string nvidiaRoot = "/proc/driver/nvidia/gpus";
+            if (Directory.Exists(nvidiaRoot))
+            {
+                var models = new List<string>();
+                foreach (var information in Directory.EnumerateFiles(nvidiaRoot, "information", SearchOption.AllDirectories))
+                {
+                    var modelLine = File.ReadLines(information).FirstOrDefault(line => line.StartsWith("Model:", StringComparison.OrdinalIgnoreCase));
+                    if (modelLine is not null)
+                    {
+                        var model = modelLine[(modelLine.IndexOf(':') + 1)..].Trim();
+                        if (!string.IsNullOrWhiteSpace(model))
+                            models.Add(model);
+                    }
+                }
+
+                if (models.Count > 0)
+                    return string.Join(" | ", models.Distinct(StringComparer.OrdinalIgnoreCase));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            InstallerLog.Warn($"Could not read NVIDIA GPU information: {ex.Message}");
+        }
+
+        return "Not detected (GPU model discovery is best-effort)";
+    }
+
+    private static string DetectDesktop()
+    {
+        var desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
+        if (string.IsNullOrWhiteSpace(desktop))
+            desktop = Environment.GetEnvironmentVariable("DESKTOP_SESSION");
+        return string.IsNullOrWhiteSpace(desktop) ? "Unknown" : desktop;
+    }
+
+    private static string DetectSessionType()
+    {
+        var session = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
+        return string.IsNullOrWhiteSpace(session) ? "Unknown" : session;
+    }
+
+    private static string? TryRunCommand(string fileName, string arguments)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
+
+            if (process is null)
+                return null;
+
+            var output = process.StandardOutput.ReadToEnd();
+            if (!process.WaitForExit(2000))
+            {
+                try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+                return null;
+            }
+
+            return process.ExitCode == 0 ? output : null;
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            InstallerLog.Warn($"Could not run {fileName} for hardware detection: {ex.Message}");
             return null;
         }
     }
