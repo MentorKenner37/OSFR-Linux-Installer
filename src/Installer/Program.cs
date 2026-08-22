@@ -27,8 +27,14 @@ internal static class Program
     {
         var state = SystemDetector.Detect();
         Console.WriteLine("Sanctuary Linux Installer diagnostics");
-        Console.WriteLine($"Linux: {state.IsLinux}");
-        Console.WriteLine($"x86_64: {state.IsX64}");
+        Console.WriteLine($"Operating system: {state.OsName}");
+        Console.WriteLine($"Kernel: {state.KernelVersion}");
+        Console.WriteLine($"Desktop: {state.Desktop}");
+        Console.WriteLine($"Session: {state.SessionType}");
+        Console.WriteLine($"CPU: {state.CpuModel}");
+        Console.WriteLine($"Architecture: {(state.IsX64 ? "x86_64" : "unsupported / non-x86_64")}");
+        Console.WriteLine($"Memory: {state.Memory}");
+        Console.WriteLine($"GPU: {state.Gpu}");
         Console.WriteLine($"Steam: {state.SteamRoot ?? "not found"}");
         Console.WriteLine($"Recommended Proton: {state.ProtonPath ?? "not found"}");
         Console.WriteLine("Detected Proton builds:");
@@ -42,6 +48,10 @@ internal static class Program
     {
         var state = SystemDetector.Detect();
         Console.WriteLine("Sanctuary Linux Installer dry run - no files will be changed");
+        Console.WriteLine($"Detected OS: {state.OsName}");
+        Console.WriteLine($"Detected CPU: {state.CpuModel}");
+        Console.WriteLine($"Detected memory: {state.Memory}");
+        Console.WriteLine($"Detected GPU: {state.Gpu}");
         Console.WriteLine($"Would install to: {InstallService.DefaultInstallRoot}");
         Console.WriteLine($"Would use Steam: {state.SteamRoot ?? "not found"}");
         Console.WriteLine($"Would use Proton: {state.ProtonPath ?? "not found"}");
