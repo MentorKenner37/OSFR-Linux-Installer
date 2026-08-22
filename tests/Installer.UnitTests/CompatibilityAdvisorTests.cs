@@ -97,6 +97,53 @@ public sealed class CompatibilityAdvisorTests
         Assert.Equal("Proton 11.0", preferred!.Name);
     }
 
+    [Fact]
+    public void ParseLdConfigOutput_GroupsMultipleArchitecturesByLibraryName()
+    {
+        const string output = """
+            2 libs found in cache `/etc/ld.so.cache'
+            libvulkan.so.1 (libc6,x86-64) => /lib64/libvulkan.so.1
+            libvulkan.so.1 (libc6) => /lib32/libvulkan.so.1
+            """;
+
+        var parsed = CompatibilityAdvisor.ParseLdConfigOutput(output);
+        Assert.True(parsed.TryGetValue("libvulkan.so.1", out var paths));
+        Assert.NotNull(paths);
+        Assert.Equal(2, paths!.Count);
+        Assert.Contains("/lib64/libvulkan.so.1", paths);
+        Assert.Contains("/lib32/libvulkan.so.1", paths);
+    }
+
+    [Fact]
+    public void ProbeLibraryPaths_DistinguishesElf32AndElf64()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"osfr-elf-probe-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        var elf32 = Path.Combine(root, "lib32.so");
+        var elf64 = Path.Combine(root, "lib64.so");
+
+        try
+        {
+            File.WriteAllBytes(elf32, ElfHeader(1));
+            File.WriteAllBytes(elf64, ElfHeader(2));
+
+            Assert.Equal(ProbeState.Available, CompatibilityAdvisor.ProbeLibraryPaths([elf32, elf64], 1));
+            Assert.Equal(ProbeState.Available, CompatibilityAdvisor.ProbeLibraryPaths([elf32, elf64], 2));
+            Assert.Equal(ProbeState.Missing, CompatibilityAdvisor.ProbeLibraryPaths([elf64], 1));
+            Assert.Equal(ProbeState.Unknown, CompatibilityAdvisor.ProbeLibraryPaths(null, 1));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    private static byte[] ElfHeader(byte elfClass) =>
+    [
+        0x7f, (byte)'E', (byte)'L', (byte)'F', elfClass,
+        1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
+
     private static ProtonCandidate Candidate(string name, bool compatible) =>
         new(name, $"/tmp/{name}/proton", "/tmp/steam", "x86_64", compatible, "test");
 }
