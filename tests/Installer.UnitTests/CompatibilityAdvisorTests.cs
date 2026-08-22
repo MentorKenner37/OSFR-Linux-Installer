@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using OSFR.Linux.Installer.Services;
 using Xunit;
 
