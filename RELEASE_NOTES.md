@@ -1,9 +1,10 @@
-# Sanctuary Linux Installer 1.0.3
+# Sanctuary Linux Installer 1.0.4
 
-Version 1.0.3 is the first security-hardened stable release of the Linux installer.
+Version 1.0.4 fixes the verified-download stream handling introduced in 1.0.3 and retains all security hardening from that release.
 
 ## Security and data-safety improvements
 
+- Rewinds completed downloader streams before staging, fixing the erroneous `Failed to download ... loading.html` result when the server file and manifest match.
 - Uninstall now preserves shared OSFR launcher settings, downloaded clients, and credential storage.
 - Client files download to unique temporary files, pass their manifest size and hash checks, and only then replace installed files atomically.
 - Server manifests, login, and registration now require HTTPS.

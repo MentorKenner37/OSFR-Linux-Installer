@@ -439,6 +439,11 @@ public partial class Server : ObservableObject
                 return false;
             }
 
+            // Downloader may return a completed seekable stream whose cursor is at
+            // the end. Always rewind before copying it into the verified staging file.
+            if (fileStream.CanSeek)
+                fileStream.Position = 0;
+
             temporaryPath = Path.Combine(fileDirectory, $".{Path.GetFileName(filePath)}.{Guid.NewGuid():N}.download");
             await using (var writeStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 await fileStream.CopyToAsync(writeStream);
