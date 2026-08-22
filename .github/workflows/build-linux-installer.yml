@@ -33,13 +33,8 @@ jobs:
           python3 - <<'PY'
           import json
           import sys
-
-          files = [
-              "/tmp/installer-vulnerabilities.json",
-              "/tmp/launcher-vulnerabilities.json",
-          ]
+          files = ["/tmp/installer-vulnerabilities.json", "/tmp/launcher-vulnerabilities.json"]
           findings = []
-
           def walk(value, source):
               if isinstance(value, dict):
                   for key, child in value.items():
@@ -49,54 +44,43 @@ jobs:
               elif isinstance(value, list):
                   for child in value:
                       walk(child, source)
-
           for path in files:
               with open(path, encoding="utf-8-sig") as handle:
                   walk(json.load(handle), path)
-
           if findings:
               for source, items in findings:
                   print(f"Known vulnerable NuGet dependencies reported in {source}:")
                   print(json.dumps(items, indent=2))
               sys.exit(1)
-
           print("No known vulnerable NuGet dependencies reported.")
           PY
 
-      - name: Run installer safety smoke tests
+      - name: Restore and run xUnit suite
         run: |
           set -euo pipefail
-          dotnet run --project src/Installer.SmokeTests/Installer.SmokeTests.csproj -c Release
+          dotnet restore tests/Installer.UnitTests/Installer.UnitTests.csproj
+          dotnet test tests/Installer.UnitTests/Installer.UnitTests.csproj -c Release --no-restore --verbosity normal
+
+      - name: Run installer safety smoke tests
+        run: dotnet run --project src/Installer.SmokeTests/Installer.SmokeTests.csproj -c Release
 
       - name: Validate generated desktop entry
         run: |
-          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y desktop-file-utils
           desktop-file-validate "$HOME/.local/share/applications/OSFR-Linux.desktop"
 
       - name: Run launcher path safety smoke tests
-        run: |
-          set -euo pipefail
-          dotnet run --project src/Launcher.SmokeTests/Launcher.SmokeTests.csproj -c Release
+        run: dotnet run --project src/Launcher.SmokeTests/Launcher.SmokeTests.csproj -c Release
 
       - name: Publish patched OSFR Launcher
         run: |
           set -euo pipefail
           rm -rf build/launcher
-          dotnet publish OSFR-Launcher/src/Launcher/Launcher.csproj \
-            -c Release \
-            -r linux-x64 \
-            --self-contained true \
-            -p:PublishSingleFile=false \
-            -p:DebugType=None \
-            -p:DebugSymbols=false \
-            -o build/launcher
-
+          dotnet publish OSFR-Launcher/src/Launcher/Launcher.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false -o build/launcher
           test -f build/launcher/Launcher
           mv build/launcher/Launcher build/launcher/OSFRLauncher
           chmod +x build/launcher/OSFRLauncher
-
           if [ ! -f build/launcher/libSkiaSharp.so ]; then
             SKIA="$(find build/launcher -type f -path '*/linux-x64/native/libSkiaSharp.so' -print -quit)"
             test -n "$SKIA"
@@ -115,16 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf build/installer
-          dotnet publish src/Installer/Installer.csproj \
-            -c Release \
-            -r linux-x64 \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:DebugType=None \
-            -p:DebugSymbols=false \
-            -o build/installer
-
+          dotnet publish src/Installer/Installer.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -o build/installer
           test -f build/installer/Installer
           mv build/installer/Installer build/installer/Sanctuary-Linux-Installer
           chmod +x build/installer/Sanctuary-Linux-Installer
@@ -135,13 +110,15 @@ jobs:
           build/installer/Sanctuary-Linux-Installer --diagnose | tee /tmp/sanctuary-diagnose.txt
           build/installer/Sanctuary-Linux-Installer --dry-run | tee /tmp/sanctuary-dry-run.txt
           grep -q "Sanctuary Linux Installer diagnostics" /tmp/sanctuary-diagnose.txt
+          grep -q "Operating system:" /tmp/sanctuary-diagnose.txt
+          grep -q "CPU:" /tmp/sanctuary-diagnose.txt
+          grep -q "GPU:" /tmp/sanctuary-diagnose.txt
           grep -q "no files will be changed" /tmp/sanctuary-dry-run.txt
           grep -q "$HOME/.local/state/OSFR-Linux/installer.log" /tmp/sanctuary-diagnose.txt
           test ! -e "$HOME/.local/share/OSFR-Linux"
 
       - name: Generate and verify SHA-256 checksum
         run: |
-          set -euo pipefail
           cd build/installer
           sha256sum Sanctuary-Linux-Installer > Sanctuary-Linux-Installer.sha256
           sha256sum -c Sanctuary-Linux-Installer.sha256
@@ -161,23 +138,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout release metadata
         uses: actions/checkout@v6
-
       - name: Download tested installer artifacts
         uses: actions/download-artifact@v8
         with:
           name: Sanctuary-Linux-Installer-linux-x64
           path: build/installer
-
       - name: Verify downloaded checksum
-        run: |
-          set -euo pipefail
-          cd build/installer
-          sha256sum -c Sanctuary-Linux-Installer.sha256
-
+        run: cd build/installer && sha256sum -c Sanctuary-Linux-Installer.sha256
       - name: Publish versioned prerelease
         env:
           GH_TOKEN: ${{ github.token }}
@@ -188,57 +158,20 @@ jobs:
           TAG="v$VERSION"
           test -f build/installer/Sanctuary-Linux-Installer
           test -f build/installer/Sanctuary-Linux-Installer.sha256
-
           release_ready=0
           for attempt in 1 2 3 4 5; do
             if gh release view "$TAG" >/dev/null 2>&1; then
               echo "Release $TAG already exists; refreshing its title and notes."
-              if gh release edit "$TAG" \
-                --title "Sanctuary Linux Installer $TAG" \
-                --notes-file RELEASE_NOTES.md \
-                --prerelease; then
-                release_ready=1
-                break
-              fi
+              if gh release edit "$TAG" --title "Sanctuary Linux Installer $TAG" --notes-file RELEASE_NOTES.md --prerelease; then release_ready=1; break; fi
             else
-              if gh release create "$TAG" \
-                --target "$GITHUB_SHA" \
-                --title "Sanctuary Linux Installer $TAG" \
-                --notes-file RELEASE_NOTES.md \
-                --prerelease; then
-                release_ready=1
-                break
-              fi
+              if gh release create "$TAG" --target "$GITHUB_SHA" --title "Sanctuary Linux Installer $TAG" --notes-file RELEASE_NOTES.md --prerelease; then release_ready=1; break; fi
             fi
-
             echo "GitHub release API attempt $attempt failed; retrying."
             sleep $((attempt * 3))
           done
-
-          if [ "$release_ready" -ne 1 ]; then
-            echo "Failed to create or refresh release $TAG after 5 attempts."
-            exit 1
-          fi
-
+          if [ "$release_ready" -ne 1 ]; then echo "Failed to create or refresh release $TAG after 5 attempts."; exit 1; fi
           for attempt in 1 2 3 4 5; do
-            if gh release upload "$TAG" \
-              build/installer/Sanctuary-Linux-Installer \
-              build/installer/Sanctuary-Linux-Installer.sha256 \
-              --clobber; then
-              break
-            fi
-            if [ "$attempt" -eq 5 ]; then
-              echo "Failed to upload verified release assets after $attempt attempts."
-              exit 1
-            fi
+            if gh release upload "$TAG" build/installer/Sanctuary-Linux-Installer build/installer/Sanctuary-Linux-Installer.sha256 --clobber; then break; fi
+            if [ "$attempt" -eq 5 ]; then echo "Failed to upload verified release assets after $attempt attempts."; exit 1; fi
             sleep $((attempt * 2))
           done
-
-          if [ "$VERSION" = "0.2.10-alpha" ]; then
-            for OLD_TAG in v0.1.0-alpha v0.2.0-alpha v0.2.1-alpha v0.2.2-alpha v0.2.3-alpha v0.2.4-alpha v0.2.5-alpha v0.2.6-alpha v0.2.7-alpha v0.2.8-alpha v0.2.9-alpha; do
-              if gh release view "$OLD_TAG" >/dev/null 2>&1; then
-                echo "Removing superseded release $OLD_TAG and its tag."
-                gh release delete "$OLD_TAG" --cleanup-tag --yes
-              fi
-            done
-          fi
