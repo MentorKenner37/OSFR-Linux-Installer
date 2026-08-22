@@ -11,14 +11,15 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 - Detects native and Flatpak Steam locations plus custom Steam libraries
 - Finds standard Proton, Proton Experimental, GE-Proton, and other compatible Steam compatibility tools
 - Verifies Proton runtime architecture before offering a build
+- Prefers the newest compatible **stable Proton** release by default, while leaving Experimental and GE-Proton available as selectable troubleshooting/fallback options
 - Detects and reports the actual Linux distribution, kernel, CPU, architecture, installed RAM, GPU, desktop environment, and Wayland/X11 session
 - Detects 32-bit FreeType and OpenGL runtime availability
 - Detects 64-bit and 32-bit Vulkan loader availability
-- Identifies native versus Flatpak Steam in diagnostics
+- Identifies native versus Flatpak Steam in both diagnostics and the graphical installer
 - Produces a DXVK/Vulkan versus WineD3D/OpenGL recommendation from the detected 32-bit Vulkan state
+- Automatically preselects the recommended graphics backend while still allowing the user to override it
 - Detects Cinnamon + Wayland and emits a non-blocking warning for the currently known Shift/modifier input caveat
-- Lets the user select the Proton build used for Sanctuary
-- Supports **DXVK/Vulkan** and **WineD3D/OpenGL** graphics paths
+- Surfaces runtime, graphics, Steam-type, hardware, OS, and compatibility details directly in the graphical installer
 - Installs the patched Open Source Free Realms launcher and isolates Free Realms in a dedicated Proton prefix
 - Creates desktop/application-menu integration
 - Uses ownership validation, staged replacement, rollback, recovery, archive traversal protection, symlink checks, and conservative uninstall behavior
@@ -44,7 +45,7 @@ The installer walks through environment detection, installation location, Proton
 
 ## Hardware and OS detection
 
-The installer no longer reduces a machine to generic `SUPPORTED` / `COMPATIBLE` labels. The compatibility UI and diagnostics expose the machine that is actually being tested, including:
+The installer no longer reduces a machine to generic `SUPPORTED` / `COMPATIBLE` labels. The graphical compatibility view and diagnostics expose the machine that is actually being tested, including:
 
 ```text
 Operating system: Fedora Linux 44
@@ -57,10 +58,16 @@ Memory: <detected installed RAM>
 GPU: <detected graphics adapter(s)>
 Steam type: Native Steam / Flatpak Steam
 Steam: <detected Steam root>
-Recommended Proton: <detected Proton build>
+Proton: <selected stable-first Proton build>
 ```
 
 This information is especially important for Alpha bug reports because old-game behavior can differ by distro, desktop environment, display session, graphics stack, and Proton build.
+
+## Proton recommendation policy
+
+When multiple compatible Proton builds are installed, Sanctuary Linux Installer now prefers the newest standard stable Proton release first. If no standard stable release is available, it falls back to the newest compatible GE-Proton build, then Proton Experimental, then another compatible candidate.
+
+This is only the default selection. Users can still explicitly choose another detected Proton build from the installer.
 
 ## Graphics backends
 
@@ -72,7 +79,7 @@ The Free Realms client's Direct3D rendering is translated through DXVK to Vulkan
 
 WineD3D translates Direct3D through OpenGL and provides a compatibility route for systems with missing or unreliable Vulkan support. Selecting OpenGL does **not** switch the installation to system Wine; the installation remains Proton-based.
 
-`--diagnose` now checks the 64-bit and 32-bit Vulkan loader state. If the 32-bit Vulkan loader is detected, DXVK/Vulkan is recommended. If 32-bit Vulkan is known to be missing, WineD3D/OpenGL is recommended as the safer default. If Vulkan availability cannot be verified, DXVK remains the non-blocking default and OpenGL remains available as a fallback.
+The compatibility advisor checks the 64-bit and 32-bit Vulkan loader state. If the 32-bit Vulkan loader is detected, DXVK/Vulkan is recommended and preselected. If 32-bit Vulkan is known to be missing, WineD3D/OpenGL is recommended and preselected as the safer default. If Vulkan availability cannot be verified, DXVK remains the non-blocking default and OpenGL remains available as a fallback.
 
 ## 32-bit runtime support
 
@@ -92,7 +99,7 @@ sudo apt update
 sudo apt install libfreetype6:i386 libgl1:i386 libgl1-mesa-dri:i386 libglx-mesa0:i386
 ```
 
-These are operating-system dependencies and are not silently installed by Sanctuary Linux Installer. Diagnostics now probe the installed 32-bit FreeType/OpenGL runtime and provide distro-family package guidance when required components are known to be missing.
+These are operating-system dependencies and are not silently installed by Sanctuary Linux Installer. The compatibility advisor probes the installed 32-bit FreeType/OpenGL runtime and provides distro-family package guidance when required components are known to be missing.
 
 ## Compatibility
 
@@ -109,7 +116,7 @@ Desktop environment and display session can matter independently of distribution
 
 Linux Mint has been confirmed working with **Cinnamon / X11**, so Cinnamon itself is not known to be generally incompatible. Fedora Cinnamon/X11 remains untested.
 
-Diagnostics now emit a **non-blocking Cinnamon + Wayland warning** when that specific combination is detected. It does not block installation and does not label Wayland globally incompatible.
+The installer and diagnostics emit a **non-blocking Cinnamon + Wayland warning** when that specific combination is detected. It does not block installation and does not label Wayland globally incompatible.
 
 ## Diagnostics
 
@@ -131,7 +138,7 @@ Preview the default installation plan without changing files:
 ./Sanctuary-Linux-Installer --dry-run
 ```
 
-`--diagnose` reports OS, kernel, desktop/session, CPU, architecture, RAM, GPU, Steam type/path, discovered Proton builds, 32-bit FreeType/OpenGL status, 64-bit/32-bit Vulkan loader status, the recommended graphics backend, compatibility warnings, and package guidance when known runtime prerequisites are missing. This is the preferred first attachment/text dump for compatibility issues.
+`--diagnose` reports OS, kernel, desktop/session, CPU, architecture, RAM, GPU, Steam type/path, discovered Proton builds, the stable-first recommended Proton build, 32-bit FreeType/OpenGL status, 64-bit/32-bit Vulkan loader status, the recommended graphics backend, compatibility warnings, and package guidance when known runtime prerequisites are missing. This is the preferred first attachment/text dump for compatibility issues.
 
 Useful findings from real-machine testing:
 
@@ -150,15 +157,15 @@ The repository contains xUnit regression tests plus installer and launcher smoke
 
 CI also checks NuGet dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, exercises packaged `--diagnose` and `--dry-run`, verifies that hardware/OS diagnostics are present, and verifies the published SHA-256 checksum.
 
-Regression coverage now includes Steam-layout detection, Cinnamon/Wayland warning logic, and graphics-backend recommendation behavior in addition to the existing installer safety and Proton tests.
+Regression coverage now includes Steam-layout detection, Cinnamon/Wayland warning logic, graphics-backend recommendation behavior, and stable-first Proton selection in addition to the existing installer safety and Proton tests.
 
 Release cleanup is handled by the dedicated Alpha cleanup workflow rather than old version-specific cleanup logic embedded in the build workflow.
 
 ## Current Alpha compatibility work
 
-The active work list is tracked in `TODO.md`. The major remaining code-side items are surfacing the new runtime/graphics/Steam compatibility advisor directly in the graphical installer UI, changing the default Proton recommendation to newest stable compatible Proton rather than Experimental-first, and adding more deterministic parser/probe tests.
+The active work list is tracked in `TODO.md`. Most code-side compatibility intelligence is now in place. Remaining work is primarily deeper deterministic parser/runtime-probe test coverage and real-machine validation.
 
-Real-machine work still includes Arch, Ubuntu, openSUSE, SteamOS/Steam Deck, Fedora Cinnamon/X11, integrated graphics, more AMD/Intel/NVIDIA hardware, and clean WineD3D/OpenGL validation.
+Real-machine work still includes Arch, Ubuntu, openSUSE, SteamOS/Steam Deck, Fedora Cinnamon/X11, integrated graphics, more AMD/Intel/NVIDIA hardware, clean WineD3D/OpenGL validation, and broader outside-user Alpha testing.
 
 ## Building from source
 
