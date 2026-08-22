@@ -1,12 +1,12 @@
-# Sanctuary Linux Installer — Alpha 1
+# Sanctuary Linux Installer — Alpha 2
 
-This is the first public alpha release of Sanctuary Linux Installer.
+This alpha focuses on making compatibility information much more useful on real Linux systems.
 
 ## Highlights
 
 - Steam and Proton detection with native Steam, Flatpak Steam, custom Steam libraries, Proton Experimental, standard Proton releases, and GE-Proton support
 - Stable-first Proton recommendation policy: newest compatible standard Proton is preferred, with GE-Proton and Experimental retained as selectable fallbacks
-- Actual host reporting for Linux distribution, kernel, CPU, architecture, installed RAM, GPU, desktop environment, and Wayland/X11 session
+- Actual host reporting for Linux distribution, kernel, CPU model, architecture, installed RAM, GPU, desktop environment, and Wayland/X11 session
 - Compatibility diagnostics for 32-bit FreeType/OpenGL plus 64-bit and 32-bit Vulkan loader availability
 - Native-versus-Flatpak Steam identification in diagnostics and the graphical installer
 - Graphics-backend recommendation logic based on detected 32-bit Vulkan state, with the recommended backend preselected while remaining user-overridable
@@ -82,7 +82,7 @@ sudo apt update
 sudo apt install libfreetype6:i386 libgl1:i386 libgl1-mesa-dri:i386 libglx-mesa0:i386
 ```
 
-These are system dependencies and are not bundled into Sanctuary. The compatibility advisor now probes the relevant 32-bit runtime state and can provide distro-family guidance when known prerequisites are missing.
+These are system dependencies and are not bundled into the installer. The compatibility advisor now probes the relevant 32-bit runtime state and can provide distro-family guidance when known prerequisites are missing.
 
 ## Compatibility notes
 
@@ -95,4 +95,4 @@ These are system dependencies and are not bundled into Sanctuary. The compatibil
 
 ## Alpha status
 
-Most code-side compatibility intelligence is now implemented. Linux Mint, Debian 13, and Fedora Workstation have been validated far enough to launch and play Open Source Free Realms through Sanctuary in known configurations. Arch-based systems, Ubuntu, openSUSE, SteamOS/Steam Deck, integrated graphics, additional GPU/driver combinations, and broader desktop/session combinations are still being validated before beta status.
+Linux Mint, Debian 13, and Fedora Workstation have been validated far enough to launch and play Open Source Free Realms through Sanctuary in known configurations. Arch-based systems, Ubuntu, openSUSE, SteamOS/Steam Deck, integrated graphics, additional GPU/driver combinations, and broader desktop/session combinations are still being validated before beta status.
