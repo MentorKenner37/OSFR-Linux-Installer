@@ -1,0 +1,62 @@
+name: Publish versioned release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-linux-installer.yml
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout tagged release metadata
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Validate tag matches project version
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n1)"
+          test -n "$VERSION"
+          test "$GITHUB_REF_NAME" = "v$VERSION"
+
+      - name: Download tested installer artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: Sanctuary-Linux-Installer-linux-x64
+          path: build/installer
+
+      - name: Verify downloaded checksum
+        run: cd build/installer && sha256sum -c Sanctuary-Linux-Installer.sha256
+
+      - name: Publish immutable versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          test -f build/installer/Sanctuary-Linux-Installer
+          test -f build/installer/Sanctuary-Linux-Installer.sha256
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Refusing to overwrite existing immutable release $TAG."
+            exit 1
+          fi
+          PRERELEASE_ARGS=()
+          case "$TAG" in
+            *-*) PRERELEASE_ARGS+=(--prerelease) ;;
+          esac
+          gh release create "$TAG" \
+            build/installer/Sanctuary-Linux-Installer \
+            build/installer/Sanctuary-Linux-Installer.sha256 \
+            --target "$GITHUB_SHA" \
+            --title "Sanctuary Linux Installer $TAG" \
+            --notes-file RELEASE_NOTES.md \
+            "${PRERELEASE_ARGS[@]}"
