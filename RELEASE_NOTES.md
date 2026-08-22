@@ -5,11 +5,13 @@ This is the first public alpha release of Sanctuary Linux Installer.
 ## Highlights
 
 - Steam and Proton detection with native Steam, Flatpak Steam, custom Steam libraries, Proton Experimental, standard Proton releases, and GE-Proton support
+- Stable-first Proton recommendation policy: newest compatible standard Proton is preferred, with GE-Proton and Experimental retained as selectable fallbacks
 - Actual host reporting for Linux distribution, kernel, CPU, architecture, installed RAM, GPU, desktop environment, and Wayland/X11 session
-- Read-only compatibility diagnostics for 32-bit FreeType/OpenGL plus 64-bit and 32-bit Vulkan loader availability
-- Native-versus-Flatpak Steam identification in diagnostics
-- Graphics-backend recommendation logic based on detected 32-bit Vulkan state
+- Compatibility diagnostics for 32-bit FreeType/OpenGL plus 64-bit and 32-bit Vulkan loader availability
+- Native-versus-Flatpak Steam identification in diagnostics and the graphical installer
+- Graphics-backend recommendation logic based on detected 32-bit Vulkan state, with the recommended backend preselected while remaining user-overridable
 - Non-blocking Cinnamon + Wayland warning for the currently known Shift/modifier input caveat
+- Runtime, graphics, OS, hardware, Steam, Proton, and compatibility details surfaced directly in the graphical installer
 - Selectable Proton graphics backend: Vulkan via DXVK or OpenGL via WineD3D
 - Proton runtime architecture checks to prevent incompatible ARM64/x86_64 selections
 - Dedicated Proton prefix management for Open Source Free Realms
@@ -20,6 +22,7 @@ This is the first public alpha release of Sanctuary Linux Installer.
 - Sanctuary desktop/application-menu branding
 - xUnit regression tests plus installer and launcher safety smoke tests
 - Main-branch builds gated by xUnit and both smoke suites
+- Packaged CI diagnostics validated for OS/hardware and runtime/graphics compatibility output
 - Verified self-contained Linux installer with published SHA-256 checksum
 
 ## Install
@@ -79,7 +82,7 @@ sudo apt update
 sudo apt install libfreetype6:i386 libgl1:i386 libgl1-mesa-dri:i386 libglx-mesa0:i386
 ```
 
-These are system dependencies and are not bundled into Sanctuary. `--diagnose` now probes the relevant 32-bit runtime state and can provide distro-family guidance when known prerequisites are missing.
+These are system dependencies and are not bundled into Sanctuary. The compatibility advisor now probes the relevant 32-bit runtime state and can provide distro-family guidance when known prerequisites are missing.
 
 ## Compatibility notes
 
@@ -88,8 +91,8 @@ These are system dependencies and are not bundled into Sanctuary. `--diagnose` n
 - **Fedora Workstation x86_64 — GNOME Classic / Wayland + Proton 11 + DXVK/Vulkan:** confirmed working, including Shift-walk.
 - **Fedora Workstation x86_64 — Cinnamon / Wayland + Proton 11 + DXVK/Vulkan:** launches and plays, but Shift + movement does not trigger walking in the tested configuration.
 - The Fedora comparison shows that Wayland and Proton 11 are not globally incompatible. The current input caveat is associated with the tested Cinnamon + Wayland combination.
-- Systems without reliable 32-bit Vulkan support can use the WineD3D/OpenGL graphics backend.
+- Systems without detected 32-bit Vulkan loader support are recommended WineD3D/OpenGL as the safer default; users may override the recommendation.
 
 ## Alpha status
 
-Linux Mint, Debian 13, and Fedora Workstation have now been validated far enough to launch and play Open Source Free Realms through Sanctuary in known configurations. Arch-based systems, Ubuntu, openSUSE, SteamOS/Steam Deck, integrated graphics, additional GPU/driver combinations, and broader desktop/session combinations are still being validated before beta status.
+Most code-side compatibility intelligence is now implemented. Linux Mint, Debian 13, and Fedora Workstation have been validated far enough to launch and play Open Source Free Realms through Sanctuary in known configurations. Arch-based systems, Ubuntu, openSUSE, SteamOS/Steam Deck, integrated graphics, additional GPU/driver combinations, and broader desktop/session combinations are still being validated before beta status.
