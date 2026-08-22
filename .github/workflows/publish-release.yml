@@ -72,7 +72,6 @@ jobs:
           gh release create "$TAG" \
             build/installer/Sanctuary-Linux-Installer \
             build/installer/Sanctuary-Linux-Installer.sha256 \
-            --target "$TAG" \
             --title "Sanctuary Linux Installer $TAG" \
             --notes-file RELEASE_NOTES.md \
             "${PRERELEASE_ARGS[@]}"
