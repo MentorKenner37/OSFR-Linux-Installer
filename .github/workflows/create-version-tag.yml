@@ -8,6 +8,7 @@ on:
       - ".github/workflows/create-version-tag.yml"
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -17,7 +18,7 @@ jobs:
       - name: Checkout release commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Create immutable version tag
+      - name: Create tag and dispatch publisher
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -26,8 +27,12 @@ jobs:
           test -n "$VERSION"
           TAG="v$VERSION"
           if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
-            echo "Refusing to move existing immutable tag $TAG."
-            exit 1
+            echo "Immutable tag $TAG already exists; it will not be moved."
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$TAG" \
+              -f sha="$GITHUB_SHA"
+            echo "Created $TAG at $GITHUB_SHA."
           fi
-          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs"             -f ref="refs/tags/$TAG"             -f sha="$GITHUB_SHA"
-          echo "Created $TAG at $GITHUB_SHA."
+          gh workflow run publish-release.yml --ref main -f tag="$TAG"
+          echo "Dispatched the tested publisher for $TAG."
