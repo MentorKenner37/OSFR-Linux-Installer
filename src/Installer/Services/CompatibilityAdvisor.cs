@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace OSFR.Linux.Installer.Services;
 
@@ -57,6 +58,44 @@ public static class CompatibilityAdvisor
             reason,
             warnings,
             BuildPackageGuidance(state.OsName, freeType32, openGl32, vulkan32));
+    }
+
+    public static ProtonCandidate? SelectPreferredProton(IEnumerable<ProtonCandidate> candidates)
+    {
+        var compatible = candidates.Where(candidate => candidate.Compatible).ToList();
+        if (compatible.Count == 0)
+            return null;
+
+        static (int Major, int Minor, int Patch) VersionOf(ProtonCandidate candidate)
+        {
+            var match = Regex.Match(candidate.Name, @"(?:GE-Proton|Proton\s*-?\s*)(?<major>\d+)(?:[.-](?<minor>\d+))?(?:[.-](?<patch>\d+))?", RegexOptions.IgnoreCase);
+            if (!match.Success)
+                return (0, 0, 0);
+            _ = int.TryParse(match.Groups["major"].Value, out var major);
+            _ = int.TryParse(match.Groups["minor"].Value, out var minor);
+            _ = int.TryParse(match.Groups["patch"].Value, out var patch);
+            return (major, minor, patch);
+        }
+
+        static IOrderedEnumerable<ProtonCandidate> ByNewest(IEnumerable<ProtonCandidate> source) => source
+            .OrderByDescending(candidate => VersionOf(candidate).Major)
+            .ThenByDescending(candidate => VersionOf(candidate).Minor)
+            .ThenByDescending(candidate => VersionOf(candidate).Patch)
+            .ThenBy(candidate => candidate.Name, StringComparer.OrdinalIgnoreCase);
+
+        var stable = ByNewest(compatible.Where(candidate =>
+            candidate.Name.StartsWith("Proton ", StringComparison.OrdinalIgnoreCase) &&
+            !candidate.Name.Contains("Experimental", StringComparison.OrdinalIgnoreCase) &&
+            !candidate.Name.Contains("GE-Proton", StringComparison.OrdinalIgnoreCase))).FirstOrDefault();
+        if (stable is not null)
+            return stable;
+
+        var ge = ByNewest(compatible.Where(candidate => candidate.Name.Contains("GE-Proton", StringComparison.OrdinalIgnoreCase))).FirstOrDefault();
+        if (ge is not null)
+            return ge;
+
+        var experimental = compatible.FirstOrDefault(candidate => candidate.Name.Contains("Experimental", StringComparison.OrdinalIgnoreCase));
+        return experimental ?? compatible.First();
     }
 
     public static bool NeedsCinnamonWaylandWarning(string desktop, string sessionType) =>
