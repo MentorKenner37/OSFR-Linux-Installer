@@ -35,8 +35,7 @@ public static class CompatibilityAdvisor
         var vulkan32 = ProbeLibrary(libraries, "libvulkan.so.1", elfClass: 1);
 
         var warnings = new List<string>();
-        if (state.Desktop.Contains("cinnamon", StringComparison.OrdinalIgnoreCase) &&
-            state.SessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase))
+        if (NeedsCinnamonWaylandWarning(state.Desktop, state.SessionType))
         {
             warnings.Add("Cinnamon + Wayland detected. Shift/modifier input issues have been observed in one tested Free Realms configuration. If Shift-walk fails, try Cinnamon/X11 or another tested desktop session.");
         }
@@ -46,17 +45,7 @@ public static class CompatibilityAdvisor
         if (openGl32 == ProbeState.Missing)
             warnings.Add("32-bit OpenGL userspace was not detected. Proton/WineD3D and parts of the 32-bit graphics stack may fail to start.");
 
-        var recommendedBackend = GraphicsBackendConfig.Dxvk;
-        var reason = "DXVK/Vulkan is the preferred graphics path when the 32-bit Vulkan loader is available.";
-        if (vulkan32 == ProbeState.Missing)
-        {
-            recommendedBackend = GraphicsBackendConfig.WineD3D;
-            reason = "32-bit Vulkan support was not detected, so WineD3D/OpenGL is the safer default.";
-        }
-        else if (vulkan32 == ProbeState.Unknown)
-        {
-            reason = "32-bit Vulkan availability could not be verified. DXVK remains the default, but WineD3D/OpenGL is available if Vulkan fails.";
-        }
+        var (recommendedBackend, reason) = RecommendGraphicsBackend(vulkan32);
 
         return new CompatibilitySnapshot(
             DetectSteamInstallType(state.SteamRoot),
@@ -69,6 +58,17 @@ public static class CompatibilityAdvisor
             warnings,
             BuildPackageGuidance(state.OsName, freeType32, openGl32, vulkan32));
     }
+
+    public static bool NeedsCinnamonWaylandWarning(string desktop, string sessionType) =>
+        desktop.Contains("cinnamon", StringComparison.OrdinalIgnoreCase) &&
+        sessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase);
+
+    public static (string Backend, string Reason) RecommendGraphicsBackend(ProbeState vulkan32) => vulkan32 switch
+    {
+        ProbeState.Available => (GraphicsBackendConfig.Dxvk, "DXVK/Vulkan is the preferred graphics path because the 32-bit Vulkan loader is available."),
+        ProbeState.Missing => (GraphicsBackendConfig.WineD3D, "32-bit Vulkan support was not detected, so WineD3D/OpenGL is the safer default."),
+        _ => (GraphicsBackendConfig.Dxvk, "32-bit Vulkan availability could not be verified. DXVK remains the default, but WineD3D/OpenGL is available if Vulkan fails.")
+    };
 
     public static string DetectSteamInstallType(string? steamRoot)
     {
