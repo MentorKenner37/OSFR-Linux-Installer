@@ -113,6 +113,11 @@ jobs:
           grep -q "Operating system:" /tmp/sanctuary-diagnose.txt
           grep -q "CPU:" /tmp/sanctuary-diagnose.txt
           grep -q "GPU:" /tmp/sanctuary-diagnose.txt
+          grep -q "Steam type:" /tmp/sanctuary-diagnose.txt
+          grep -q "32-bit FreeType:" /tmp/sanctuary-diagnose.txt
+          grep -q "32-bit OpenGL:" /tmp/sanctuary-diagnose.txt
+          grep -q "32-bit Vulkan loader:" /tmp/sanctuary-diagnose.txt
+          grep -q "Recommended graphics backend:" /tmp/sanctuary-diagnose.txt
           grep -q "no files will be changed" /tmp/sanctuary-dry-run.txt
           grep -q "$HOME/.local/state/OSFR-Linux/installer.log" /tmp/sanctuary-diagnose.txt
           test ! -e "$HOME/.local/share/OSFR-Linux"
