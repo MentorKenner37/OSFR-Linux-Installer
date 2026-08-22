@@ -4,7 +4,8 @@
         x:Class="OSFR.Linux.Installer.MainWindow"
         Title="Sanctuary Linux Installer"
         Width="1180" Height="825" CanResize="False"
-        Background="#101010">
+        Background="#101010"
+        Opened="HardwareStatusOpened">
 
   <Grid ColumnDefinitions="310,*">
     <Border Grid.Column="0" Background="#121212" BorderBrush="#2B2B2B" BorderThickness="0,0,1,0" Padding="24">
@@ -21,12 +22,14 @@
         <Border Grid.Row="1" Background="#171717" BorderBrush="#313131" BorderThickness="1" CornerRadius="8" Padding="18">
           <StackPanel Spacing="14">
             <TextBlock Text="System Compatibility" FontSize="18" FontWeight="SemiBold" Foreground="#4CCF7A" />
-            <TextBlock Text="Required components detected on this system." Foreground="#858585" FontSize="11" TextWrapping="Wrap" />
+            <TextBlock Text="Detected hardware and environment." Foreground="#858585" FontSize="11" TextWrapping="Wrap" />
             <StackPanel Spacing="11">
-              <StackPanel><TextBlock Text="Operating System" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="LinuxStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
-              <StackPanel><TextBlock Text="Processor Architecture" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="CpuStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
-              <StackPanel><TextBlock Text="Steam Installation" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="SteamStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
-              <StackPanel><TextBlock Text="Proton Compatibility Layer" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="ProtonStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
+              <StackPanel><TextBlock Text="Operating System" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="LinuxStatus" FontSize="12" Foreground="#A0A0A0" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel><TextBlock Text="Desktop Environment" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="DesktopStatus" FontSize="12" Foreground="#A0A0A0" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel><TextBlock Text="Processor" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="CpuStatus" FontSize="12" Foreground="#A0A0A0" TextWrapping="Wrap"/></StackPanel>
+              <StackPanel><TextBlock Text="Graphics Processor" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="GpuStatus" FontSize="12" Foreground="#A0A0A0" TextWrapping="Wrap" MaxHeight="48"/></StackPanel>
+              <StackPanel><TextBlock Text="Steam" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="SteamStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
+              <StackPanel><TextBlock Text="Proton" Foreground="#F0F0F0" FontWeight="SemiBold"/><TextBlock x:Name="ProtonStatus" FontSize="12" Foreground="#A0A0A0"/></StackPanel>
             </StackPanel>
           </StackPanel>
         </Border>
@@ -70,10 +73,10 @@
                     <TextBlock Text="• A dedicated empty installation folder or an existing Sanctuary installation" Foreground="#B6B6B6" TextWrapping="Wrap"/>
                   </StackPanel>
                 </ScrollViewer>
-                <TextBlock Text="The compatibility panel on the left shows what Sanctuary detects. Steam and Proton are only read for configuration and are not installed, updated, or modified." Foreground="#858585" FontSize="12" TextWrapping="Wrap"/>
+                <TextBlock Text="The compatibility panel on the left shows the detected OS, desktop environment, processor, GPU, Steam, and Proton status. Steam and Proton paths are intentionally hidden here." Foreground="#858585" FontSize="12" TextWrapping="Wrap"/>
               </StackPanel>
             </Border>
-            <TextBlock x:Name="DetailText" Foreground="#8B8B8B" TextWrapping="Wrap" FontSize="12" />
+            <TextBlock x:Name="DetailText" IsVisible="False" Foreground="#8B8B8B" TextWrapping="Wrap" FontSize="12" />
           </StackPanel>
 
           <StackPanel x:Name="LocationPanel" IsVisible="False" Spacing="20">
