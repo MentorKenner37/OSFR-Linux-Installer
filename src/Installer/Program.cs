@@ -23,9 +23,16 @@ internal static class Program
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
-    private static void PrintDiagnostics()
+    private static SystemState DetectWithPreferredProton()
     {
         var state = SystemDetector.Detect();
+        var preferred = CompatibilityAdvisor.SelectPreferredProton(state.ProtonCandidates ?? []);
+        return preferred is null ? state : state.WithProton(preferred);
+    }
+
+    private static void PrintDiagnostics()
+    {
+        var state = DetectWithPreferredProton();
         var compatibility = CompatibilityAdvisor.Detect(state);
         Console.WriteLine("Sanctuary Linux Installer diagnostics");
         Console.WriteLine($"Operating system: {state.OsName}");
@@ -41,7 +48,7 @@ internal static class Program
         Console.WriteLine($"Recommended Proton: {state.ProtonPath ?? "not found"}");
         Console.WriteLine("Detected Proton builds:");
         foreach (var proton in state.ProtonCandidates ?? [])
-            Console.WriteLine($"  - {proton.Name}: {proton.Path}{(proton.Recommended ? " [recommended]" : string.Empty)}");
+            Console.WriteLine($"  - {proton.Name}: {proton.Path}{(state.ProtonPath == proton.Path ? " [recommended]" : string.Empty)}");
         Console.WriteLine("Runtime/graphics checks:");
         Console.WriteLine($"  - 32-bit FreeType: {CompatibilityAdvisor.ProbeLabel(compatibility.FreeType32)}");
         Console.WriteLine($"  - 32-bit OpenGL: {CompatibilityAdvisor.ProbeLabel(compatibility.OpenGl32)}");
@@ -59,7 +66,7 @@ internal static class Program
 
     private static void PrintDryRun()
     {
-        var state = SystemDetector.Detect();
+        var state = DetectWithPreferredProton();
         var compatibility = CompatibilityAdvisor.Detect(state);
         Console.WriteLine("Sanctuary Linux Installer dry run - no files will be changed");
         Console.WriteLine($"Detected OS: {state.OsName}");
