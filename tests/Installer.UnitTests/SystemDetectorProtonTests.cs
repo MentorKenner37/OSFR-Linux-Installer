@@ -11,6 +11,17 @@ namespace Installer.UnitTests
         private readonly TempDirFixture _fixture = new();
         public void Dispose() => _fixture.Dispose();
 
+        [Fact]
+        public void FindExecutable_UsesProvidedPath()
+        {
+            var executable = Path.Combine(_fixture.Root, "curl");
+            File.WriteAllText(executable, "stub");
+
+            Assert.Equal(executable, SystemDetector.FindExecutable("curl", _fixture.Root));
+            Assert.Null(SystemDetector.FindExecutable("missing-command", _fixture.Root));
+            Assert.Throws<ArgumentException>(() => SystemDetector.FindExecutable("../curl", _fixture.Root));
+        }
+
         private static void WriteMinimalElf(string path, ushort machine, bool littleEndian = true)
         {
             var header = new byte[20];
