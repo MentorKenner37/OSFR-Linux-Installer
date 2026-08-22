@@ -72,6 +72,13 @@ public partial class Register : Popup
     {
         try
         {
+            if (!Uri.TryCreate(_server.Info.WebApiUrl, UriKind.Absolute, out var baseUri) ||
+                baseUri.Scheme != Uri.UriSchemeHttps)
+            {
+                App.AddNotification("Registration blocked because this server's API does not use HTTPS.", true);
+                return false;
+            }
+
             ProgressDescription = App.GetText("Text.Register.Loading");
 
             using var httpClient = HttpHelper.CreateHttpClient();
@@ -81,8 +88,6 @@ public partial class Register : Popup
                 Username = Username,
                 Password = Password
             };
-
-            var baseUri = new Uri(_server.Info.WebApiUrl);
 
             var registerUri = new Uri(baseUri, "register");
 

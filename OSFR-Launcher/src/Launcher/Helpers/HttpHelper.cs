@@ -20,6 +20,7 @@ namespace Launcher.Helpers;
 
 public static class HttpHelper
 {
+    private const int MaxManifestBytes = 1024 * 1024;
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private static readonly HttpClient _httpClient = CreateHttpClient();
     private static readonly HttpClient _downloadHttpClient = CreateDownloadHttpClient();
@@ -152,9 +153,10 @@ public static class HttpHelper
 
     public static async Task<(ManifestResult Result, string Error, ServerManifest? ServerManifest)> GetServerManifestAsync(string serverUrl)
     {
+        EnsureHttps(serverUrl);
         var serverManifestUri = UriHelper.JoinUriPaths(serverUrl, ServerManifest.FileName.ToLower());
 
-        var response = await _httpClient.GetAsync(serverManifestUri);
+        using var response = await _httpClient.GetAsync(serverManifestUri, HttpCompletionOption.ResponseHeadersRead);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -180,7 +182,7 @@ public static class HttpHelper
             return (ManifestResult.InvalidFormat, error, null);
         }
 
-        using var contentStream = await response.Content.ReadAsStreamAsync();
+        using var contentStream = await ReadManifestAsync(response);
         var version = 0;
 
         try
@@ -260,9 +262,10 @@ public static class HttpHelper
 
     public static async Task<(ManifestResult Result, string Error, ClientManifest? ClientManifest)> GetClientManifestAsync(string serverUrl)
     {
+        EnsureHttps(serverUrl);
         var clientManifestUri = UriHelper.JoinUriPaths(serverUrl, ClientManifest.FileName.ToLower());
 
-        var response = await _httpClient.GetAsync(clientManifestUri);
+        using var response = await _httpClient.GetAsync(clientManifestUri, HttpCompletionOption.ResponseHeadersRead);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -288,7 +291,7 @@ public static class HttpHelper
             return (ManifestResult.InvalidFormat, error, null);
         }
 
-        using var contentStream = await response.Content.ReadAsStreamAsync();
+        using var contentStream = await ReadManifestAsync(response);
 
         try
         {
@@ -340,5 +343,34 @@ public static class HttpHelper
         }
 
         return (ManifestResult.Success, string.Empty, clientManifest);
+    }
+
+    private static async Task<MemoryStream> ReadManifestAsync(HttpResponseMessage response)
+    {
+        if (response.Content.Headers.ContentLength is > MaxManifestBytes)
+            throw new InvalidDataException($"Manifest exceeds the {MaxManifestBytes}-byte size limit.");
+
+        await using var source = await response.Content.ReadAsStreamAsync();
+        var destination = new MemoryStream();
+        var buffer = new byte[81920];
+
+        while (true)
+        {
+            var read = await source.ReadAsync(buffer);
+            if (read == 0)
+                break;
+            if (destination.Length + read > MaxManifestBytes)
+                throw new InvalidDataException($"Manifest exceeds the {MaxManifestBytes}-byte size limit.");
+            await destination.WriteAsync(buffer.AsMemory(0, read));
+        }
+
+        destination.Position = 0;
+        return destination;
+    }
+
+    private static void EnsureHttps(string serverUrl)
+    {
+        if (!Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("Server manifests must use HTTPS.");
     }
 }

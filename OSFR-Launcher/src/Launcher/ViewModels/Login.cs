@@ -86,10 +86,16 @@ public partial class Login : Popup
     {
         try
         {
+            if (!Uri.TryCreate(_server.Info.WebApiUrl, UriKind.Absolute, out var baseUri) ||
+                baseUri.Scheme != Uri.UriSchemeHttps)
+            {
+                App.AddNotification("Login blocked because this server's API does not use HTTPS.", true);
+                return false;
+            }
+
             ProgressDescription = App.GetText("Text.Login.Loading");
             using var httpClient = HttpHelper.CreateHttpClient();
             var loginRequest = new LoginRequest { Username = Username, Password = Password };
-            var baseUri = new Uri(_server.Info.WebApiUrl);
             var loginUri = new Uri(baseUri, "login");
             var httpResponse = await httpClient.PostAsJsonAsync(loginUri, loginRequest);
 

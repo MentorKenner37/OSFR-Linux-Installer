@@ -18,10 +18,6 @@ public sealed class InstallService
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".local", "share", "OSFR-Linux");
 
-    public static string LauncherDataRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".local", "share", "OSFRLauncher");
-
     public static string DesktopIconPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".local", "share", "icons", "hicolor", "256x256", "apps", $"{DesktopIconName}.png");
@@ -267,9 +263,6 @@ public sealed class InstallService
             var targets = new[]
             {
                 (Path: installRoot, RequireHome: false),
-                (Path: LauncherDataRoot, RequireHome: true),
-                (Path: Path.Combine(home, ".cache", "OSFRLauncher"), RequireHome: true),
-                (Path: Path.Combine(home, ".cache", "OSFR-Linux"), RequireHome: true),
                 (Path: Path.Combine(home, ".local", "share", "applications", DesktopFileName), RequireHome: true),
                 (Path: Path.Combine(home, "Desktop", DesktopFileName), RequireHome: true),
                 (Path: DesktopIconPath, RequireHome: true)

@@ -45,7 +45,7 @@
   <x:String x:Key="Text.Register.Loading" xml:space="preserve">Registering your account...</x:String>
 
   <!-- Server Operations -->
-  <x:String x:Key="Text.Server.SecureApiWarning" xml:space="preserve">This server does not use HTTPS. Proceed at your own risk.</x:String>
+  <x:String x:Key="Text.Server.SecureApiWarning" xml:space="preserve">This server does not use HTTPS. Login and registration are blocked.</x:String>
   <x:String x:Key="Text.Server.PreparingGameFiles" xml:space="preserve">Preparing Game Files: ({0}/{1})</x:String>
   <x:String x:Key="Text.Server.VerifyClientFiles" xml:space="preserve">Verifying Client Files...</x:String>
   <x:String x:Key="Text.ServerStatus" xml:space="preserve">Server Status: </x:String>
@@ -60,7 +60,7 @@
   <x:String x:Key="Text.Add_Server.ServerUrl" xml:space="preserve">Server URL:</x:String>
   <x:String x:Key="Text.Add_Server.Loading" xml:space="preserve">Adding Server...</x:String>
   <x:String x:Key="Text.Add_Server.InvalidServerUrl1" xml:space="preserve">Invalid url format. {0}</x:String>
-  <x:String x:Key="Text.Add_Server.InvalidServerUrl2" xml:space="preserve">Invalid url, only HTTP/HTTPS is supported. {0}</x:String>
+  <x:String x:Key="Text.Add_Server.InvalidServerUrl2" xml:space="preserve">Invalid URL. Servers must use HTTPS. {0}</x:String>
 
   <!-- Delete Server -->
   <x:String x:Key="Text.Delete_Server" xml:space="preserve">Delete Server</x:String>

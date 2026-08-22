@@ -349,7 +349,7 @@ public partial class Server : ObservableObject
 
                         try
                         {
-                            if (!await DownloadFileAsync(downloadService!, file.Path, file.Name))
+                            if (!await DownloadFileAsync(downloadService!, file))
                                 failedFiles.Add(file.Name);
                         }
                         finally
@@ -373,7 +373,7 @@ public partial class Server : ObservableObject
 
                 foreach (var file in filesToDownload)
                 {
-                    if (!await DownloadFileAsync(downloadService, file.Path, file.Name))
+                    if (!await DownloadFileAsync(downloadService, file))
                         failedFiles.Add(file.Name);
 
                     filesDownloaded++;
@@ -410,19 +410,20 @@ public partial class Server : ObservableObject
         ParallelDownload = false,
     };
 
-    private async Task<bool> DownloadFileAsync(DownloadService downloadService, string path, string fileName)
+    private async Task<bool> DownloadFileAsync(DownloadService downloadService, LocalFile file)
     {
         if (string.IsNullOrEmpty(Info.Url))
             return false;
 
-        var downloadFilePath = Path.Combine(path, fileName);
+        var downloadFilePath = Path.Combine(file.Path, file.Name);
+        string? temporaryPath = null;
 
         try
         {
-            var filePath = ServerPathHelper.GetClientFilePath(Info.SavePath, path, fileName);
+            var filePath = ServerPathHelper.GetClientFilePath(Info.SavePath, file.Path, file.Name);
             var fileDirectory = Path.GetDirectoryName(filePath)
                 ?? throw new InvalidDataException("The client manifest contains an invalid file path.");
-            var clientFileUri = UriHelper.JoinUriPaths(Info.Url, "client", path, fileName);
+            var clientFileUri = UriHelper.JoinUriPaths(Info.Url, "client", file.Path, file.Name);
 
             Directory.CreateDirectory(fileDirectory);
             await using var fileStream = await downloadService.DownloadFileTaskAsync(clientFileUri);
@@ -432,9 +433,27 @@ public partial class Server : ObservableObject
                 _logger.Error("Failed to get client file or received empty stream: {Path}.", downloadFilePath);
                 return false;
             }
+            if (fileStream.Length != file.Size)
+            {
+                _logger.Error("Downloaded client file has an unexpected size: {Path}.", downloadFilePath);
+                return false;
+            }
 
-            await using var writeStream = File.Create(filePath);
-            await fileStream.CopyToAsync(writeStream);
+            temporaryPath = Path.Combine(fileDirectory, $".{Path.GetFileName(filePath)}.{Guid.NewGuid():N}.download");
+            await using (var writeStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                await fileStream.CopyToAsync(writeStream);
+
+            await using (var verifyStream = File.OpenRead(temporaryPath))
+            {
+                if (verifyStream.Length != file.Size || XXHash.Hash64(verifyStream) != file.Hash)
+                {
+                    _logger.Error("Downloaded client file failed size/hash verification: {Path}.", downloadFilePath);
+                    return false;
+                }
+            }
+
+            File.Move(temporaryPath, filePath, overwrite: true);
+            temporaryPath = null;
             return true;
         }
         catch (InvalidDataException ex)
@@ -446,6 +465,17 @@ public partial class Server : ObservableObject
         {
             _logger.Error(ex, "Error downloading: {Path}.", downloadFilePath);
             return false;
+        }
+        finally
+        {
+            if (temporaryPath is not null && File.Exists(temporaryPath))
+            {
+                try { File.Delete(temporaryPath); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _logger.Warn(ex, "Could not remove temporary download: {Path}.", temporaryPath);
+                }
+            }
         }
     }
 
@@ -488,7 +518,9 @@ public partial class Server : ObservableObject
             results.Add(new LocalFile
             {
                 Path = path,
-                Name = file.Name
+                Name = file.Name,
+                Size = file.Size,
+                Hash = file.Hash
             });
         }
 

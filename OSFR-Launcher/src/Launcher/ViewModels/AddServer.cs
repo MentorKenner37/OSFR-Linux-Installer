@@ -41,7 +41,7 @@ public partial class AddServer : Popup
         if (!Uri.TryCreate(serverUrl, UriKind.Absolute, out var serverUri))
             return new ValidationResult(App.GetText("Text.Add_Server.InvalidServerUrl1", serverUrl));
 
-        if (serverUri.Scheme != Uri.UriSchemeHttp && serverUri.Scheme != Uri.UriSchemeHttps)
+        if (serverUri.Scheme != Uri.UriSchemeHttps)
             return new ValidationResult(App.GetText("Text.Add_Server.InvalidServerUrl2", serverUrl));
 
         return ValidationResult.Success;
@@ -70,6 +70,13 @@ public partial class AddServer : Popup
             }
 
             var serverManifest = result.ServerManifest;
+
+            if (!Uri.TryCreate(serverManifest.WebApiUrl, UriKind.Absolute, out var apiUri) ||
+                apiUri.Scheme != Uri.UriSchemeHttps)
+            {
+                App.AddNotification("Could not add the server. Its login API must use HTTPS.", true);
+                return false;
+            }
 
             if (string.IsNullOrEmpty(serverManifest.Name))
             {

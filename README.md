@@ -4,7 +4,7 @@
 
 Sanctuary Linux Installer is a Linux-first installation and compatibility tool for **Sanctuary**, the Open Source Free Realms emulator. It finds Steam and Proton, prepares a dedicated Free Realms prefix, installs the patched OSFR launcher used to connect to Sanctuary, and handles the Linux-specific setup needed to get into the game.
 
-> **Alpha 2** — Tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
+> **Version 1.0.3** — Tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
 
 ## What the installer does
 
@@ -23,6 +23,8 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 - Installs the patched Open Source Free Realms launcher and isolates Free Realms in a dedicated Proton prefix
 - Creates desktop/application-menu integration
 - Uses ownership validation, staged replacement, rollback, recovery, archive traversal protection, symlink checks, and conservative uninstall behavior
+- Stages and verifies every downloaded game file before atomically replacing the installed copy
+- Requires HTTPS for server manifests, login, and registration
 - Provides `--diagnose` and `--dry-run` troubleshooting modes
 
 The installer does **not** replace Steam, install graphics drivers, modify Linux users/services, or silently change package-manager configuration.
@@ -41,7 +43,7 @@ chmod +x Sanctuary-Linux-Installer
 ./Sanctuary-Linux-Installer
 ```
 
-The installer walks through environment detection, installation location, Proton selection, graphics backend, review, and installation.
+The installer walks through environment detection, installation location, Proton selection, graphics backend, review, and installation. Uninstall removes the installer-owned program directory and desktop integration but deliberately preserves shared launcher settings and downloaded game data under `~/.local/share/OSFRLauncher`.
 
 ## Hardware and OS detection
 
@@ -155,15 +157,15 @@ Useful findings from real-machine testing:
 
 The repository contains xUnit regression tests plus installer and launcher smoke tests. Pushes to `main` and pull requests into `main` run the full unit/smoke suite, and the packaged installer build is gated on the xUnit suite before an artifact can be published.
 
-CI also checks NuGet dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, exercises packaged `--diagnose` and `--dry-run`, verifies hardware/OS/runtime/graphics diagnostic fields are present, and verifies the published SHA-256 checksum.
+CI also checks NuGet dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, exercises packaged `--diagnose` and `--dry-run`, verifies hardware/OS/runtime/graphics diagnostic fields are present, and verifies the published SHA-256 checksum. Versioned releases are immutable: publishing fails if the version tag already exists.
 
 Regression coverage includes install/uninstall safety, ownership and rollback behavior, Steam-library parsing, Proton runtime architecture, Steam type detection, Cinnamon/Wayland warning logic, graphics-backend recommendation behavior, stable-first Proton selection, OS/CPU/RAM/GPU text parsing, `ldconfig` parsing, and ELF32/ELF64 runtime probing.
 
 Release cleanup is handled by the dedicated Alpha cleanup workflow rather than old version-specific cleanup logic embedded in the build workflow.
 
-## Current Alpha compatibility work
+## Current compatibility work
 
-The active work list is tracked in `TODO.md`. The code-side compatibility and diagnostics pass is now largely complete. The remaining Alpha work is primarily **real-machine validation**.
+The active work list is tracked in `TODO.md`. The code-side compatibility and diagnostics pass is now largely complete. The remaining work is primarily **real-machine validation**.
 
 That includes Arch, Ubuntu, openSUSE, SteamOS/Steam Deck, Fedora Cinnamon/X11, integrated graphics, more AMD/Intel/NVIDIA hardware, clean WineD3D/OpenGL validation, more desktop/session combinations, and broader outside-user testing.
 
@@ -191,6 +193,6 @@ Upstream projects:
 - Sanctuary emulator: https://github.com/Open-Source-Free-Realms/Sanctuary
 - Open Source Free Realms launcher: https://github.com/Open-Source-Free-Realms/Launcher
 
-See `OSFR-Launcher/LICENSE` for the upstream launcher license.
+Original installer code in this repository is licensed under GNU AGPL-3.0-or-later; see `LICENSE.md`. See `OSFR-Launcher/LICENSE` for the complete upstream launcher license text and `THIRD_PARTY_NOTICES.md` for bundled-component provenance.
 
 The launcher includes Discord Rich Presence integration through the Discord Game SDK. This project is not created by or endorsed by Discord.
