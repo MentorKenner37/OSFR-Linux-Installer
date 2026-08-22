@@ -54,39 +54,33 @@ public static class SystemDetector
         var isX64 = RuntimeInformation.OSArchitecture == Architecture.X64;
         var contexts = FindSteamLibraryContexts();
         var candidates = FindProtonCandidates(contexts);
-        var selected = candidates.FirstOrDefault(p => p.Compatible);
+        var selected = candidates.FirstOrDefault(candidate => candidate.Compatible);
         var fallbackSteamRoot = FindSteamRoots().FirstOrDefault(Directory.Exists);
         var steamRoot = selected?.SteamRoot ?? fallbackSteamRoot;
-        var proton = selected?.Path;
 
-        var osName = DetectOsName();
-        var kernel = DetectKernelVersion();
-        var cpu = DetectCpuModel();
-        var memory = DetectMemory();
-        var gpu = DetectGpu();
-        var desktop = DetectDesktop();
-        var session = DetectSessionType();
-
-        InstallerLog.Info(
-            $"System detection: Linux={isLinux}, x64={isX64}, OS={osName}, Kernel={kernel}, CPU={cpu}, RAM={memory}, " +
-            $"GPU={gpu}, Desktop={desktop}, Session={session}, Steam={(steamRoot ?? "not found")}, " +
-            $"Proton={(proton ?? "not found")}, ProtonCompatible={selected?.Compatible ?? false}, ProtonCandidates={candidates.Count}");
-
-        return new SystemState(
+        var state = new SystemState(
             isLinux,
             isX64,
             steamRoot,
-            proton,
+            selected?.Path,
             candidates,
             selected?.Compatible ?? false,
             selected?.CompatibilityMessage,
-            osName,
-            kernel,
-            cpu,
-            memory,
-            gpu,
-            desktop,
-            session);
+            DetectOsName(),
+            DetectKernelVersion(),
+            DetectCpuModel(),
+            DetectMemory(),
+            DetectGpu(),
+            DetectDesktop(),
+            DetectSessionType());
+
+        InstallerLog.Info(
+            $"System detection: Linux={state.IsLinux}, x64={state.IsX64}, OS={state.OsName}, Kernel={state.KernelVersion}, " +
+            $"CPU={state.CpuModel}, RAM={state.Memory}, GPU={state.Gpu}, Desktop={state.Desktop}, Session={state.SessionType}, " +
+            $"Steam={(state.SteamRoot ?? "not found")}, Proton={(state.ProtonPath ?? "not found")}, " +
+            $"ProtonCompatible={state.ProtonCompatible}, ProtonCandidates={candidates.Count}");
+
+        return state;
     }
 
     public static IEnumerable<string> FindSteamRoots()
@@ -102,48 +96,6 @@ public static class SystemDetector
 
     public static IEnumerable<string> FindSteamLibraries() =>
         FindSteamLibraryContexts().Select(context => context.LibraryPath).Distinct(StringComparer.Ordinal);
-
-    private static List<SteamLibraryContext> FindSteamLibraryContexts()
-    {
-        var results = new List<SteamLibraryContext>();
-
-        foreach (var discoveredRoot in FindSteamRoots().Where(Directory.Exists))
-        {
-            var root = CanonicalizePath(discoveredRoot);
-            results.Add(new SteamLibraryContext(root, root));
-
-            var vdf = Path.Combine(root, "steamapps", "libraryfolders.vdf");
-            if (!File.Exists(vdf))
-                continue;
-
-            string text;
-            try
-            {
-                text = File.ReadAllText(vdf);
-            }
-            catch (IOException ex)
-            {
-                InstallerLog.Warn($"Could not read Steam library file {vdf}: {ex.Message}");
-                continue;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                InstallerLog.Warn($"Could not access Steam library file {vdf}: {ex.Message}");
-                continue;
-            }
-
-            foreach (var path in ParseSteamLibraryPaths(text))
-            {
-                if (Directory.Exists(path))
-                    results.Add(new SteamLibraryContext(CanonicalizePath(path), root));
-            }
-        }
-
-        return results
-            .GroupBy(context => context.LibraryPath, StringComparer.Ordinal)
-            .Select(group => group.First())
-            .ToList();
-    }
 
     public static IEnumerable<string> ParseSteamLibraryPaths(string vdfText)
     {
@@ -163,7 +115,9 @@ public static class SystemDetector
         var fallbackRoot = FindSteamRoots().FirstOrDefault(Directory.Exists);
         var contexts = libraries
             .Where(Directory.Exists)
-            .Select(path => new SteamLibraryContext(CanonicalizePath(path), fallbackRoot is null ? CanonicalizePath(path) : CanonicalizePath(fallbackRoot)))
+            .Select(path => new SteamLibraryContext(
+                CanonicalizePath(path),
+                fallbackRoot is null ? CanonicalizePath(path) : CanonicalizePath(fallbackRoot)))
             .GroupBy(context => context.LibraryPath, StringComparer.Ordinal)
             .Select(group => group.First())
             .ToList();
@@ -171,14 +125,143 @@ public static class SystemDetector
         return FindProtonCandidates(contexts);
     }
 
+    public static ProtonCompatibility InspectProtonRuntime(string protonPath)
+    {
+        if (!File.Exists(protonPath))
+            return new ProtonCompatibility("missing", false, "Proton launcher file is missing.");
+
+        if (OperatingSystem.IsLinux())
+        {
+            try
+            {
+                if ((File.GetUnixFileMode(protonPath) & UnixFileMode.UserExecute) == 0)
+                    return new ProtonCompatibility("unknown", false, "Proton launcher is not executable by the current user.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+            {
+                InstallerLog.Warn($"Could not inspect execute permissions for {protonPath}: {ex.Message}");
+            }
+        }
+
+        var name = GetProtonDirectoryName(protonPath);
+        if (Regex.IsMatch(name, @"(?:aarch64|arm64)", RegexOptions.IgnoreCase))
+        {
+            var compatible = RuntimeInformation.OSArchitecture == Architecture.Arm64;
+            return new ProtonCompatibility(
+                "aarch64",
+                compatible,
+                compatible ? "ARM64 Proton build matches the host architecture." : "ARM64 Proton build is incompatible with this x86_64 system.");
+        }
+
+        var protonRoot = Path.GetDirectoryName(protonPath) ?? string.Empty;
+        var runtimeBinaries = new[]
+        {
+            Path.Combine(protonRoot, "files", "bin", "wine64"),
+            Path.Combine(protonRoot, "files", "bin", "wine"),
+            Path.Combine(protonRoot, "dist", "bin", "wine64"),
+            Path.Combine(protonRoot, "dist", "bin", "wine")
+        };
+
+        var detectedMachines = runtimeBinaries
+            .Where(File.Exists)
+            .Select(TryReadElfMachine)
+            .Where(machine => machine is not null)
+            .Select(machine => machine!.Value)
+            .Distinct()
+            .ToList();
+
+        if (detectedMachines.Contains(62))
+        {
+            var compatible = RuntimeInformation.OSArchitecture == Architecture.X64;
+            return new ProtonCompatibility(
+                "x86_64",
+                compatible,
+                compatible ? "x86_64 Proton runtime verified." : "x86_64 Proton runtime does not match this host architecture.");
+        }
+
+        if (detectedMachines.Contains(183))
+        {
+            var compatible = RuntimeInformation.OSArchitecture == Architecture.Arm64;
+            return new ProtonCompatibility(
+                "aarch64",
+                compatible,
+                compatible ? "ARM64 Proton runtime verified." : "ARM64 Proton runtime is incompatible with this x86_64 system.");
+        }
+
+        if (Regex.IsMatch(name, @"(?:x86_64|amd64)", RegexOptions.IgnoreCase))
+        {
+            var compatible = RuntimeInformation.OSArchitecture == Architecture.X64;
+            return new ProtonCompatibility(
+                "x86_64",
+                compatible,
+                compatible ? "x86_64 Proton build matches the host architecture." : "x86_64 Proton build does not match this host architecture.");
+        }
+
+        return new ProtonCompatibility(
+            "unknown",
+            true,
+            "Proton was found and is executable, but its runtime architecture could not be verified from the installed files.");
+    }
+
+    public static string CanonicalizePath(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        try
+        {
+            var info = Directory.Exists(fullPath)
+                ? (FileSystemInfo)new DirectoryInfo(fullPath)
+                : new FileInfo(fullPath);
+            var target = info.ResolveLinkTarget(returnFinalTarget: true);
+            return target is null ? fullPath : Path.GetFullPath(target.FullName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            InstallerLog.Warn($"Could not resolve filesystem alias {fullPath}: {ex.Message}");
+            return fullPath;
+        }
+    }
+
+    private static List<SteamLibraryContext> FindSteamLibraryContexts()
+    {
+        var results = new List<SteamLibraryContext>();
+
+        foreach (var discoveredRoot in FindSteamRoots().Where(Directory.Exists))
+        {
+            var root = CanonicalizePath(discoveredRoot);
+            results.Add(new SteamLibraryContext(root, root));
+
+            var vdf = Path.Combine(root, "steamapps", "libraryfolders.vdf");
+            if (!File.Exists(vdf))
+                continue;
+
+            try
+            {
+                foreach (var path in ParseSteamLibraryPaths(File.ReadAllText(vdf)))
+                {
+                    if (Directory.Exists(path))
+                        results.Add(new SteamLibraryContext(CanonicalizePath(path), root));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                InstallerLog.Warn($"Could not read Steam library file {vdf}: {ex.Message}");
+            }
+        }
+
+        return results
+            .GroupBy(context => context.LibraryPath, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
+    }
+
     private static IReadOnlyList<ProtonCandidate> FindProtonCandidates(IReadOnlyList<SteamLibraryContext> contexts)
     {
-        var candidates = new List<CandidatePath>();
+        var candidatePaths = new List<CandidatePath>();
 
         foreach (var context in contexts)
         {
-            AddSteamCommonCandidates(context.LibraryPath, context.SteamRoot, candidates);
-            AddCompatibilityToolCandidates(Path.Combine(context.LibraryPath, "compatibilitytools.d"), context.SteamRoot, candidates);
+            AddSteamCommonCandidates(context.LibraryPath, context.SteamRoot, candidatePaths);
+            AddCompatibilityToolCandidates(Path.Combine(context.LibraryPath, "compatibilitytools.d"), context.SteamRoot, candidatePaths);
         }
 
         var envToolPaths = Environment.GetEnvironmentVariable("STEAM_COMPAT_TOOL_PATHS");
@@ -186,10 +269,10 @@ public static class SystemDetector
         {
             var fallbackRoot = contexts.FirstOrDefault()?.SteamRoot ?? FindSteamRoots().FirstOrDefault(Directory.Exists);
             foreach (var path in envToolPaths.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                AddCompatibilityToolCandidates(path, fallbackRoot, candidates);
+                AddCompatibilityToolCandidates(path, fallbackRoot, candidatePaths);
         }
 
-        var unique = candidates
+        var unique = candidatePaths
             .Where(candidate => File.Exists(candidate.ProtonPath))
             .Select(candidate => candidate with { ProtonPath = CanonicalizePath(candidate.ProtonPath) })
             .GroupBy(candidate => candidate.ProtonPath, StringComparer.Ordinal)
@@ -218,76 +301,6 @@ public static class SystemDetector
         return unique
             .Select((candidate, index) => candidate with { Recommended = index == recommendedIndex })
             .ToList();
-    }
-
-    public static ProtonCompatibility InspectProtonRuntime(string protonPath)
-    {
-        if (!File.Exists(protonPath))
-            return new ProtonCompatibility("missing", false, "Proton launcher file is missing.");
-
-        if (OperatingSystem.IsLinux())
-        {
-            try
-            {
-                if ((File.GetUnixFileMode(protonPath) & UnixFileMode.UserExecute) == 0)
-                    return new ProtonCompatibility("unknown", false, "Proton launcher is not executable by the current user.");
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
-            {
-                InstallerLog.Warn($"Could not inspect execute permissions for {protonPath}: {ex.Message}");
-            }
-        }
-
-        var name = GetProtonDirectoryName(protonPath);
-        if (Regex.IsMatch(name, @"(?:aarch64|arm64)", RegexOptions.IgnoreCase))
-        {
-            var compatible = RuntimeInformation.OSArchitecture == Architecture.Arm64;
-            return new ProtonCompatibility("aarch64", compatible,
-                compatible ? "ARM64 Proton build matches the host architecture." : "ARM64 Proton build is incompatible with this x86_64 system.");
-        }
-
-        var protonRoot = Path.GetDirectoryName(protonPath) ?? string.Empty;
-        var runtimeBinaries = new[]
-        {
-            Path.Combine(protonRoot, "files", "bin", "wine64"),
-            Path.Combine(protonRoot, "files", "bin", "wine"),
-            Path.Combine(protonRoot, "dist", "bin", "wine64"),
-            Path.Combine(protonRoot, "dist", "bin", "wine")
-        };
-
-        var detectedMachines = runtimeBinaries
-            .Where(File.Exists)
-            .Select(TryReadElfMachine)
-            .Where(machine => machine is not null)
-            .Select(machine => machine!.Value)
-            .Distinct()
-            .ToList();
-
-        if (detectedMachines.Contains(62))
-        {
-            var compatible = RuntimeInformation.OSArchitecture == Architecture.X64;
-            return new ProtonCompatibility("x86_64", compatible,
-                compatible ? "x86_64 Proton runtime verified." : "x86_64 Proton runtime does not match this host architecture.");
-        }
-
-        if (detectedMachines.Contains(183))
-        {
-            var compatible = RuntimeInformation.OSArchitecture == Architecture.Arm64;
-            return new ProtonCompatibility("aarch64", compatible,
-                compatible ? "ARM64 Proton runtime verified." : "ARM64 Proton runtime is incompatible with this x86_64 system.");
-        }
-
-        if (Regex.IsMatch(name, @"(?:x86_64|amd64)", RegexOptions.IgnoreCase))
-        {
-            var compatible = RuntimeInformation.OSArchitecture == Architecture.X64;
-            return new ProtonCompatibility("x86_64", compatible,
-                compatible ? "x86_64 Proton build matches the host architecture." : "x86_64 Proton build does not match this host architecture.");
-        }
-
-        return new ProtonCompatibility(
-            "unknown",
-            true,
-            "Proton was found and is executable, but its runtime architecture could not be verified from the installed files.");
     }
 
     private static ushort? TryReadElfMachine(string path)
@@ -319,23 +332,9 @@ public static class SystemDetector
 
         try
         {
-            const string osRelease = "/etc/os-release";
-            if (File.Exists(osRelease))
-            {
-                var values = File.ReadLines(osRelease)
-                    .Select(line => line.Split('=', 2))
-                    .Where(parts => parts.Length == 2)
-                    .ToDictionary(parts => parts[0], parts => parts[1].Trim().Trim('"'), StringComparer.OrdinalIgnoreCase);
-
-                if (values.TryGetValue("PRETTY_NAME", out var prettyName) && !string.IsNullOrWhiteSpace(prettyName))
-                    return prettyName;
-
-                if (values.TryGetValue("NAME", out var name))
-                {
-                    values.TryGetValue("VERSION_ID", out var version);
-                    return string.IsNullOrWhiteSpace(version) ? name : $"{name} {version}";
-                }
-            }
+            const string path = "/etc/os-release";
+            if (File.Exists(path))
+                return HostInfoParser.ParseOsRelease(File.ReadAllText(path)) ?? RuntimeInformation.OSDescription;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
@@ -349,8 +348,8 @@ public static class SystemDetector
     {
         try
         {
-            const string kernelPath = "/proc/sys/kernel/osrelease";
-            return File.Exists(kernelPath) ? File.ReadAllText(kernelPath).Trim() : Environment.OSVersion.VersionString;
+            const string path = "/proc/sys/kernel/osrelease";
+            return File.Exists(path) ? File.ReadAllText(path).Trim() : Environment.OSVersion.VersionString;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -363,24 +362,9 @@ public static class SystemDetector
     {
         try
         {
-            const string cpuInfo = "/proc/cpuinfo";
-            if (File.Exists(cpuInfo))
-            {
-                foreach (var line in File.ReadLines(cpuInfo))
-                {
-                    if (!line.StartsWith("model name", StringComparison.OrdinalIgnoreCase) &&
-                        !line.StartsWith("Hardware", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    var separator = line.IndexOf(':');
-                    if (separator >= 0)
-                    {
-                        var model = line[(separator + 1)..].Trim();
-                        if (!string.IsNullOrWhiteSpace(model))
-                            return model;
-                    }
-                }
-            }
+            const string path = "/proc/cpuinfo";
+            if (File.Exists(path))
+                return HostInfoParser.ParseCpuInfo(File.ReadAllText(path)) ?? RuntimeInformation.ProcessArchitecture.ToString();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -394,17 +378,9 @@ public static class SystemDetector
     {
         try
         {
-            const string memInfo = "/proc/meminfo";
-            if (File.Exists(memInfo))
-            {
-                var line = File.ReadLines(memInfo).FirstOrDefault(value => value.StartsWith("MemTotal:", StringComparison.OrdinalIgnoreCase));
-                var match = line is null ? Match.Empty : Regex.Match(line, @"MemTotal:\s+(?<kb>\d+)\s+kB", RegexOptions.IgnoreCase);
-                if (match.Success && long.TryParse(match.Groups["kb"].Value, out var kb))
-                {
-                    var gib = kb / 1024d / 1024d;
-                    return $"{gib:0.#} GiB";
-                }
-            }
+            const string path = "/proc/meminfo";
+            if (File.Exists(path))
+                return HostInfoParser.ParseMemory(File.ReadAllText(path)) ?? "Unknown";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -419,19 +395,7 @@ public static class SystemDetector
         var lspci = TryRunCommand("lspci", "");
         if (!string.IsNullOrWhiteSpace(lspci))
         {
-            var adapters = lspci
-                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(line => line.Contains("VGA compatible controller", StringComparison.OrdinalIgnoreCase) ||
-                               line.Contains("3D controller", StringComparison.OrdinalIgnoreCase) ||
-                               line.Contains("Display controller", StringComparison.OrdinalIgnoreCase))
-                .Select(line =>
-                {
-                    var index = line.IndexOf(": ", StringComparison.Ordinal);
-                    return index >= 0 ? line[(index + 2)..].Trim() : line.Trim();
-                })
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
+            var adapters = HostInfoParser.ParseLspciGraphics(lspci);
             if (adapters.Count > 0)
                 return string.Join(" | ", adapters);
         }
@@ -444,13 +408,14 @@ public static class SystemDetector
                 var models = new List<string>();
                 foreach (var information in Directory.EnumerateFiles(nvidiaRoot, "information", SearchOption.AllDirectories))
                 {
-                    var modelLine = File.ReadLines(information).FirstOrDefault(line => line.StartsWith("Model:", StringComparison.OrdinalIgnoreCase));
-                    if (modelLine is not null)
-                    {
-                        var model = modelLine[(modelLine.IndexOf(':') + 1)..].Trim();
-                        if (!string.IsNullOrWhiteSpace(model))
-                            models.Add(model);
-                    }
+                    var modelLine = File.ReadLines(information)
+                        .FirstOrDefault(line => line.StartsWith("Model:", StringComparison.OrdinalIgnoreCase));
+                    if (modelLine is null)
+                        continue;
+
+                    var model = modelLine[(modelLine.IndexOf(':') + 1)..].Trim();
+                    if (!string.IsNullOrWhiteSpace(model))
+                        models.Add(model);
                 }
 
                 if (models.Count > 0)
@@ -512,24 +477,6 @@ public static class SystemDetector
         }
     }
 
-    public static string CanonicalizePath(string path)
-    {
-        var fullPath = Path.GetFullPath(path);
-        try
-        {
-            var info = Directory.Exists(fullPath)
-                ? (FileSystemInfo)new DirectoryInfo(fullPath)
-                : new FileInfo(fullPath);
-            var target = info.ResolveLinkTarget(returnFinalTarget: true);
-            return target is null ? fullPath : Path.GetFullPath(target.FullName);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
-        {
-            InstallerLog.Warn($"Could not resolve filesystem alias {fullPath}: {ex.Message}");
-            return fullPath;
-        }
-    }
-
     private static void AddSteamCommonCandidates(string library, string? steamRoot, ICollection<CandidatePath> candidates)
     {
         var common = Path.Combine(library, "steamapps", "common");
@@ -545,13 +492,9 @@ public static class SystemDetector
                     candidates.Add(new CandidatePath(proton, steamRoot));
             }
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             InstallerLog.Warn($"Could not enumerate Proton builds in {common}: {ex.Message}");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            InstallerLog.Warn($"Could not access Proton builds in {common}: {ex.Message}");
         }
     }
 
@@ -573,13 +516,9 @@ public static class SystemDetector
                     candidates.Add(new CandidatePath(proton, steamRoot));
             }
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             InstallerLog.Warn($"Could not enumerate compatibility tools in {tools}: {ex.Message}");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            InstallerLog.Warn($"Could not access compatibility tools in {tools}: {ex.Message}");
         }
     }
 
