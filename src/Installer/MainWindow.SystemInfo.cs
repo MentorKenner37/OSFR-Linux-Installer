@@ -1,11 +1,18 @@
-using Avalonia.Interactivity;
-
 namespace OSFR.Linux.Installer;
 
 public partial class MainWindow
 {
+    private bool _hardwareStatusEventsHooked;
+
     private void HardwareStatusOpened(object? sender, EventArgs e)
     {
+        if (!_hardwareStatusEventsHooked)
+        {
+            _hardwareStatusEventsHooked = true;
+            ProtonComboBox.SelectionChanged += (_, _) => RefreshHardwareCompatibilityUi();
+            Activated += (_, _) => RefreshHardwareCompatibilityUi();
+        }
+
         RefreshHardwareCompatibilityUi();
     }
 
