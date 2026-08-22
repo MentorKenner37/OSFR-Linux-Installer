@@ -394,11 +394,22 @@ public partial class Server : ObservableObject
             var clientFileUri = UriHelper.JoinUriPaths(Info.Url, "client", file.Path, file.Name);
 
             Directory.CreateDirectory(fileDirectory);
-            using var response = await HttpHelper.DownloadHttpClient.GetAsync(
-                clientFileUri,
+            using var request = new HttpRequestMessage(HttpMethod.Get, clientFileUri);
+            request.Headers.AcceptEncoding.ParseAdd("identity");
+            using var response = await HttpHelper.DownloadHttpClient.SendAsync(
+                request,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
             response.EnsureSuccessStatusCode();
+
+            _logger.Info(
+                "Client download response for {Path}: URI={Uri}, HTTP={Version}, Content-Length={Length}, Content-Encoding={Encoding}, Transfer-Encoding={TransferEncoding}.",
+                downloadFilePath,
+                response.RequestMessage?.RequestUri,
+                response.Version,
+                response.Content.Headers.ContentLength?.ToString() ?? "<none>",
+                string.Join(",", response.Content.Headers.ContentEncoding),
+                string.Join(",", response.Headers.TransferEncoding));
 
             if (response.Content.Headers.ContentLength is long contentLength && contentLength != file.Size)
             {
@@ -423,7 +434,12 @@ public partial class Server : ObservableObject
                         break;
                     total += read;
                     if (total > file.Size)
-                        throw new InvalidDataException($"Downloaded client file exceeded its declared size: {downloadFilePath}");
+                        throw new InvalidDataException(
+                            $"Downloaded client file exceeded its declared size: {downloadFilePath}; expected={file.Size}, received-at-least={total}, " +
+                            $"content-length={response.Content.Headers.ContentLength?.ToString() ?? "<none>"}, " +
+                            $"content-encoding={string.Join(",", response.Content.Headers.ContentEncoding)}, " +
+                            $"transfer-encoding={string.Join(",", response.Headers.TransferEncoding)}, " +
+                            $"final-uri={response.RequestMessage?.RequestUri}");
                     await writeStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
                 }
             }
@@ -439,6 +455,11 @@ public partial class Server : ObservableObject
 
             File.Move(temporaryPath, filePath, overwrite: true);
             temporaryPath = null;
+            _logger.Info(
+                "Verified client download: {Path}; bytes={Size}, xxhash64={Hash}.",
+                downloadFilePath,
+                file.Size,
+                file.Hash);
             return true;
         }
         catch (InvalidDataException ex)

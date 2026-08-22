@@ -1,10 +1,12 @@
-# Sanctuary Linux Installer 1.0.5
+# Sanctuary Linux Installer 1.0.6
 
-Version 1.0.5 replaces the third-party client-file download stream with bounded direct HTTP streaming and retains all security hardening from 1.0.3.
+Version 1.0.6 adds exact client-download diagnostics and requests an identity-encoded response to isolate a Linux HTTP-stream discrepancy affecting `loading.html`.
 
 ## Security and data-safety improvements
 
 - Uses direct HTTP response streaming for client files, eliminating the stream behavior that caused an erroneous `Failed to download ... loading.html` result.
+- Records the final URL, HTTP version, expected and received byte counts, content length, content encoding, and transfer encoding for failed downloads.
+- Explicitly requests an uncompressed identity response to match the known-working command-line download behavior.
 - Uninstall now preserves shared OSFR launcher settings, downloaded clients, and credential storage.
 - Client files download to unique temporary files, pass their manifest size and hash checks, and only then replace installed files atomically.
 - Server manifests, login, and registration now require HTTPS.
