@@ -3,7 +3,7 @@ name: Run unit and smoke tests
 on:
   push:
     branches:
-      - feature/add-xunit-tests
+      - main
   pull_request:
     branches:
       - main
