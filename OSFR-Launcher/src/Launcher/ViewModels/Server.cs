@@ -378,7 +378,7 @@ public partial class Server : ObservableObject
         return failedFiles.IsEmpty;
     }
 
-    private async Task<bool> DownloadFileAsync(LocalFile file, CancellationToken cancellationToken)
+    private async Task<bool> DownloadFileAsync(LocalFile file, CancellationToken cancellationToken, int attempt = 1)
     {
         if (string.IsNullOrEmpty(Info.Url))
             return false;
@@ -396,6 +396,8 @@ public partial class Server : ObservableObject
             Directory.CreateDirectory(fileDirectory);
             using var request = new HttpRequestMessage(HttpMethod.Get, clientFileUri);
             request.Headers.AcceptEncoding.ParseAdd("identity");
+            if (attempt > 1)
+                request.Headers.CacheControl = new() { NoCache = true, NoStore = true };
             using var response = await HttpHelper.DownloadHttpClient.SendAsync(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
@@ -413,12 +415,8 @@ public partial class Server : ObservableObject
 
             if (response.Content.Headers.ContentLength is long contentLength && contentLength != file.Size)
             {
-                _logger.Error(
-                    "Server reported an unexpected client file size for {Path}: expected {Expected}, received {Actual}.",
-                    downloadFilePath,
-                    file.Size,
-                    contentLength);
-                return false;
+                throw new InvalidDataException(
+                    $"Server reported an unexpected client file size for {downloadFilePath}: expected={file.Size}, received={contentLength}.");
             }
 
             temporaryPath = Path.Combine(fileDirectory, $".{Path.GetFileName(filePath)}.{Guid.NewGuid():N}.download");
@@ -448,8 +446,8 @@ public partial class Server : ObservableObject
             {
                 if (verifyStream.Length != file.Size || XXHash.Hash64(verifyStream) != file.Hash)
                 {
-                    _logger.Error("Downloaded client file failed size/hash verification: {Path}.", downloadFilePath);
-                    return false;
+                    throw new InvalidDataException(
+                        $"Downloaded client file failed verification: {downloadFilePath}; expected-size={file.Size}, received-size={verifyStream.Length}, expected-xxhash64={file.Hash}.");
                 }
             }
 
@@ -464,11 +462,29 @@ public partial class Server : ObservableObject
         }
         catch (InvalidDataException ex)
         {
-            _logger.Error(ex, "Rejected unsafe client file path: {Path}.", downloadFilePath);
+            if (attempt < 3)
+            {
+                _logger.Warn(ex, "Client download verification failed for {Path} on attempt {Attempt}; retrying.", downloadFilePath, attempt);
+                await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), cancellationToken);
+                return await DownloadFileAsync(file, cancellationToken, attempt + 1);
+            }
+
+            _logger.Error(ex, "Client download verification failed for {Path} after {Attempts} attempts.", downloadFilePath, attempt);
             return false;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
+            if (attempt < 3)
+            {
+                _logger.Warn(ex, "Client download failed for {Path} on attempt {Attempt}; retrying.", downloadFilePath, attempt);
+                await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), cancellationToken);
+                return await DownloadFileAsync(file, cancellationToken, attempt + 1);
+            }
+
             _logger.Error(ex, "Error downloading: {Path}.", downloadFilePath);
             return false;
         }

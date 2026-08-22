@@ -1,12 +1,13 @@
-# Sanctuary Linux Installer 1.0.6
+# Sanctuary Linux Installer 1.0.7
 
-Version 1.0.6 adds exact client-download diagnostics and requests an identity-encoded response to isolate a Linux HTTP-stream discrepancy affecting `loading.html`.
+Version 1.0.7 adds verified retry handling for transient CDN responses after diagnostics showed Cloudflare occasionally returning a mismatched chunked body with HTTP 200 during a large parallel download batch.
 
 ## Security and data-safety improvements
 
 - Uses direct HTTP response streaming for client files, eliminating the stream behavior that caused an erroneous `Failed to download ... loading.html` result.
 - Records the final URL, HTTP version, expected and received byte counts, content length, content encoding, and transfer encoding for failed downloads.
 - Explicitly requests an uncompressed identity response to match the known-working command-line download behavior.
+- Retries size, hash, and transient HTTP failures up to three times with cache bypass while preserving atomic installation and verification.
 - Uninstall now preserves shared OSFR launcher settings, downloaded clients, and credential storage.
 - Client files download to unique temporary files, pass their manifest size and hash checks, and only then replace installed files atomically.
 - Server manifests, login, and registration now require HTTPS.
