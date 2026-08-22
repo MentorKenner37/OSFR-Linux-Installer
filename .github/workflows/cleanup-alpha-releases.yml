@@ -36,7 +36,7 @@ jobs:
           echo "Keeping current Alpha release: $KEEP_TAG"
 
           gh release edit "$KEEP_TAG" \
-            --title "Sanctuary Linux Installer — Alpha 1" \
+            --title "Sanctuary Linux Installer $KEEP_TAG" \
             --notes-file RELEASE_NOTES.md \
             --prerelease
 
