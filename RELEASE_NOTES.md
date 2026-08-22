@@ -1,10 +1,10 @@
-# Sanctuary Linux Installer 1.0.4
+# Sanctuary Linux Installer 1.0.5
 
-Version 1.0.4 fixes the verified-download stream handling introduced in 1.0.3 and retains all security hardening from that release.
+Version 1.0.5 replaces the third-party client-file download stream with bounded direct HTTP streaming and retains all security hardening from 1.0.3.
 
 ## Security and data-safety improvements
 
-- Rewinds completed downloader streams before staging, fixing the erroneous `Failed to download ... loading.html` result when the server file and manifest match.
+- Uses direct HTTP response streaming for client files, eliminating the stream behavior that caused an erroneous `Failed to download ... loading.html` result.
 - Uninstall now preserves shared OSFR launcher settings, downloaded clients, and credential storage.
 - Client files download to unique temporary files, pass their manifest size and hash checks, and only then replace installed files atomically.
 - Server manifests, login, and registration now require HTTPS.

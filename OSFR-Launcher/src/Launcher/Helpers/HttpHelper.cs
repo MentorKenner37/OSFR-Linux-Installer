@@ -56,8 +56,8 @@ public static class HttpHelper
             MaxConnectionsPerServer = Settings.Instance.DownloadThreads,
         });
 
-        // Downloader enforces its own per-block timeouts, so disable the
-        // overall client timeout to avoid cutting off large files on slow connections.
+        // Client files can be large and are streamed with manifest-declared byte
+        // limits, so avoid an overall timeout that would break slow connections.
         httpClient.Timeout = Timeout.InfiniteTimeSpan;
 
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);

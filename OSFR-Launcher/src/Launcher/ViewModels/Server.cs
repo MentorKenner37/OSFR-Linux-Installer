@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,6 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Downloader;
 using HashDepot;
 
 using Launcher.Helpers;
@@ -336,44 +336,20 @@ public partial class Server : ObservableObject
             {
                 var numParallelDownloads = Math.Max(2, Settings.Instance.DownloadThreads);
                 var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = numParallelDownloads };
-                var servicePool = new ConcurrentBag<DownloadService>();
-
-                for (var i = 0; i < numParallelDownloads; i++)
-                    servicePool.Add(new DownloadService(CreateDownloadConfiguration()));
-
-                try
+                await Parallel.ForEachAsync(filesToDownload, parallelOptions, async (file, ct) =>
                 {
-                    await Parallel.ForEachAsync(filesToDownload, parallelOptions, async (file, ct) =>
-                    {
-                        servicePool.TryTake(out var downloadService);
+                    if (!await DownloadFileAsync(file, ct))
+                        failedFiles.Add(file.Name);
 
-                        try
-                        {
-                            if (!await DownloadFileAsync(downloadService!, file))
-                                failedFiles.Add(file.Name);
-                        }
-                        finally
-                        {
-                            servicePool.Add(downloadService!);
-                        }
-
-                        filesDownloaded = Interlocked.Increment(ref filesDownloaded);
-                        StatusMessage = App.GetText("Text.Server.PreparingGameFiles", filesDownloaded, filesToDownload.Count);
-                    });
-                }
-                finally
-                {
-                    foreach (var downloadService in servicePool)
-                        downloadService.Dispose();
-                }
+                    filesDownloaded = Interlocked.Increment(ref filesDownloaded);
+                    StatusMessage = App.GetText("Text.Server.PreparingGameFiles", filesDownloaded, filesToDownload.Count);
+                });
             }
             else
             {
-                using var downloadService = new DownloadService(CreateDownloadConfiguration());
-
                 foreach (var file in filesToDownload)
                 {
-                    if (!await DownloadFileAsync(downloadService, file))
+                    if (!await DownloadFileAsync(file, CancellationToken.None))
                         failedFiles.Add(file.Name);
 
                     filesDownloaded++;
@@ -402,15 +378,7 @@ public partial class Server : ObservableObject
         return failedFiles.IsEmpty;
     }
 
-    private static DownloadConfiguration CreateDownloadConfiguration() => new()
-    {
-        CustomHttpClientFactory = () => HttpHelper.DownloadHttpClient,
-        MaxTryAgainOnFailure = 5,
-        ChunkCount = 1,
-        ParallelDownload = false,
-    };
-
-    private async Task<bool> DownloadFileAsync(DownloadService downloadService, LocalFile file)
+    private async Task<bool> DownloadFileAsync(LocalFile file, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(Info.Url))
             return false;
@@ -426,27 +394,39 @@ public partial class Server : ObservableObject
             var clientFileUri = UriHelper.JoinUriPaths(Info.Url, "client", file.Path, file.Name);
 
             Directory.CreateDirectory(fileDirectory);
-            await using var fileStream = await downloadService.DownloadFileTaskAsync(clientFileUri);
+            using var response = await HttpHelper.DownloadHttpClient.GetAsync(
+                clientFileUri,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+            response.EnsureSuccessStatusCode();
 
-            if (fileStream is null || fileStream.Length == 0)
+            if (response.Content.Headers.ContentLength is long contentLength && contentLength != file.Size)
             {
-                _logger.Error("Failed to get client file or received empty stream: {Path}.", downloadFilePath);
+                _logger.Error(
+                    "Server reported an unexpected client file size for {Path}: expected {Expected}, received {Actual}.",
+                    downloadFilePath,
+                    file.Size,
+                    contentLength);
                 return false;
             }
-            if (fileStream.Length != file.Size)
-            {
-                _logger.Error("Downloaded client file has an unexpected size: {Path}.", downloadFilePath);
-                return false;
-            }
-
-            // Downloader may return a completed seekable stream whose cursor is at
-            // the end. Always rewind before copying it into the verified staging file.
-            if (fileStream.CanSeek)
-                fileStream.Position = 0;
 
             temporaryPath = Path.Combine(fileDirectory, $".{Path.GetFileName(filePath)}.{Guid.NewGuid():N}.download");
+            await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken))
             await using (var writeStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                await fileStream.CopyToAsync(writeStream);
+            {
+                var buffer = new byte[81920];
+                long total = 0;
+                while (true)
+                {
+                    var read = await source.ReadAsync(buffer, cancellationToken);
+                    if (read == 0)
+                        break;
+                    total += read;
+                    if (total > file.Size)
+                        throw new InvalidDataException($"Downloaded client file exceeded its declared size: {downloadFilePath}");
+                    await writeStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                }
+            }
 
             await using (var verifyStream = File.OpenRead(temporaryPath))
             {
