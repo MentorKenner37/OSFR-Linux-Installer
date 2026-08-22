@@ -48,6 +48,55 @@ public sealed class CompatibilityAdvisorTests
     {
         var recommendation = CompatibilityAdvisor.RecommendGraphicsBackend(ProbeState.Unknown);
         Assert.Equal(GraphicsBackendConfig.Dxvk, recommendation.Backend);
-        Assert.Contains("could not be verified", recommendation.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.True(recommendation.Reason.Contains("could not be verified", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void PreferredProton_ChoosesNewestStableBeforeExperimentalAndGe()
+    {
+        var candidates = new[]
+        {
+            Candidate("Proton Experimental", true),
+            Candidate("GE-Proton11-5", true),
+            Candidate("Proton 9.0", true),
+            Candidate("Proton 10.0", true),
+            Candidate("Proton 11.0", true)
+        };
+
+        var preferred = CompatibilityAdvisor.SelectPreferredProton(candidates);
+        Assert.NotNull(preferred);
+        Assert.Equal("Proton 11.0", preferred!.Name);
+    }
+
+    [Fact]
+    public void PreferredProton_FallsBackToGeWhenNoStableExists()
+    {
+        var candidates = new[]
+        {
+            Candidate("Proton Experimental", true),
+            Candidate("GE-Proton10-30", true),
+            Candidate("GE-Proton11-5", true)
+        };
+
+        var preferred = CompatibilityAdvisor.SelectPreferredProton(candidates);
+        Assert.NotNull(preferred);
+        Assert.Equal("GE-Proton11-5", preferred!.Name);
+    }
+
+    [Fact]
+    public void PreferredProton_IgnoresIncompatibleBuilds()
+    {
+        var candidates = new[]
+        {
+            Candidate("Proton 12.0", false),
+            Candidate("Proton 11.0", true)
+        };
+
+        var preferred = CompatibilityAdvisor.SelectPreferredProton(candidates);
+        Assert.NotNull(preferred);
+        Assert.Equal("Proton 11.0", preferred!.Name);
+    }
+
+    private static ProtonCandidate Candidate(string name, bool compatible) =>
+        new(name, $"/tmp/{name}/proton", "/tmp/steam", "x86_64", compatible, "test");
 }
