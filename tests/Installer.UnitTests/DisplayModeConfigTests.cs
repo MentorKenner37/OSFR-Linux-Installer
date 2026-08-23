@@ -1,10 +1,13 @@
+using System;
+using System.IO;
 using OSFR.Linux.Installer.Services;
+using Xunit;
 
 namespace Installer.UnitTests;
 
 public sealed class DisplayModeConfigTests : IDisposable
 {
-    private readonly TempHomeFixture _fixture = new();
+    private readonly TempDirFixture _fixture = new();
 
     [Theory]
     [InlineData(DisplayModeConfig.Fullscreen, 1920, 1080)]
