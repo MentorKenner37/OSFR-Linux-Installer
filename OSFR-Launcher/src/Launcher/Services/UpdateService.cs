@@ -86,6 +86,8 @@ internal static class UpdateService
         await File.WriteAllBytesAsync(installer, await Http.GetByteArrayAsync(release.InstallerUrl));
         await File.WriteAllBytesAsync(checksum, await Http.GetByteArrayAsync(release.ChecksumUrl));
         VerifyChecksum(installer, await File.ReadAllTextAsync(checksum));
+        if (!OperatingSystem.IsLinux())
+            throw new PlatformNotSupportedException("Sanctuary automatic updates currently require Linux.");
         File.SetUnixFileMode(installer, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
         var launcherDirectory = Path.GetFullPath(AppContext.BaseDirectory).TrimEnd(Path.DirectorySeparatorChar);
@@ -100,7 +102,7 @@ internal static class UpdateService
         start.ArgumentList.Add(installRoot);
         start.ArgumentList.Add("--wait-pid");
         start.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
-        Process.Start(start) ?? throw new InvalidOperationException("Could not start the verified Sanctuary updater.");
+        _ = Process.Start(start) ?? throw new InvalidOperationException("Could not start the verified Sanctuary updater.");
         Logger.Info("Verified update {Tag} launched; closing the old launcher before transactional replacement.", release.Tag);
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
             lifetime.Shutdown();
@@ -136,7 +138,7 @@ internal static class UpdateService
     {
         static (Version Core, int Pre) Parse(string value)
         {
-            value = value.TrimStart('v');
+            value = value.TrimStart('v').Split('+', 2)[0];
             var parts = value.Split('-', 2);
             var core = Version.TryParse(parts[0], out var parsed) ? parsed : new Version();
             if (parts.Length == 1)
