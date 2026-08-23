@@ -390,6 +390,8 @@ public partial class MainWindow : Window
             LaunchInstalledButton.IsEnabled = !_busy && installed;
             UninstallButton.IsEnabled = !_busy && installed;
             RepairButton.IsEnabled = !_busy && _state.Ready;
+            RemoveGamescopeCheck.IsVisible = installed && GamescopeService.IsInstallerOwned(InstallRoot);
+            RemoveGamescopeCheck.IsEnabled = !_busy && RemoveGamescopeCheck.IsVisible;
         }
 
         ActionButton.Content = installed ? "UNINSTALL" : "INSTALL";
@@ -758,12 +760,23 @@ public partial class MainWindow : Window
 
         try
         {
+            GamescopeInstallReceipt? gamescopeReceipt = null;
             if (shouldInstallGamescope)
             {
                 UpdateProgress(new InstallProgress(2, "Installing Gamescope with administrator approval..."));
-                await GamescopeService.InstallAsync();
-                _gamescopeInstalled = true;
-                RefreshGamescopeUi();
+                try
+                {
+                    gamescopeReceipt = await GamescopeService.InstallAsync();
+                    _gamescopeInstalled = true;
+                    RefreshGamescopeUi();
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
+                {
+                    InstallerLog.Error("Optional Gamescope installation failed; Sanctuary installation will continue", ex);
+                    await ShowMessageAsync(
+                        "Gamescope was not installed",
+                        $"Sanctuary will continue installing and use the normal game window until Gamescope is available.\n\n{ex.Message}\n\nDiagnostics: {InstallerLog.LogPath}");
+                }
             }
 
             await _installService.InstallAsync(
@@ -773,6 +786,15 @@ public partial class MainWindow : Window
                 new InstallOptions(
                     repairExisting ? MaintenanceDesktopShortcutCheck.IsChecked == true : CreateDesktopShortcutCheck.IsChecked == true,
                     repairExisting));
+
+            if (gamescopeReceipt is not null)
+            {
+                try { GamescopeService.RecordInstallerOwnership(InstallRoot, gamescopeReceipt); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+                {
+                    InstallerLog.Warn($"Gamescope was installed, but its Sanctuary ownership marker could not be saved: {ex.Message}");
+                }
+            }
 
             try
             {
@@ -822,9 +844,12 @@ public partial class MainWindow : Window
     {
         var confirmed = await ConfirmAsync(
             "Uninstall Sanctuary",
-            RemoveUserDataCheck.IsChecked == true
+            (RemoveUserDataCheck.IsChecked == true
                 ? "Remove Sanctuary, its shortcuts, downloaded game files, launcher settings, logs, and saved user data? This cannot be undone. The installer executable itself will be preserved."
-                : "Remove Sanctuary and its shortcuts while preserving downloaded game files, launcher settings, logs, and saved user data?");
+                : "Remove Sanctuary and its shortcuts while preserving downloaded game files, launcher settings, logs, and saved user data?")
+            + (RemoveGamescopeCheck.IsChecked == true
+                ? "\n\nGamescope will also be removed system-wide because Sanctuary recorded that it installed the package."
+                : string.Empty));
         if (!confirmed)
             return;
 
@@ -833,6 +858,11 @@ public partial class MainWindow : Window
 
         try
         {
+            if (RemoveGamescopeCheck.IsChecked == true && GamescopeService.IsInstallerOwned(InstallRoot))
+            {
+                UpdateProgress(new InstallProgress(5, "Uninstalling Gamescope with administrator approval..."));
+                await GamescopeService.UninstallOwnedAsync(InstallRoot);
+            }
             await _installService.UninstallAsync(
                 InstallRoot,
                 progress,
@@ -874,6 +904,7 @@ public partial class MainWindow : Window
         MaintenanceDesktopShortcutCheck.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         MaintenanceDisplayModeComboBox.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         RemoveUserDataCheck.IsEnabled = !busy;
+        RemoveGamescopeCheck.IsEnabled = !busy && RemoveGamescopeCheck.IsVisible;
         LaunchInstalledButton.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         RepairButton.IsEnabled = !busy && _state.Ready;
         UninstallButton.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
