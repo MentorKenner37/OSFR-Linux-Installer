@@ -233,7 +233,7 @@ if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringCompar
     var createDesktopEntries = typeof(InstallService).GetMethod("CreateDesktopEntries", BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException("Could not locate desktop-entry generator for validation.");
 
-    createDesktopEntries.Invoke(null, ["/tmp/OSFR Test/OSFRLauncher"]);
+    createDesktopEntries.Invoke(null, ["/tmp/OSFR Test/OSFRLauncher", true]);
     var generatedDesktop = Path.Combine(home, ".local", "share", "applications", "OSFR-Linux.desktop");
     Assert(File.Exists(generatedDesktop), "CI desktop-entry generation must produce an application-menu entry.");
 
@@ -242,6 +242,9 @@ if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringCompar
     Assert(!desktopText.Contains("Name=Open Source Free Realms", StringComparison.Ordinal), "Legacy Open Source Free Realms shortcut naming must not remain user-facing.");
     Assert(desktopText.Contains("Icon=osfr-linux", StringComparison.Ordinal), "Desktop entry must use the stable icon-theme name.");
     Assert(desktopText.Contains("StartupWMClass=OSFRLauncher", StringComparison.Ordinal), "Desktop entry must declare the launcher window class for taskbar grouping.");
+    createDesktopEntries.Invoke(null, ["/tmp/OSFR Test/OSFRLauncher", false]);
+    Assert(!File.Exists(InstallService.DesktopShortcutPath), "Disabling the desktop shortcut must remove only the optional Desktop copy.");
+    Assert(File.Exists(generatedDesktop), "Disabling the desktop shortcut must preserve application-menu integration.");
     Console.WriteLine($"Generated desktop entry: {generatedDesktop}");
 }
 
