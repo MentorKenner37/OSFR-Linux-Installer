@@ -96,6 +96,8 @@
                     <ComboBoxItem Content="Windowed (game default)"/>
                   </ComboBox>
                 </StackPanel>
+                <CheckBox x:Name="MaintenanceInstallGamescopeCheck" Content="Install Gamescope for real fullscreen" IsChecked="True"/>
+                <TextBlock x:Name="MaintenanceGamescopeStatus" Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
               </StackPanel>
             </Border>
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
@@ -136,13 +138,17 @@
               </ComboBox>
               <TextBlock Text="Fullscreen scales Free Realms through Gamescope and Proton. If Gamescope is unavailable, Sanctuary safely launches the normal game window and shows a warning. No Proton virtual desktop is used." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
+            <StackPanel Spacing="6">
+              <CheckBox x:Name="InstallGamescopeCheck" Content="Install Gamescope for real fullscreen" IsChecked="True"/>
+              <TextBlock x:Name="GamescopeStatus" Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
             <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="16"><StackPanel Spacing="7"><TextBlock Text="Need another official Proton version?" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Search for Proton in your Steam Library and install the version you want. Restart Sanctuary Linux Installer afterward and the newly installed Proton version should appear here." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="Selecting a Proton version or graphics backend here does not modify the Proton installation itself." Foreground="#777777" TextWrapping="Wrap" FontSize="11"/></StackPanel></Border>
           </StackPanel>
           </ScrollViewer>
 
           <StackPanel x:Name="SummaryPanel" IsVisible="False" Spacing="20">
             <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Review the detected environment and selected options before installation begins." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
-            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Graphics backend" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryGraphicsBackend" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Game display mode" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryDisplayMode" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Graphics backend" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryGraphicsBackend" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Game display mode" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryDisplayMode" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Gamescope" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryGamescope" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
             <CheckBox x:Name="SummaryAcceptCheck" Content="I accept these installation settings and want to continue" IsChecked="False" Click="SummaryAcceptanceChanged"/>
             <CheckBox x:Name="CreateDesktopShortcutCheck" Content="Create a desktop shortcut" IsChecked="True"/>
           </StackPanel>
