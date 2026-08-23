@@ -21,6 +21,7 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 - Detects Cinnamon + Wayland and emits a non-blocking warning for the currently known Shift/modifier input caveat
 - Surfaces runtime, graphics, Steam-type, hardware, OS, and compatibility details directly in the graphical installer
 - Installs the patched Open Source Free Realms launcher and isolates Free Realms in a dedicated Proton prefix
+- Offers desktop-resolution fullscreen or an isolated 1280 × 720 boxed Proton window, with fullscreen selected by default
 - Always creates application-menu integration and lets the user choose whether to create a desktop shortcut
 - Lets the user choose whether Sanctuary launches automatically when installation finishes
 - Detects existing installations and replaces the normal wizard with a locked maintenance page
@@ -171,7 +172,7 @@ Repository owners must set **Settings → Actions → General → Workflow permi
 
 CI also checks NuGet dependencies for known vulnerabilities, validates generated desktop entries, builds the patched launcher and self-contained installer, exercises packaged `--diagnose` and `--dry-run`, verifies hardware/OS/runtime/graphics diagnostic fields are present, and verifies the published SHA-256 checksum. Versioned releases are immutable: publishing fails if the version tag already exists.
 
-Regression coverage includes install/uninstall safety, ownership and rollback behavior, Steam-library parsing, Proton runtime architecture, Steam type detection, Cinnamon/Wayland warning logic, graphics-backend recommendation behavior, stable-first Proton selection, OS/CPU/RAM/GPU text parsing, `ldconfig` parsing, and ELF32/ELF64 runtime probing.
+Regression coverage includes install/uninstall safety, ownership and rollback behavior, Steam-library parsing, Proton runtime architecture, Steam type detection, Cinnamon/Wayland warning logic, graphics-backend and display-mode behavior, stable-first Proton selection, OS/CPU/RAM/GPU text parsing, `ldconfig` parsing, and ELF32/ELF64 runtime probing.
 
 Release cleanup is handled by a dedicated prerelease cleanup workflow. Stable releases are never removed by that automation.
 
