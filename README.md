@@ -4,7 +4,7 @@
 
 Sanctuary Linux Installer is a Linux-first installation and compatibility tool for **Sanctuary**, the Open Source Free Realms emulator. It finds Steam and Proton, prepares a dedicated Free Realms prefix, installs the patched OSFR launcher used to connect to Sanctuary, and handles the Linux-specific setup needed to get into the game.
 
-> **Version 1.1.0-beta.7** — Beta software tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
+> **Version 1.1.0-beta.8** — Beta software tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
 
 ## What the installer does
 
@@ -21,8 +21,9 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 - Detects Cinnamon + Wayland and emits a non-blocking warning for the currently known Shift/modifier input caveat
 - Surfaces runtime, graphics, Steam-type, hardware, OS, and compatibility details directly in the graphical installer
 - Installs the patched Open Source Free Realms launcher and isolates Free Realms in a dedicated Proton prefix
-- Offers Gamescope-powered fullscreen or the game's normal windowed mode, with fullscreen selected by default and a safe windowed fallback when Gamescope is unavailable
-- Detects Gamescope automatically and offers an optional administrator-approved installation through DNF, APT, Pacman, or Zypper when it is missing
+- Offers Free Realms' native fullscreen startup option or its genuine movable window, always launched directly through Proton
+- Preserves the game's own in-game window-size controls without Gamescope, virtual desktops, stretching, or letterboxing wrappers
+- Checks the official GitHub releases for stable or beta updates, verifies the published SHA-256, and supports opt-in transactional automatic upgrades
 - Always creates application-menu integration and lets the user choose whether to create a desktop shortcut
 - Lets the user choose whether Sanctuary launches automatically when installation finishes
 - Detects existing installations and replaces the normal wizard with a locked maintenance page

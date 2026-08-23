@@ -1,10 +1,12 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Xml.Serialization;
 
 using Avalonia.Collections;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Launcher.Helpers;
 using Launcher.Models;
@@ -37,6 +39,22 @@ public partial class Settings : ObservableObject
     [ObservableProperty]
     private AvaloniaList<ServerInfo> serverInfoList = [];
 
+    [ObservableProperty]
+    private bool automaticUpdates;
+
+    [ObservableProperty]
+    private bool betaUpdates = true;
+
+    [ObservableProperty]
+    private string lastUpdateCheckUtc = string.Empty;
+
+    [ObservableProperty]
+    private string skippedUpdateVersion = string.Empty;
+
+    [ObservableProperty]
+    [property: XmlIgnore]
+    private string availableUpdateStatus = "Not checked yet";
+
     public event EventHandler? DiscordActivityChanged;
 
     private Settings() { }
@@ -63,6 +81,19 @@ public partial class Settings : ObservableObject
         if (!XmlHelper.TrySerialize(Instance, _savePath))
             _logger.Error("Failed to serialize and save settings to '{Path}'.", _savePath);
     }
+
+    [RelayCommand]
+    private Task CheckForUpdatesAsync() => UpdateService.CheckAsync(true);
+
+    [RelayCommand]
+    private async Task InstallUpdateAsync()
+    {
+        try { await UpdateService.DownloadVerifyAndLaunchAsync(); }
+        catch (Exception ex) { App.AddNotification($"Update installation failed: {ex.Message}", true); }
+    }
+
+    [RelayCommand]
+    private void SkipUpdate() => UpdateService.SkipAvailable();
 
     partial void OnDiscordActivityChanged(bool value)
     {

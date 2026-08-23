@@ -19,7 +19,6 @@ public partial class MainWindow : Window
     private bool _maintenanceMode;
     private bool _updatingMaintenanceShortcut;
     private bool _updatingMaintenanceDisplayMode;
-    private bool _gamescopeInstalled;
     private InstallationInfo _installationInfo = new(InstallationCondition.NotInstalled, null, false);
     private int _step = 1;
 
@@ -45,8 +44,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        DisplayModeComboBox.SelectionChanged += DisplayModeSelectionChanged;
-        MaintenanceDisplayModeComboBox.SelectionChanged += MaintenanceDisplayModeChanged;
         ApplyBranding();
         InstallPathBox.Text = InstallerState.GetInitialInstallRoot();
         RefreshState();
@@ -57,7 +54,7 @@ public partial class MainWindow : Window
         GraphicsBackendComboBox.SelectedIndex == 1 ? GraphicsBackendConfig.WineD3D : GraphicsBackendConfig.Dxvk;
 
     private string SelectedDisplayMode =>
-        DisplayModeComboBox.SelectedIndex == 1 ? DisplayModeConfig.Windowed : DisplayModeConfig.Fullscreen;
+        FullscreenCheck.IsChecked == true ? DisplayModeConfig.Fullscreen : DisplayModeConfig.Windowed;
 
     private (int Width, int Height) DesktopResolution
     {
@@ -133,35 +130,7 @@ public partial class MainWindow : Window
 
         DetailText.Text = BuildHostDetails();
 
-        RefreshGamescopeUi();
         RefreshInstallUi();
-    }
-
-    private void RefreshGamescopeUi()
-    {
-        _gamescopeInstalled = GamescopeService.FindInstalledPath() is not null;
-        var command = GamescopeService.GetInstallCommand();
-        if (_gamescopeInstalled)
-        {
-            InstallGamescopeCheck.IsChecked = true;
-            InstallGamescopeCheck.IsEnabled = false;
-            InstallGamescopeCheck.Content = "Gamescope — Already installed";
-            GamescopeStatus.Text = GamescopeService.FindInstalledPath();
-            MaintenanceInstallGamescopeCheck.IsChecked = true;
-            MaintenanceInstallGamescopeCheck.IsEnabled = false;
-            MaintenanceInstallGamescopeCheck.Content = "Gamescope — Already installed";
-            MaintenanceGamescopeStatus.Text = GamescopeService.FindInstalledPath();
-            return;
-        }
-
-        InstallGamescopeCheck.Content = "Install Gamescope for real fullscreen";
-        InstallGamescopeCheck.IsEnabled = !_busy && command is not null;
-        GamescopeStatus.Text = command is null
-            ? "Automatic installation is unavailable. Install the 'gamescope' package manually."
-            : $"Not installed — the installer can add it through {command.Manager} with an administrator prompt.";
-        MaintenanceInstallGamescopeCheck.Content = "Install Gamescope for real fullscreen";
-        MaintenanceInstallGamescopeCheck.IsEnabled = !_busy && command is not null;
-        MaintenanceGamescopeStatus.Text = GamescopeStatus.Text;
     }
 
     private string BuildHostDetails()
@@ -175,8 +144,7 @@ public partial class MainWindow : Window
             $"Memory: {_host.Memory}",
             $"GPU: {_host.Gpu}",
             $"Steam: {_state.SteamRoot ?? "not found"}",
-            $"Proton: {_state.ProtonPath ?? "not found"}",
-            $"Gamescope: {GamescopeService.FindInstalledPath() ?? "not found"}"
+            $"Proton: {_state.ProtonPath ?? "not found"}"
         };
 
         lines.Add($"curl fallback: {_state.CurlPath ?? "not found (normal downloads remain available)"}");
@@ -385,13 +353,11 @@ public partial class MainWindow : Window
             var desktop = DesktopResolution;
             var display = DisplayModeConfig.Read(InstallRoot, desktop.Width, desktop.Height);
             _updatingMaintenanceDisplayMode = true;
-            MaintenanceDisplayModeComboBox.SelectedIndex = display.Mode == DisplayModeConfig.Windowed ? 1 : 0;
+            MaintenanceFullscreenCheck.IsChecked = display.Mode == DisplayModeConfig.Fullscreen;
             _updatingMaintenanceDisplayMode = false;
             LaunchInstalledButton.IsEnabled = !_busy && installed;
             UninstallButton.IsEnabled = !_busy && installed;
             RepairButton.IsEnabled = !_busy && _state.Ready;
-            RemoveGamescopeCheck.IsVisible = installed && GamescopeService.IsInstallerOwned(InstallRoot);
-            RemoveGamescopeCheck.IsEnabled = !_busy && RemoveGamescopeCheck.IsVisible;
         }
 
         ActionButton.Content = installed ? "UNINSTALL" : "INSTALL";
@@ -456,9 +422,6 @@ public partial class MainWindow : Window
         SummaryProtonPath.Text = _state.ProtonPath ?? "Not detected";
         SummaryGraphicsBackend.Text = GraphicsBackendConfig.DisplayName(SelectedGraphicsBackend);
         SummaryDisplayMode.Text = DisplayModeConfig.DisplayName(SelectedDisplayMode);
-        SummaryGamescope.Text = _gamescopeInstalled
-            ? "Already installed"
-            : InstallGamescopeCheck.IsChecked == true ? "Install with administrator approval" : "Do not install";
     }
 
     private static void SetCheck(TextBlock control, bool ok, string text)
@@ -579,7 +542,7 @@ public partial class MainWindow : Window
         UpdateStepUi();
     }
 
-    private void DisplayModeSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void DisplayModeSelectionChanged(object? sender, RoutedEventArgs e)
     {
         InstallerLog.Info($"User selected game display mode: {DisplayModeConfig.DisplayName(SelectedDisplayMode)}");
         SummaryAcceptCheck.IsChecked = false;
@@ -663,16 +626,16 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void MaintenanceDisplayModeChanged(object? sender, SelectionChangedEventArgs e)
+    private async void MaintenanceDisplayModeChanged(object? sender, RoutedEventArgs e)
     {
         if (_updatingMaintenanceDisplayMode || _busy || _installationInfo.Condition != InstallationCondition.Installed)
             return;
 
         try
         {
-            var mode = MaintenanceDisplayModeComboBox.SelectedIndex == 1
-                ? DisplayModeConfig.Windowed
-                : DisplayModeConfig.Fullscreen;
+            var mode = MaintenanceFullscreenCheck.IsChecked == true
+                ? DisplayModeConfig.Fullscreen
+                : DisplayModeConfig.Windowed;
             var desktop = DesktopResolution;
             var resolution = mode == DisplayModeConfig.Windowed ? (1280, 720) : desktop;
             DisplayModeConfig.Write(InstallRoot, mode, resolution.Item1, resolution.Item2);
@@ -730,11 +693,8 @@ public partial class MainWindow : Window
         var selectedProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         var selectedGraphicsBackend = SelectedGraphicsBackend;
         var selectedDisplayMode = repairExisting
-            ? (MaintenanceDisplayModeComboBox.SelectedIndex == 1 ? DisplayModeConfig.Windowed : DisplayModeConfig.Fullscreen)
+            ? (MaintenanceFullscreenCheck.IsChecked == true ? DisplayModeConfig.Fullscreen : DisplayModeConfig.Windowed)
             : SelectedDisplayMode;
-        var shouldInstallGamescope = !_gamescopeInstalled && (repairExisting
-            ? MaintenanceInstallGamescopeCheck.IsChecked == true
-            : InstallGamescopeCheck.IsChecked == true);
         RefreshState();
         ReapplyWindowIcon();
         if (selectedProton is not null && _state.ProtonCandidates?.FirstOrDefault(candidate => candidate.Path == selectedProton && candidate.Compatible) is { } selected)
@@ -760,25 +720,6 @@ public partial class MainWindow : Window
 
         try
         {
-            GamescopeInstallReceipt? gamescopeReceipt = null;
-            if (shouldInstallGamescope)
-            {
-                UpdateProgress(new InstallProgress(2, "Installing Gamescope with administrator approval..."));
-                try
-                {
-                    gamescopeReceipt = await GamescopeService.InstallAsync();
-                    _gamescopeInstalled = true;
-                    RefreshGamescopeUi();
-                }
-                catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
-                {
-                    InstallerLog.Error("Optional Gamescope installation failed; Sanctuary installation will continue", ex);
-                    await ShowMessageAsync(
-                        "Gamescope was not installed",
-                        $"Sanctuary will continue installing and use the normal game window until Gamescope is available.\n\n{ex.Message}\n\nDiagnostics: {InstallerLog.LogPath}");
-                }
-            }
-
             await _installService.InstallAsync(
                 InstallRoot,
                 _state,
@@ -786,15 +727,6 @@ public partial class MainWindow : Window
                 new InstallOptions(
                     repairExisting ? MaintenanceDesktopShortcutCheck.IsChecked == true : CreateDesktopShortcutCheck.IsChecked == true,
                     repairExisting));
-
-            if (gamescopeReceipt is not null)
-            {
-                try { GamescopeService.RecordInstallerOwnership(InstallRoot, gamescopeReceipt); }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-                {
-                    InstallerLog.Warn($"Gamescope was installed, but its Sanctuary ownership marker could not be saved: {ex.Message}");
-                }
-            }
 
             try
             {
@@ -847,9 +779,7 @@ public partial class MainWindow : Window
             (RemoveUserDataCheck.IsChecked == true
                 ? "Remove Sanctuary, its shortcuts, downloaded game files, launcher settings, logs, and saved user data? This cannot be undone. The installer executable itself will be preserved."
                 : "Remove Sanctuary and its shortcuts while preserving downloaded game files, launcher settings, logs, and saved user data?")
-            + (RemoveGamescopeCheck.IsChecked == true
-                ? "\n\nGamescope will also be removed system-wide because Sanctuary recorded that it installed the package."
-                : string.Empty));
+            );
         if (!confirmed)
             return;
 
@@ -858,11 +788,6 @@ public partial class MainWindow : Window
 
         try
         {
-            if (RemoveGamescopeCheck.IsChecked == true && GamescopeService.IsInstallerOwned(InstallRoot))
-            {
-                UpdateProgress(new InstallProgress(5, "Uninstalling Gamescope with administrator approval..."));
-                await GamescopeService.UninstallOwnedAsync(InstallRoot);
-            }
             await _installService.UninstallAsync(
                 InstallRoot,
                 progress,
@@ -902,22 +827,15 @@ public partial class MainWindow : Window
         LaunchAfterInstallCheck.IsEnabled = !busy;
         CreateDesktopShortcutCheck.IsEnabled = !busy;
         MaintenanceDesktopShortcutCheck.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
-        MaintenanceDisplayModeComboBox.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
+        MaintenanceFullscreenCheck.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         RemoveUserDataCheck.IsEnabled = !busy;
-        RemoveGamescopeCheck.IsEnabled = !busy && RemoveGamescopeCheck.IsVisible;
         LaunchInstalledButton.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         RepairButton.IsEnabled = !busy && _state.Ready;
         UninstallButton.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         SummaryAcceptCheck.IsEnabled = !busy;
         ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Any(candidate => candidate.Compatible) ?? false);
         GraphicsBackendComboBox.IsEnabled = !busy;
-        DisplayModeComboBox.IsEnabled = !busy;
-        if (!_gamescopeInstalled)
-        {
-            var canInstallGamescope = GamescopeService.GetInstallCommand() is not null;
-            InstallGamescopeCheck.IsEnabled = !busy && canInstallGamescope;
-            MaintenanceInstallGamescopeCheck.IsEnabled = !busy && canInstallGamescope;
-        }
+        FullscreenCheck.IsEnabled = !busy;
         UpdateStepUi();
     }
 

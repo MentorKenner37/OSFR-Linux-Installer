@@ -10,7 +10,7 @@ public static class ProtonHelper
     private const string GraphicsBackendFileName = "graphics-backend.txt";
     private const string DisplayModeFileName = "display-mode.txt";
 
-    public sealed record GameLaunchPlan(string FileName, string Arguments, string Mode, int Width, int Height, bool UsesGamescope);
+    public sealed record GameLaunchPlan(string FileName, string Arguments, string Mode, int Width, int Height);
 
     public static string GetConfiguredPath(string fileName)
     {
@@ -68,30 +68,17 @@ public static class ProtonHelper
     public static GameLaunchPlan CreateGameLaunchPlan(string protonPath, string executableName, string gameArguments)
     {
         var (mode, width, height) = ReadDisplayMode();
-        if (mode == "fullscreen" && FindOnPath("gamescope") is { } gamescope)
-        {
-            Logger.Info("Launching Free Realms fullscreen through Gamescope and Proton at {width}x{height}.", width, height);
-            return new(
-                gamescope,
-                $"-f -W {width} -H {height} -- \"{protonPath}\" run \"{executableName}\" {gameArguments}",
-                mode,
-                width,
-                height,
-                true);
-        }
-
         if (mode == "fullscreen")
-            Logger.Warn("Gamescope was not found; safely falling back to Free Realms' normal windowed mode.");
+            Logger.Info("Launching Free Realms directly through Proton with its native fullscreen option.");
         else
-            Logger.Info("Launching Free Realms in its normal windowed mode through Proton.");
+            Logger.Info("Launching Free Realms directly through Proton and preserving its native window controls.");
 
         return new(
             protonPath,
-            $"run \"{executableName}\" {gameArguments}",
+            $"run \"{executableName}\" {gameArguments}{(mode == "fullscreen" ? " --fullscreen" : string.Empty)}",
             mode,
             width,
-            height,
-            false);
+            height);
     }
 
     private static (string Mode, int Width, int Height) ReadDisplayMode()
@@ -106,23 +93,6 @@ public static class ProtonHelper
         if (!string.IsNullOrWhiteSpace(configured))
             Logger.Warn("Invalid display mode configuration '{displayMode}'. Using fullscreen 1920x1080.", configured);
         return ("fullscreen", 1920, 1080);
-    }
-
-    private static string? FindOnPath(string executable)
-    {
-        foreach (var commonPath in new[] { $"/usr/bin/{executable}", $"/usr/games/{executable}", $"/usr/local/bin/{executable}" })
-            if (File.Exists(commonPath))
-                return commonPath;
-
-        foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator))
-        {
-            if (string.IsNullOrWhiteSpace(directory))
-                continue;
-            var candidate = Path.Combine(directory, executable);
-            if (File.Exists(candidate))
-                return candidate;
-        }
-        return null;
     }
 
     private static void ApplyConfiguredGraphicsBackend()

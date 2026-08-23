@@ -1,4 +1,5 @@
 using Avalonia;
+using System.Diagnostics;
 using OSFR.Linux.Installer.Services;
 
 namespace OSFR.Linux.Installer;
@@ -8,6 +9,12 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (args.Contains("--auto-upgrade", StringComparer.OrdinalIgnoreCase))
+        {
+            RunAutoUpgradeAsync(args).GetAwaiter().GetResult();
+            return;
+        }
+
         if (args.Contains("--diagnose", StringComparer.OrdinalIgnoreCase))
         {
             PrintDiagnostics();
@@ -21,6 +28,55 @@ internal static class Program
         }
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    private static async Task RunAutoUpgradeAsync(string[] args)
+    {
+        var rootIndex = Array.FindIndex(args, value => value.Equals("--install-root", StringComparison.OrdinalIgnoreCase));
+        if (rootIndex < 0 || rootIndex + 1 >= args.Length)
+            throw new ArgumentException("--auto-upgrade requires --install-root.");
+        var installRoot = InstallService.NormalizeInstallRoot(args[rootIndex + 1]);
+
+        var waitIndex = Array.FindIndex(args, value => value.Equals("--wait-pid", StringComparison.OrdinalIgnoreCase));
+        if (waitIndex >= 0 && waitIndex + 1 < args.Length && int.TryParse(args[waitIndex + 1], out var pid))
+        {
+            try
+            {
+                using var process = Process.GetProcessById(pid);
+                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(45));
+            }
+            catch (ArgumentException) { }
+            catch (InvalidOperationException) { }
+            catch (TimeoutException) { throw new InvalidOperationException("The running Sanctuary launcher did not close in time for its update."); }
+        }
+
+        var service = new InstallService();
+        var installation = service.GetInstallationInfo(installRoot);
+        if (installation.Condition != InstallationCondition.Installed)
+            throw new InvalidOperationException("Automatic upgrade requires a verified existing Sanctuary installation.");
+
+        var display = DisplayModeConfig.Read(installRoot);
+        var graphics = GraphicsBackendConfig.Read(installRoot);
+        var configuredProton = ReadConfiguredPath(installRoot, "proton-path.txt");
+        var state = SystemDetector.Detect();
+        var selected = state.ProtonCandidates?.FirstOrDefault(candidate => candidate.Compatible && candidate.Path == configuredProton)
+                       ?? CompatibilityAdvisor.SelectPreferredProton(state.ProtonCandidates ?? []);
+        if (selected is null)
+            throw new InvalidOperationException("No compatible Proton build is available for the automatic upgrade.");
+        state = state.WithProton(selected);
+
+        Console.WriteLine($"Updating Sanctuary at {installRoot}...");
+        var progress = new Progress<InstallProgress>(value => Console.WriteLine($"{value.Percent}% {value.Message}"));
+        await service.InstallAsync(installRoot, state, progress, new InstallOptions(installation.HasDesktopShortcut, RepairExisting: true));
+        GraphicsBackendConfig.Write(installRoot, graphics);
+        DisplayModeConfig.Write(installRoot, display.Mode, display.Width, display.Height);
+        Console.WriteLine("Sanctuary update completed successfully.");
+    }
+
+    private static string ReadConfiguredPath(string installRoot, string name)
+    {
+        var path = Path.Combine(installRoot, "Launcher", name);
+        return File.Exists(path) && !InstallService.IsSymbolicLink(path) ? File.ReadAllText(path).Trim() : string.Empty;
     }
 
     private static SystemState DetectWithPreferredProton()

@@ -11,6 +11,15 @@ internal static class GraphicsBackendConfig
             ? "OpenGL (WineD3D)"
             : "Vulkan (DXVK)";
 
+    public static string Read(string installRoot)
+    {
+        var path = Path.Combine(InstallService.NormalizeInstallRoot(installRoot), "Launcher", FileName);
+        if (!File.Exists(path) || InstallService.IsSymbolicLink(path))
+            return Dxvk;
+        var value = File.ReadAllText(path).Trim().ToLowerInvariant();
+        return value == WineD3D ? WineD3D : Dxvk;
+    }
+
     public static void Write(string installRoot, string backend)
     {
         if (backend is not Dxvk and not WineD3D)

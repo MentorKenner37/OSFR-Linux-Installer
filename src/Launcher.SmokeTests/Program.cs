@@ -65,11 +65,11 @@ try
     Assert(boxedPlan.FileName == fakeProton && boxedPlan.Arguments == "run \"FreeRealms.exe\" Server=example",
         "Windowed display mode must launch directly through Proton without a virtual desktop.");
 
-    Environment.SetEnvironmentVariable("PATH", AppContext.BaseDirectory);
     File.WriteAllText(displayConfig, "fullscreen:1920:1080\n");
-    var safeFallbackPlan = ProtonHelper.CreateGameLaunchPlan(fakeProton, "FreeRealms.exe", "Server=example");
-    Assert(!safeFallbackPlan.UsesGamescope && safeFallbackPlan.Arguments == "run \"FreeRealms.exe\" Server=example",
-        "Missing Gamescope must fall back to direct windowed Proton launch without a virtual desktop.");
+    var fullscreenPlan = ProtonHelper.CreateGameLaunchPlan(fakeProton, "FreeRealms.exe", "Server=example");
+    Assert(fullscreenPlan.FileName == fakeProton &&
+           fullscreenPlan.Arguments == "run \"FreeRealms.exe\" Server=example --fullscreen",
+        "Fullscreen must use Free Realms' native fullscreen option through direct Proton without Gamescope or a virtual desktop.");
 
     File.Delete(graphicsConfig);
     Environment.SetEnvironmentVariable("PROTON_USE_WINED3D", "1");
