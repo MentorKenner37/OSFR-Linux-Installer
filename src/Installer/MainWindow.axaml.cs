@@ -16,6 +16,9 @@ public partial class MainWindow : Window
     private HostSnapshot _host = DetectHost();
     private bool _busy;
     private bool _updatingProtonSelection;
+    private bool _maintenanceMode;
+    private bool _updatingMaintenanceShortcut;
+    private InstallationInfo _installationInfo = new(InstallationCondition.NotInstalled, null, false);
     private int _step = 1;
 
     private sealed record HostSnapshot(
@@ -308,18 +311,33 @@ public partial class MainWindow : Window
         var pathError = RefreshInstallPathState();
         var installed = false;
 
-        if (pathError is null)
+        try
         {
-            try
-            {
-                installed = _installService.IsInstalled(InstallRoot);
-            }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-            {
-                pathError = "The installation path is not valid.";
-                InstallPathStatus.Text = $"✗ {pathError}";
-                InstallPathStatus.Foreground = Bad;
-            }
+            _installationInfo = _installService.GetInstallationInfo(InstallRoot);
+            installed = _installationInfo.Condition == InstallationCondition.Installed;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            _installationInfo = new(InstallationCondition.NotInstalled, null, false);
+            pathError = "The installation path is not valid.";
+            InstallPathStatus.Text = $"✗ {pathError}";
+            InstallPathStatus.Foreground = Bad;
+        }
+
+        _maintenanceMode = _installationInfo.Condition != InstallationCondition.NotInstalled;
+        if (_maintenanceMode)
+        {
+            InstalledVersionText.Text = _installationInfo.Version ?? "Unknown / damaged metadata";
+            MaintenanceInstallPath.Text = InstallRoot;
+            MaintenanceDescription.Text = _installationInfo.Condition == InstallationCondition.Installed
+                ? "An existing Sanctuary installation was detected. Use the maintenance actions below instead of continuing through setup."
+                : "This Sanctuary installation is incomplete or damaged. Repair is available, but uninstall remains locked until ownership can be verified.";
+            _updatingMaintenanceShortcut = true;
+            MaintenanceDesktopShortcutCheck.IsChecked = _installationInfo.HasDesktopShortcut;
+            _updatingMaintenanceShortcut = false;
+            LaunchInstalledButton.IsEnabled = !_busy && installed;
+            UninstallButton.IsEnabled = !_busy && installed;
+            RepairButton.IsEnabled = !_busy && _state.Ready;
         }
 
         ActionButton.Content = installed ? "UNINSTALL" : "INSTALL";
@@ -404,6 +422,25 @@ public partial class MainWindow : Window
 
     private void UpdateStepUi()
     {
+        if (_maintenanceMode)
+        {
+            StepHeader.IsVisible = false;
+            WelcomePanel.IsVisible = false;
+            MaintenancePanel.IsVisible = true;
+            LocationPanel.IsVisible = false;
+            ProtonPanel.IsVisible = false;
+            SummaryPanel.IsVisible = false;
+            InstallPanel.IsVisible = false;
+            BackButton.IsVisible = false;
+            NextButton.IsVisible = false;
+            ActionButton.IsVisible = false;
+            StepHint.Text = "Existing installation maintenance";
+            return;
+        }
+
+        StepHeader.IsVisible = true;
+        MaintenancePanel.IsVisible = false;
+        BackButton.IsVisible = true;
         WelcomePanel.IsVisible = _step == 1;
         LocationPanel.IsVisible = _step == 2;
         ProtonPanel.IsVisible = _step == 3;
@@ -524,7 +561,84 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task InstallAsync()
+    private async void LaunchInstalledClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_busy || _installationInfo.Condition != InstallationCondition.Installed)
+            return;
+        try { _installService.Launch(InstallRoot); }
+        catch (Exception ex) { await ShowMessageAsync("Launch failed", ex.Message); }
+    }
+
+    private async void RepairClicked(object? sender, RoutedEventArgs e)
+    {
+        if (!_busy)
+            await InstallAsync(repairExisting: true);
+    }
+
+    private async void UninstallClicked(object? sender, RoutedEventArgs e)
+    {
+        if (!_busy && _installationInfo.Condition == InstallationCondition.Installed)
+            await UninstallAsync();
+    }
+
+    private async void MaintenanceShortcutChanged(object? sender, RoutedEventArgs e)
+    {
+        if (_updatingMaintenanceShortcut || _busy || _installationInfo.Condition != InstallationCondition.Installed)
+            return;
+        try
+        {
+            _installService.SetDesktopShortcut(InstallRoot, MaintenanceDesktopShortcutCheck.IsChecked == true);
+            RefreshInstallUi();
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync("Shortcut update failed", ex.Message);
+            RefreshInstallUi();
+        }
+    }
+
+    private async void OpenInstallFolderClicked(object? sender, RoutedEventArgs e) => await OpenFolderAsync(InstallRoot);
+
+    private async void OpenLogsClicked(object? sender, RoutedEventArgs e) =>
+        await OpenFolderAsync(Path.GetDirectoryName(InstallerLog.LogPath)!);
+
+    private async Task OpenFolderAsync(string path)
+    {
+        try
+        {
+            Directory.CreateDirectory(path);
+            var startInfo = new ProcessStartInfo("xdg-open") { UseShellExecute = false };
+            startInfo.ArgumentList.Add(path);
+            Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync("Could not open folder", ex.Message);
+        }
+    }
+
+    private async void ExportDiagnosticsClicked(object? sender, RoutedEventArgs e)
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Sanctuary diagnostics",
+            SuggestedFileName = $"sanctuary-diagnostics-{DateTime.UtcNow:yyyyMMdd-HHmmss}.zip"
+        });
+        if (file?.TryGetLocalPath() is not { } path)
+            return;
+
+        try
+        {
+            await DiagnosticBundleService.CreateAsync(path, BuildHostDetails());
+            await ShowMessageAsync("Diagnostics exported", $"Redacted diagnostics were saved to:\n{path}");
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync("Diagnostics export failed", ex.Message);
+        }
+    }
+
+    private async Task InstallAsync(bool repairExisting = false)
     {
         var selectedProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         var selectedGraphicsBackend = SelectedGraphicsBackend;
@@ -540,7 +654,7 @@ public partial class MainWindow : Window
         }
 
         var pathError = InstallService.GetInstallDestinationError(InstallPathBox.Text ?? string.Empty);
-        if (pathError is not null)
+        if (pathError is not null && !(repairExisting && InstallationOwnership.HasRecognizableMetadata(InstallRoot)))
         {
             await ShowMessageAsync("Invalid installation location", pathError);
             return;
@@ -553,7 +667,13 @@ public partial class MainWindow : Window
 
         try
         {
-            await _installService.InstallAsync(InstallRoot, _state, progress);
+            await _installService.InstallAsync(
+                InstallRoot,
+                _state,
+                progress,
+                new InstallOptions(
+                    repairExisting ? MaintenanceDesktopShortcutCheck.IsChecked == true : CreateDesktopShortcutCheck.IsChecked == true,
+                    repairExisting));
 
             try
             {
@@ -568,11 +688,16 @@ public partial class MainWindow : Window
                 return;
             }
 
-            _installService.Launch(InstallRoot);
+            if (LaunchAfterInstallCheck.IsChecked == true)
+                _installService.Launch(InstallRoot);
             ReapplyWindowIcon();
             shouldClose = CloseAfterInstallCheck.IsChecked == true;
             if (!shouldClose)
-                await ShowMessageAsync("Installation complete", "Sanctuary has been installed successfully and the Open Source Free Realms launcher has started.");
+                await ShowMessageAsync(
+                    "Installation complete",
+                    LaunchAfterInstallCheck.IsChecked == true
+                        ? "Sanctuary has been installed successfully and the Open Source Free Realms launcher has started."
+                        : "Sanctuary has been installed successfully.");
         }
         catch (Exception ex)
         {
@@ -595,7 +720,9 @@ public partial class MainWindow : Window
     {
         var confirmed = await ConfirmAsync(
             "Uninstall Sanctuary",
-            "Remove Sanctuary, its dedicated Proton prefix, all downloaded Open Source Free Realms server clients, application data, and shortcuts? The installer executable itself will be preserved.");
+            RemoveUserDataCheck.IsChecked == true
+                ? "Remove Sanctuary, its shortcuts, downloaded game files, launcher settings, logs, and saved user data? This cannot be undone. The installer executable itself will be preserved."
+                : "Remove Sanctuary and its shortcuts while preserving downloaded game files, launcher settings, logs, and saved user data?");
         if (!confirmed)
             return;
 
@@ -604,9 +731,16 @@ public partial class MainWindow : Window
 
         try
         {
-            await _installService.UninstallAsync(InstallRoot, progress);
+            await _installService.UninstallAsync(
+                InstallRoot,
+                progress,
+                new UninstallOptions(RemoveUserDataCheck.IsChecked == true));
             InstallPathBox.Text = InstallerState.GetInitialInstallRoot();
-            await ShowMessageAsync("Uninstall complete", "Sanctuary and its downloaded Open Source Free Realms data have been removed.");
+            await ShowMessageAsync(
+                "Uninstall complete",
+                RemoveUserDataCheck.IsChecked == true
+                    ? "Sanctuary and its user data have been removed."
+                    : "Sanctuary was removed. Downloaded game files and launcher data were preserved.");
         }
         catch (Exception ex)
         {
@@ -633,6 +767,13 @@ public partial class MainWindow : Window
         ActionButton.IsEnabled = !busy;
         InstallPathBox.IsEnabled = !busy;
         CloseAfterInstallCheck.IsEnabled = !busy;
+        LaunchAfterInstallCheck.IsEnabled = !busy;
+        CreateDesktopShortcutCheck.IsEnabled = !busy;
+        MaintenanceDesktopShortcutCheck.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
+        RemoveUserDataCheck.IsEnabled = !busy;
+        LaunchInstalledButton.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
+        RepairButton.IsEnabled = !busy && _state.Ready;
+        UninstallButton.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         SummaryAcceptCheck.IsEnabled = !busy;
         ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Any(candidate => candidate.Compatible) ?? false);
         GraphicsBackendComboBox.IsEnabled = !busy;
