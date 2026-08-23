@@ -68,8 +68,8 @@ try
     File.WriteAllText(displayConfig, "fullscreen:1920:1080\n");
     var fullscreenPlan = ProtonHelper.CreateGameLaunchPlan(fakeProton, "FreeRealms.exe", "Server=example");
     Assert(fullscreenPlan.FileName == fakeProton &&
-           fullscreenPlan.Arguments == "run \"FreeRealms.exe\" Server=example --fullscreen",
-        "Fullscreen must use Free Realms' native fullscreen option through direct Proton without Gamescope or a virtual desktop.");
+           fullscreenPlan.Arguments == "run \"FreeRealms.exe\" --fullscreen Server=example",
+        "Fullscreen must place the native client switch before legacy key=value arguments so Free Realms parses it.");
 
     File.Delete(graphicsConfig);
     Environment.SetEnvironmentVariable("PROTON_USE_WINED3D", "1");
