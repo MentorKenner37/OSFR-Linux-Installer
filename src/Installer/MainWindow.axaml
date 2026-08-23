@@ -93,7 +93,7 @@
                   <TextBlock Text="Game display mode" Foreground="#777777" FontSize="11"/>
                   <ComboBox x:Name="MaintenanceDisplayModeComboBox">
                     <ComboBoxItem Content="Fullscreen (desktop resolution) — Recommended"/>
-                    <ComboBoxItem Content="Boxed window (1280 × 720)"/>
+                    <ComboBoxItem Content="Windowed (game default)"/>
                   </ComboBox>
                 </StackPanel>
               </StackPanel>
@@ -132,9 +132,9 @@
               <TextBlock Text="Game Display Mode" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/>
               <ComboBox x:Name="DisplayModeComboBox" SelectedIndex="0">
                 <ComboBoxItem Content="Fullscreen (desktop resolution) — Recommended"/>
-                <ComboBoxItem Content="Boxed window (1280 × 720)"/>
+                <ComboBoxItem Content="Windowed (game default)"/>
               </ComboBox>
-              <TextBlock Text="Sanctuary applies this through Proton when Free Realms starts. Fullscreen follows your current primary display; boxed mode uses an isolated 1280 × 720 Proton desktop." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="Fullscreen scales Free Realms through Gamescope and Proton. If Gamescope is unavailable, Sanctuary safely launches the normal game window and shows a warning. No Proton virtual desktop is used." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
             <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="16"><StackPanel Spacing="7"><TextBlock Text="Need another official Proton version?" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Search for Proton in your Steam Library and install the version you want. Restart Sanctuary Linux Installer afterward and the newly installed Proton version should appear here." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="Selecting a Proton version or graphics backend here does not modify the Proton installation itself." Foreground="#777777" TextWrapping="Wrap" FontSize="11"/></StackPanel></Border>
           </StackPanel>
