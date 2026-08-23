@@ -15,7 +15,7 @@
           <TextBlock Text="SANCTUARY" FontSize="30" FontWeight="Bold" Foreground="#F4F4F4" HorizontalAlignment="Center" />
           <TextBlock Text="LINUX INSTALLER" FontSize="14" FontWeight="Bold" Foreground="#42B86B" LetterSpacing="1.5" HorizontalAlignment="Center" />
           <Border Background="#1C1C1C" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="15" Padding="12,5" Margin="0,7,0,0" HorizontalAlignment="Center">
-            <TextBlock Text="ALPHA" Foreground="#4CCF7A" FontWeight="Bold" FontSize="10" />
+            <TextBlock Text="BETA" Foreground="#4CCF7A" FontWeight="Bold" FontSize="10" />
           </Border>
         </StackPanel>
 
@@ -49,7 +49,7 @@
     </Border>
 
     <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Margin="30,18,30,26">
-      <Grid Grid.Row="0" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8" Margin="0,0,0,18">
+      <Grid x:Name="StepHeader" Grid.Row="0" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8" Margin="0,0,0,18">
         <StackPanel Grid.Column="0" Spacing="7"><Border x:Name="Step1Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step1Label" Text="Welcome" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
         <StackPanel Grid.Column="1" Spacing="7"><Border x:Name="Step2Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step2Label" Text="Location" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
         <StackPanel Grid.Column="2" Spacing="7"><Border x:Name="Step3Circle" CornerRadius="22" Width="44" Height="44" HorizontalAlignment="Center"><TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/></Border><TextBlock x:Name="Step3Label" Text="Proton" HorizontalAlignment="Center" FontSize="12"/></StackPanel>
@@ -79,6 +79,30 @@
             <TextBlock x:Name="DetailText" IsVisible="False" Foreground="#8B8B8B" TextWrapping="Wrap" FontSize="12" />
           </StackPanel>
 
+          <StackPanel x:Name="MaintenancePanel" IsVisible="False" Spacing="18">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Manage Sanctuary" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/>
+              <TextBlock x:Name="MaintenanceDescription" Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20">
+              <StackPanel Spacing="12">
+                <StackPanel><TextBlock Text="Installed version" Foreground="#777777" FontSize="11"/><TextBlock x:Name="InstalledVersionText" Foreground="#F0F0F0" FontSize="15"/></StackPanel>
+                <StackPanel><TextBlock Text="Installation location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="MaintenanceInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel>
+                <CheckBox x:Name="MaintenanceDesktopShortcutCheck" Content="Create a desktop shortcut" Click="MaintenanceShortcutChanged"/>
+              </StackPanel>
+            </Border>
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+              <Button x:Name="LaunchInstalledButton" Grid.Row="0" Grid.Column="0" Classes="primary" Content="LAUNCH SANCTUARY" Click="LaunchInstalledClicked"/>
+              <Button x:Name="RepairButton" Grid.Row="0" Grid.Column="1" Content="REPAIR / UPGRADE" Click="RepairClicked"/>
+              <Button Grid.Row="1" Grid.Column="0" Content="OPEN INSTALL FOLDER" Click="OpenInstallFolderClicked"/>
+              <Button Grid.Row="1" Grid.Column="1" Content="OPEN LOGS" Click="OpenLogsClicked"/>
+              <Button Grid.Row="2" Grid.Column="0" Content="EXPORT DIAGNOSTICS" Click="ExportDiagnosticsClicked"/>
+              <Button x:Name="UninstallButton" Grid.Row="2" Grid.Column="1" Content="UNINSTALL" Click="UninstallClicked"/>
+            </Grid>
+            <CheckBox x:Name="RemoveUserDataCheck" Content="Also remove downloaded game files, launcher settings, logs, and saved user data" IsChecked="False"/>
+            <TextBlock Text="Uninstall removes Sanctuary and its shortcuts. Personal game data is preserved unless the option above is checked." Foreground="#777777" FontSize="11" TextWrapping="Wrap"/>
+          </StackPanel>
+
           <StackPanel x:Name="LocationPanel" IsVisible="False" Spacing="20">
             <StackPanel Spacing="6"><TextBlock Text="Choose installation location" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Choose where Sanctuary and its dedicated Free Realms Proton prefix should be stored." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
             <StackPanel Spacing="8"><TextBlock Text="Installation Directory" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><TextBox x:Name="InstallPathBox" TextChanged="InstallPathChanged"/><Button Grid.Column="1" Content="Browse..." Click="BrowseClicked" MinWidth="105"/></Grid><TextBlock x:Name="InstallPathStatus" FontSize="11" Foreground="#45D483" TextWrapping="Wrap"/></StackPanel>
@@ -103,11 +127,13 @@
             <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Review the detected environment and selected options before installation begins." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
             <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Graphics backend" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryGraphicsBackend" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
             <CheckBox x:Name="SummaryAcceptCheck" Content="I accept these installation settings and want to continue" IsChecked="False" Click="SummaryAcceptanceChanged"/>
+            <CheckBox x:Name="CreateDesktopShortcutCheck" Content="Create a desktop shortcut" IsChecked="True"/>
           </StackPanel>
 
           <StackPanel x:Name="InstallPanel" IsVisible="False" Spacing="20">
             <StackPanel Spacing="6"><TextBlock Text="Install Sanctuary" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Configuration is complete. Begin installation below and keep this window open until the process finishes." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
             <StackPanel Spacing="10"><Grid ColumnDefinitions="*,Auto"><TextBlock x:Name="StatusText" Text="Ready to install" Foreground="#B6B6B6" FontSize="12"/><TextBlock x:Name="ProgressText" Grid.Column="1" Text="Ready" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="12"/></Grid><ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Value="0" Height="10"/></StackPanel>
+            <CheckBox x:Name="LaunchAfterInstallCheck" Content="Launch Sanctuary after installation" IsChecked="True"/>
             <CheckBox x:Name="CloseAfterInstallCheck" Content="Close Sanctuary Linux Installer after a successful installation" IsChecked="True"/>
             <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="18"><TextBlock Text="Installer logs are stored separately under ~/.local/state/OSFR-Linux and do not occupy the selected installation directory." Foreground="#777777" FontSize="11" TextWrapping="Wrap"/></Border>
           </StackPanel>
