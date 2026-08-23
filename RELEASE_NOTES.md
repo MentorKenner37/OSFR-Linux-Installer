@@ -1,19 +1,28 @@
-# Sanctuary Linux Installer 1.1.0-beta.7
+# Sanctuary Linux Installer 1.1.0-beta.8
 
-This beta fixes Gamescope installation on Debian 13 and adds ownership-safe Gamescope removal.
+This beta replaces Gamescope fullscreen with Free Realms' working native fullscreen mode and introduces verified launcher-driven updates.
 
-## What changed
+## Native display modes
 
-- Installs Gamescope on Debian 13 from the official `trixie-backports` repository.
-- Enables the official backports source with administrator approval only when APT has no Gamescope candidate.
-- Uses `trixie-backports` explicitly instead of attempting an unavailable Debian stable package.
-- Captures package-manager output and reports the actual installation error instead of only an exit code.
-- Treats Gamescope as optional: a failed Gamescope setup no longer aborts Sanctuary installation.
-- Records when Sanctuary installed Gamescope and offers to remove that system package during Sanctuary uninstall.
-- Never offers automatic removal for a Gamescope installation that existed before Sanctuary installed.
-- Removes the Sanctuary-created Debian backports source when removing an installer-owned Gamescope package.
-- Clarifies that changing resolution inside Free Realms does not leave Gamescope fullscreen; true windowed mode must be selected in the installer.
-- Fixes `ldconfig` diagnostics when the directory used to launch the installer has subsequently been removed.
+- Removes Gamescope from every Sanctuary installation, launch, repair, diagnostic, and uninstall path.
+- Always launches Free Realms directly through Proton.
+- Adds a **Start Free Realms in native fullscreen** checkbox using the client's supported `--fullscreen` option.
+- Leaves the option off for a genuine movable game window with functional in-game size controls.
+- Preserves the selected startup mode across repair and automatic upgrades.
+- Migrates beta.5–beta.7 display settings and removes only obsolete Sanctuary Gamescope metadata.
+- Never removes an independently installed Gamescope package or changes system repositories.
+- Keeps the `ldconfig` working-directory diagnostics fix from beta.7.
+
+## Verified updates
+
+- Checks the official GitHub repository for updates when the Sanctuary launcher starts, at most twice per day.
+- Supports stable-only or beta update channels.
+- Shows update availability and summarized release notes without blocking offline play.
+- Adds **Check now**, **Update now**, **Skip version**, and opt-in automatic updates to launcher settings.
+- Downloads both the installer and its published checksum and refuses to execute a SHA-256 mismatch.
+- Performs verified upgrades through the installer's existing transactional replacement and rollback system.
+- Preserves Proton selection, graphics backend, display mode, desktop shortcut, prefix, downloaded game files, launcher settings, logs, and user data.
+- Refuses automatic downgrades, wrong/unowned installation roots, and releases without both required assets.
 
 ## Install
 
