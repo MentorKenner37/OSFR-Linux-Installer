@@ -22,6 +22,7 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 - Surfaces runtime, graphics, Steam-type, hardware, OS, and compatibility details directly in the graphical installer
 - Installs the patched Open Source Free Realms launcher and isolates Free Realms in a dedicated Proton prefix
 - Offers Gamescope-powered fullscreen or the game's normal windowed mode, with fullscreen selected by default and a safe windowed fallback when Gamescope is unavailable
+- Detects Gamescope automatically and offers an optional administrator-approved installation through DNF, APT, Pacman, or Zypper when it is missing
 - Always creates application-menu integration and lets the user choose whether to create a desktop shortcut
 - Lets the user choose whether Sanctuary launches automatically when installation finishes
 - Detects existing installations and replaces the normal wizard with a locked maintenance page
