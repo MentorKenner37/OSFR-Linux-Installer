@@ -1,24 +1,26 @@
-# Sanctuary Linux Installer 1.1.0-beta.1
+# Sanctuary Linux Installer 1.1.0-beta.2
 
-This is the first public beta of Sanctuary Linux Installer. It keeps the verified v1.0.8 client-download recovery while strengthening its tests, diagnostics, and release process.
+This beta adds a complete maintenance experience for existing Sanctuary installations while retaining the verified client-download recovery and security protections from beta.1.
 
-## Beta changes
+## What changed
 
-- Resolves `curl` through `PATH` instead of assuming `/usr/bin` or `/bin`.
-- Restricts both initial curl requests and redirects to HTTPS.
-- Adds executable smoke coverage for curl argument safety, HTTPS rejection, PATH discovery, successful verified download, and hash-mismatch rejection.
-- Reports curl fallback availability in graphical details, `--diagnose`, and `--dry-run`.
-- Separates normal push/PR CI from immutable tag-triggered release publishing.
-- Requires release tags to exactly match the project version.
-- Generalizes superseded-prerelease cleanup without touching stable releases.
+- Detects an existing Sanctuary installation immediately and replaces the normal wizard with a locked maintenance page.
+- Adds **Launch Sanctuary**, **Repair / Upgrade**, **Uninstall**, **Open install folder**, **Open logs**, and **Export diagnostics** actions.
+- Displays the installed version and current desktop-shortcut state.
+- Adds a **Create a desktop shortcut** choice while always preserving application-menu integration.
+- Adds a **Launch Sanctuary after installation** choice.
+- Preserves downloaded game files, launcher settings, logs, and user data during a normal uninstall.
+- Offers a separate explicit option to remove all Sanctuary user data.
+- Recognizes damaged installation metadata for repair, while keeping recursive uninstall disabled until ownership and the launcher hash verify again.
+- Exports a bounded diagnostic ZIP with credentials, authorization values, session IDs, cookies, passwords, and token query parameters redacted.
 
 ## Existing protections
 
+- HTTPS-only manifests, authentication, client downloads, and the verified `curl` compatibility fallback.
+- Exact manifest size and XXHash64 verification before atomic client-file replacement.
 - Transactional launcher replacement with rollback and interrupted-install recovery.
-- Structured ownership, symlink, traversal, install-path, and conservative deletion protections.
-- Dedicated Proton prefix with DXVK/Vulkan or WineD3D/OpenGL selection.
-- HTTPS-only manifests and credentials, bounded manifests, protected credential storage, and verified atomic client downloads.
-- xUnit regression tests, smoke tests, dependency vulnerability checks, self-contained packaging, and published SHA-256 checksums.
+- Structured ownership, symlink, traversal, archive, install-path, and conservative deletion protections.
+- xUnit regression tests, executable smoke tests, dependency vulnerability checks, self-contained packaging, and published SHA-256 checksums.
 
 ## Known beta issues
 
