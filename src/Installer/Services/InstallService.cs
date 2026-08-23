@@ -301,11 +301,11 @@ public sealed class InstallService
                 targets.Add((InstallerState.StateDirectory, true));
             }
 
-            for (var i = 0; i < targets.Length; i++)
+            for (var i = 0; i < targets.Count; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var target = targets[i];
-                var percent = 20 + (int)(70.0 * (i + 1) / targets.Length);
+                var percent = 20 + (int)(70.0 * (i + 1) / targets.Count);
                 progress.Report(new(percent, $"Removing {Path.GetFileName(target.Path)}..."));
 
                 if (target.RequireHome && !IsPathInside(target.Path, home))
