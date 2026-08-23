@@ -17,6 +17,7 @@ public sealed class InstallService
     private const string DesktopFileName = "OSFR-Linux.desktop";
     private const string DesktopIconName = "osfr-linux";
     private const string TransactionStateFileName = ".sanctuary-install-transaction.json";
+    private const string LegacyGamescopeOwnershipFileName = ".gamescope-installed-by-sanctuary.json";
 
     public static string DefaultInstallRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -214,6 +215,10 @@ public sealed class InstallService
 
             transaction.Commit();
             transactionStarted = false;
+
+            // beta.8 no longer manages or launches Gamescope. Remove only Sanctuary's obsolete
+            // metadata; never alter a system Gamescope package or the user's APT configuration.
+            TryDeleteFile(Path.Combine(installRoot, LegacyGamescopeOwnershipFileName));
 
             progress.Report(new(100, "Installation complete"));
             InstallerLog.Info("Transactional installation completed successfully.");
