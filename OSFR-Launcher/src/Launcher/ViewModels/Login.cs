@@ -218,9 +218,6 @@ public partial class Login : Popup
         Directory.CreateDirectory(protonPrefix);
 
         var launchPlan = ProtonHelper.CreateGameLaunchPlan(protonPath, Constants.ClientExecutableName, arguments);
-        if (launchPlan.Mode == "fullscreen" && !launchPlan.UsesGamescope)
-            App.AddNotification("Gamescope is not installed, so Free Realms was launched windowed. Install Gamescope to use real fullscreen.", true);
-
         _server.Process = new Process
         {
             StartInfo =
@@ -240,8 +237,8 @@ public partial class Login : Popup
 
         try
         {
-            _logger.Info("Launching FreeRealms through Proton: {Proton} for server: {Name}; display={Mode}, resolution={Width}x{Height}, gamescope={Gamescope}.",
-                protonPath, _server.Info.Name, launchPlan.Mode, launchPlan.Width, launchPlan.Height, launchPlan.UsesGamescope);
+            _logger.Info("Launching FreeRealms through Proton: {Proton} for server: {Name}; native-display={Mode}, configured-resolution={Width}x{Height}.",
+                protonPath, _server.Info.Name, launchPlan.Mode, launchPlan.Width, launchPlan.Height);
             _server.Process.Start();
         }
         catch (Exception ex)
