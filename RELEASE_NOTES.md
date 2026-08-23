@@ -1,12 +1,12 @@
-# Sanctuary Linux Installer 1.1.0-beta.8
+# Sanctuary Linux Installer 1.1.0-beta.9
 
-This beta replaces Gamescope fullscreen with Free Realms' working native fullscreen mode and introduces verified launcher-driven updates.
+This hotfix makes Free Realms reliably see the native fullscreen startup switch and retains the verified update system introduced in beta.8.
 
 ## Native display modes
 
 - Removes Gamescope from every Sanctuary installation, launch, repair, diagnostic, and uninstall path.
 - Always launches Free Realms directly through Proton.
-- Adds a **Start Free Realms in native fullscreen** checkbox using the client's supported `--fullscreen` option.
+- Fixes native fullscreen startup by placing the client's supported `--fullscreen` switch before its legacy `Server=...` and session arguments.
 - Leaves the option off for a genuine movable game window with functional in-game size controls.
 - Preserves the selected startup mode across repair and automatic upgrades.
 - Migrates beta.5–beta.7 display settings and removes only obsolete Sanctuary Gamescope metadata.
