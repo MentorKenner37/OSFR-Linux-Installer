@@ -21,7 +21,10 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 - Detects Cinnamon + Wayland and emits a non-blocking warning for the currently known Shift/modifier input caveat
 - Surfaces runtime, graphics, Steam-type, hardware, OS, and compatibility details directly in the graphical installer
 - Installs the patched Open Source Free Realms launcher and isolates Free Realms in a dedicated Proton prefix
-- Creates desktop/application-menu integration
+- Always creates application-menu integration and lets the user choose whether to create a desktop shortcut
+- Lets the user choose whether Sanctuary launches automatically when installation finishes
+- Detects existing installations and replaces the normal wizard with a locked maintenance page
+- Provides Launch, Repair/Upgrade, safe Uninstall, shortcut management, folder/log access, and redacted diagnostic export
 - Uses ownership validation, staged replacement, rollback, recovery, archive traversal protection, symlink checks, and conservative uninstall behavior
 - Stages and verifies every downloaded game file before atomically replacing the installed copy
 - Requires HTTPS for server manifests, login, and registration
