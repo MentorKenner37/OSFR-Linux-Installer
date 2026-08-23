@@ -44,6 +44,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        DisplayModeComboBox.SelectionChanged += DisplayModeSelectionChanged;
+        MaintenanceDisplayModeComboBox.SelectionChanged += MaintenanceDisplayModeChanged;
         ApplyBranding();
         InstallPathBox.Text = InstallerState.GetInitialInstallRoot();
         RefreshState();
