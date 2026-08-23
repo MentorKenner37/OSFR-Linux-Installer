@@ -109,6 +109,7 @@
               <Button x:Name="UninstallButton" Grid.Row="2" Grid.Column="1" Content="UNINSTALL" Click="UninstallClicked"/>
             </Grid>
             <CheckBox x:Name="RemoveUserDataCheck" Content="Also remove downloaded game files, launcher settings, logs, and saved user data" IsChecked="False"/>
+            <CheckBox x:Name="RemoveGamescopeCheck" Content="Also uninstall Gamescope (installed system-wide by Sanctuary)" IsChecked="False" IsVisible="False"/>
             <TextBlock Text="Uninstall removes Sanctuary and its shortcuts. Personal game data is preserved unless the option above is checked." Foreground="#777777" FontSize="11" TextWrapping="Wrap"/>
           </StackPanel>
 
@@ -136,7 +137,7 @@
                 <ComboBoxItem Content="Fullscreen (desktop resolution) — Recommended"/>
                 <ComboBoxItem Content="Windowed (game default)"/>
               </ComboBox>
-              <TextBlock Text="Fullscreen scales Free Realms through Gamescope and Proton. If Gamescope is unavailable, Sanctuary safely launches the normal game window and shows a warning. No Proton virtual desktop is used." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
+              <TextBlock Text="Fullscreen scales Free Realms through Gamescope and Proton. Changing resolution inside Free Realms may add black bars but does not leave Gamescope fullscreen; choose Windowed here to use a real desktop window. If Gamescope is unavailable, Sanctuary safely launches the normal game window." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
             <StackPanel Spacing="6">
               <CheckBox x:Name="InstallGamescopeCheck" Content="Install Gamescope for real fullscreen" IsChecked="True"/>

@@ -198,7 +198,8 @@ public static class CompatibilityAdvisor
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    WorkingDirectory = "/"
                 });
 
                 if (process is null)
