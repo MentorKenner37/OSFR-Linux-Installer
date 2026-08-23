@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private bool _maintenanceMode;
     private bool _updatingMaintenanceShortcut;
     private bool _updatingMaintenanceDisplayMode;
+    private bool _gamescopeInstalled;
     private InstallationInfo _installationInfo = new(InstallationCondition.NotInstalled, null, false);
     private int _step = 1;
 
@@ -132,7 +133,35 @@ public partial class MainWindow : Window
 
         DetailText.Text = BuildHostDetails();
 
+        RefreshGamescopeUi();
         RefreshInstallUi();
+    }
+
+    private void RefreshGamescopeUi()
+    {
+        _gamescopeInstalled = GamescopeService.FindInstalledPath() is not null;
+        var command = GamescopeService.GetInstallCommand();
+        if (_gamescopeInstalled)
+        {
+            InstallGamescopeCheck.IsChecked = true;
+            InstallGamescopeCheck.IsEnabled = false;
+            InstallGamescopeCheck.Content = "Gamescope — Already installed";
+            GamescopeStatus.Text = GamescopeService.FindInstalledPath();
+            MaintenanceInstallGamescopeCheck.IsChecked = true;
+            MaintenanceInstallGamescopeCheck.IsEnabled = false;
+            MaintenanceInstallGamescopeCheck.Content = "Gamescope — Already installed";
+            MaintenanceGamescopeStatus.Text = GamescopeService.FindInstalledPath();
+            return;
+        }
+
+        InstallGamescopeCheck.Content = "Install Gamescope for real fullscreen";
+        InstallGamescopeCheck.IsEnabled = !_busy && command is not null;
+        GamescopeStatus.Text = command is null
+            ? "Automatic installation is unavailable. Install the 'gamescope' package manually."
+            : $"Not installed — the installer can add it through {command.Manager} with an administrator prompt.";
+        MaintenanceInstallGamescopeCheck.Content = "Install Gamescope for real fullscreen";
+        MaintenanceInstallGamescopeCheck.IsEnabled = !_busy && command is not null;
+        MaintenanceGamescopeStatus.Text = GamescopeStatus.Text;
     }
 
     private string BuildHostDetails()
@@ -146,7 +175,8 @@ public partial class MainWindow : Window
             $"Memory: {_host.Memory}",
             $"GPU: {_host.Gpu}",
             $"Steam: {_state.SteamRoot ?? "not found"}",
-            $"Proton: {_state.ProtonPath ?? "not found"}"
+            $"Proton: {_state.ProtonPath ?? "not found"}",
+            $"Gamescope: {GamescopeService.FindInstalledPath() ?? "not found"}"
         };
 
         lines.Add($"curl fallback: {_state.CurlPath ?? "not found (normal downloads remain available)"}");
@@ -424,6 +454,9 @@ public partial class MainWindow : Window
         SummaryProtonPath.Text = _state.ProtonPath ?? "Not detected";
         SummaryGraphicsBackend.Text = GraphicsBackendConfig.DisplayName(SelectedGraphicsBackend);
         SummaryDisplayMode.Text = DisplayModeConfig.DisplayName(SelectedDisplayMode);
+        SummaryGamescope.Text = _gamescopeInstalled
+            ? "Already installed"
+            : InstallGamescopeCheck.IsChecked == true ? "Install with administrator approval" : "Do not install";
     }
 
     private static void SetCheck(TextBlock control, bool ok, string text)
@@ -697,6 +730,9 @@ public partial class MainWindow : Window
         var selectedDisplayMode = repairExisting
             ? (MaintenanceDisplayModeComboBox.SelectedIndex == 1 ? DisplayModeConfig.Windowed : DisplayModeConfig.Fullscreen)
             : SelectedDisplayMode;
+        var shouldInstallGamescope = !_gamescopeInstalled && (repairExisting
+            ? MaintenanceInstallGamescopeCheck.IsChecked == true
+            : InstallGamescopeCheck.IsChecked == true);
         RefreshState();
         ReapplyWindowIcon();
         if (selectedProton is not null && _state.ProtonCandidates?.FirstOrDefault(candidate => candidate.Path == selectedProton && candidate.Compatible) is { } selected)
@@ -722,6 +758,14 @@ public partial class MainWindow : Window
 
         try
         {
+            if (shouldInstallGamescope)
+            {
+                UpdateProgress(new InstallProgress(2, "Installing Gamescope with administrator approval..."));
+                await GamescopeService.InstallAsync();
+                _gamescopeInstalled = true;
+                RefreshGamescopeUi();
+            }
+
             await _installService.InstallAsync(
                 InstallRoot,
                 _state,
@@ -837,6 +881,12 @@ public partial class MainWindow : Window
         ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Any(candidate => candidate.Compatible) ?? false);
         GraphicsBackendComboBox.IsEnabled = !busy;
         DisplayModeComboBox.IsEnabled = !busy;
+        if (!_gamescopeInstalled)
+        {
+            var canInstallGamescope = GamescopeService.GetInstallCommand() is not null;
+            InstallGamescopeCheck.IsEnabled = !busy && canInstallGamescope;
+            MaintenanceInstallGamescopeCheck.IsEnabled = !busy && canInstallGamescope;
+        }
         UpdateStepUi();
     }
 
