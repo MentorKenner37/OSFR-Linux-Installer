@@ -110,6 +110,10 @@ public static class ProtonHelper
 
     private static string? FindOnPath(string executable)
     {
+        foreach (var commonPath in new[] { $"/usr/bin/{executable}", $"/usr/games/{executable}", $"/usr/local/bin/{executable}" })
+            if (File.Exists(commonPath))
+                return commonPath;
+
         foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator))
         {
             if (string.IsNullOrWhiteSpace(directory))
