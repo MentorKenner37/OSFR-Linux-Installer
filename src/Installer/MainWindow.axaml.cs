@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private bool _updatingProtonSelection;
     private bool _maintenanceMode;
     private bool _updatingMaintenanceShortcut;
+    private bool _updatingMaintenanceDisplayMode;
     private InstallationInfo _installationInfo = new(InstallationCondition.NotInstalled, null, false);
     private int _step = 1;
 
@@ -51,6 +52,20 @@ public partial class MainWindow : Window
 
     private string SelectedGraphicsBackend =>
         GraphicsBackendComboBox.SelectedIndex == 1 ? GraphicsBackendConfig.WineD3D : GraphicsBackendConfig.Dxvk;
+
+    private string SelectedDisplayMode =>
+        DisplayModeComboBox.SelectedIndex == 1 ? DisplayModeConfig.Windowed : DisplayModeConfig.Fullscreen;
+
+    private (int Width, int Height) DesktopResolution
+    {
+        get
+        {
+            var screen = Screens.Primary;
+            return screen is null
+                ? (1920, 1080)
+                : (Math.Max(640, screen.Bounds.Width), Math.Max(480, screen.Bounds.Height));
+        }
+    }
 
     private void ApplyBranding()
     {
@@ -335,6 +350,11 @@ public partial class MainWindow : Window
             _updatingMaintenanceShortcut = true;
             MaintenanceDesktopShortcutCheck.IsChecked = _installationInfo.HasDesktopShortcut;
             _updatingMaintenanceShortcut = false;
+            var desktop = DesktopResolution;
+            var display = DisplayModeConfig.Read(InstallRoot, desktop.Width, desktop.Height);
+            _updatingMaintenanceDisplayMode = true;
+            MaintenanceDisplayModeComboBox.SelectedIndex = display.Mode == DisplayModeConfig.Windowed ? 1 : 0;
+            _updatingMaintenanceDisplayMode = false;
             LaunchInstalledButton.IsEnabled = !_busy && installed;
             UninstallButton.IsEnabled = !_busy && installed;
             RepairButton.IsEnabled = !_busy && _state.Ready;
@@ -401,6 +421,7 @@ public partial class MainWindow : Window
         SummarySteamPath.Text = _state.SteamRoot ?? "Not detected";
         SummaryProtonPath.Text = _state.ProtonPath ?? "Not detected";
         SummaryGraphicsBackend.Text = GraphicsBackendConfig.DisplayName(SelectedGraphicsBackend);
+        SummaryDisplayMode.Text = DisplayModeConfig.DisplayName(SelectedDisplayMode);
     }
 
     private static void SetCheck(TextBlock control, bool ok, string text)
@@ -521,6 +542,14 @@ public partial class MainWindow : Window
         UpdateStepUi();
     }
 
+    private void DisplayModeSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        InstallerLog.Info($"User selected game display mode: {DisplayModeConfig.DisplayName(SelectedDisplayMode)}");
+        SummaryAcceptCheck.IsChecked = false;
+        RefreshSummary();
+        UpdateStepUi();
+    }
+
     private void InstallPathChanged(object? sender, TextChangedEventArgs e)
     {
         if (!_busy)
@@ -597,6 +626,27 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void MaintenanceDisplayModeChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_updatingMaintenanceDisplayMode || _busy || _installationInfo.Condition != InstallationCondition.Installed)
+            return;
+
+        try
+        {
+            var mode = MaintenanceDisplayModeComboBox.SelectedIndex == 1
+                ? DisplayModeConfig.Windowed
+                : DisplayModeConfig.Fullscreen;
+            var desktop = DesktopResolution;
+            var resolution = mode == DisplayModeConfig.Windowed ? (1280, 720) : desktop;
+            DisplayModeConfig.Write(InstallRoot, mode, resolution.Item1, resolution.Item2);
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync("Display mode update failed", ex.Message);
+            RefreshInstallUi();
+        }
+    }
+
     private async void OpenInstallFolderClicked(object? sender, RoutedEventArgs e) => await OpenFolderAsync(InstallRoot);
 
     private async void OpenLogsClicked(object? sender, RoutedEventArgs e) =>
@@ -642,6 +692,9 @@ public partial class MainWindow : Window
     {
         var selectedProton = (ProtonComboBox.SelectedItem as ProtonCandidate)?.Path;
         var selectedGraphicsBackend = SelectedGraphicsBackend;
+        var selectedDisplayMode = repairExisting
+            ? (MaintenanceDisplayModeComboBox.SelectedIndex == 1 ? DisplayModeConfig.Windowed : DisplayModeConfig.Fullscreen)
+            : SelectedDisplayMode;
         RefreshState();
         ReapplyWindowIcon();
         if (selectedProton is not null && _state.ProtonCandidates?.FirstOrDefault(candidate => candidate.Path == selectedProton && candidate.Compatible) is { } selected)
@@ -678,6 +731,9 @@ public partial class MainWindow : Window
             try
             {
                 GraphicsBackendConfig.Write(InstallRoot, selectedGraphicsBackend);
+                var desktop = DesktopResolution;
+                var resolution = selectedDisplayMode == DisplayModeConfig.Windowed ? (1280, 720) : desktop;
+                DisplayModeConfig.Write(InstallRoot, selectedDisplayMode, resolution.Item1, resolution.Item2);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
@@ -770,6 +826,7 @@ public partial class MainWindow : Window
         LaunchAfterInstallCheck.IsEnabled = !busy;
         CreateDesktopShortcutCheck.IsEnabled = !busy;
         MaintenanceDesktopShortcutCheck.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
+        MaintenanceDisplayModeComboBox.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         RemoveUserDataCheck.IsEnabled = !busy;
         LaunchInstalledButton.IsEnabled = !busy && _installationInfo.Condition == InstallationCondition.Installed;
         RepairButton.IsEnabled = !busy && _state.Ready;
@@ -777,6 +834,7 @@ public partial class MainWindow : Window
         SummaryAcceptCheck.IsEnabled = !busy;
         ProtonComboBox.IsEnabled = !busy && (_state.ProtonCandidates?.Any(candidate => candidate.Compatible) ?? false);
         GraphicsBackendComboBox.IsEnabled = !busy;
+        DisplayModeComboBox.IsEnabled = !busy;
         UpdateStepUi();
     }
 
