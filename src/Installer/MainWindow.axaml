@@ -89,6 +89,13 @@
                 <StackPanel><TextBlock Text="Installed version" Foreground="#777777" FontSize="11"/><TextBlock x:Name="InstalledVersionText" Foreground="#F0F0F0" FontSize="15"/></StackPanel>
                 <StackPanel><TextBlock Text="Installation location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="MaintenanceInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel>
                 <CheckBox x:Name="MaintenanceDesktopShortcutCheck" Content="Create a desktop shortcut" Click="MaintenanceShortcutChanged"/>
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Game display mode" Foreground="#777777" FontSize="11"/>
+                  <ComboBox x:Name="MaintenanceDisplayModeComboBox" SelectionChanged="MaintenanceDisplayModeChanged">
+                    <ComboBoxItem Content="Fullscreen (desktop resolution) — Recommended"/>
+                    <ComboBoxItem Content="Boxed window (1280 × 720)"/>
+                  </ComboBox>
+                </StackPanel>
               </StackPanel>
             </Border>
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
@@ -109,7 +116,8 @@
             <TextBlock Text="Select a dedicated empty folder or an existing Sanctuary installation. Unsafe locations and unrelated non-empty directories are rejected automatically." Foreground="#777777" FontSize="12" TextWrapping="Wrap"/>
           </StackPanel>
 
-          <StackPanel x:Name="ProtonPanel" IsVisible="False" Spacing="16">
+          <ScrollViewer x:Name="ProtonPanel" IsVisible="False" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="16" Margin="0,0,10,0">
             <StackPanel Spacing="6"><TextBlock Text="Choose Proton settings" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Choose a Proton version and graphics backend for Free Realms." Foreground="#B1B1B1" FontSize="13" TextWrapping="Wrap"/></StackPanel>
             <StackPanel Spacing="8"><TextBlock Text="Proton Version" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/><ComboBox x:Name="ProtonComboBox" SelectionChanged="ProtonSelectionChanged"><ComboBox.ItemTemplate><DataTemplate x:DataType="services:ProtonCandidate"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox></StackPanel>
             <StackPanel Spacing="8">
@@ -120,12 +128,21 @@
               </ComboBox>
               <TextBlock Text="DXVK uses Vulkan and is recommended for supported hardware. WineD3D stays inside Proton but translates Direct3D through OpenGL for systems with missing or unreliable Vulkan support." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
+            <StackPanel Spacing="8">
+              <TextBlock Text="Game Display Mode" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/>
+              <ComboBox x:Name="DisplayModeComboBox" SelectedIndex="0" SelectionChanged="DisplayModeSelectionChanged">
+                <ComboBoxItem Content="Fullscreen (desktop resolution) — Recommended"/>
+                <ComboBoxItem Content="Boxed window (1280 × 720)"/>
+              </ComboBox>
+              <TextBlock Text="Sanctuary applies this through Proton when Free Realms starts. Fullscreen follows your current primary display; boxed mode uses an isolated 1280 × 720 Proton desktop." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
             <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="16"><StackPanel Spacing="7"><TextBlock Text="Need another official Proton version?" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Search for Proton in your Steam Library and install the version you want. Restart Sanctuary Linux Installer afterward and the newly installed Proton version should appear here." Foreground="#999999" TextWrapping="Wrap" FontSize="12"/><TextBlock Text="Selecting a Proton version or graphics backend here does not modify the Proton installation itself." Foreground="#777777" TextWrapping="Wrap" FontSize="11"/></StackPanel></Border>
           </StackPanel>
+          </ScrollViewer>
 
           <StackPanel x:Name="SummaryPanel" IsVisible="False" Spacing="20">
             <StackPanel Spacing="6"><TextBlock Text="Review installation" FontSize="28" FontWeight="SemiBold" Foreground="#F4F4F4"/><TextBlock Text="Review the detected environment and selected options before installation begins." Foreground="#B1B1B1" FontSize="13"/></StackPanel>
-            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Graphics backend" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryGraphicsBackend" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
+            <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="20"><StackPanel Spacing="14"><StackPanel><TextBlock Text="Install location" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryInstallPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Steam" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummarySteamPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Proton" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryProtonPath" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Graphics backend" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryGraphicsBackend" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel><StackPanel><TextBlock Text="Game display mode" Foreground="#777777" FontSize="11"/><TextBlock x:Name="SummaryDisplayMode" Foreground="#F0F0F0" TextWrapping="Wrap"/></StackPanel></StackPanel></Border>
             <CheckBox x:Name="SummaryAcceptCheck" Content="I accept these installation settings and want to continue" IsChecked="False" Click="SummaryAcceptanceChanged"/>
             <CheckBox x:Name="CreateDesktopShortcutCheck" Content="Create a desktop shortcut" IsChecked="True"/>
           </StackPanel>
