@@ -1,9 +1,11 @@
-# Sanctuary Linux Installer 1.1.0-beta.3
+# Sanctuary Linux Installer 1.1.0-beta.4
 
-This beta adds selectable fullscreen and boxed-window game modes while retaining the complete maintenance experience and verified client-download protections from earlier betas.
+This hotfix beta corrects the installer startup crash in beta.3 while retaining its selectable fullscreen and boxed-window game modes.
 
 ## What changed
 
+- Fixes a startup `NullReferenceException` caused by the display-mode event firing before Avalonia finished constructing the installer window.
+- Defers display-mode event subscriptions until after `InitializeComponent()` completes.
 - Adds **Fullscreen (desktop resolution)** as the default for new installations.
 - Adds an isolated **Boxed window (1280 × 720)** option through Proton's virtual desktop.
 - Applies the saved display mode every time the launcher starts Free Realms without modifying `FreeRealms.exe`.
