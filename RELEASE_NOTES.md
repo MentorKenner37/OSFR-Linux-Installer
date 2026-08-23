@@ -1,9 +1,15 @@
-# Sanctuary Linux Installer 1.1.0-beta.2
+# Sanctuary Linux Installer 1.1.0-beta.3
 
-This beta adds a complete maintenance experience for existing Sanctuary installations while retaining the verified client-download recovery and security protections from beta.1.
+This beta adds selectable fullscreen and boxed-window game modes while retaining the complete maintenance experience and verified client-download protections from earlier betas.
 
 ## What changed
 
+- Adds **Fullscreen (desktop resolution)** as the default for new installations.
+- Adds an isolated **Boxed window (1280 × 720)** option through Proton's virtual desktop.
+- Applies the saved display mode every time the launcher starts Free Realms without modifying `FreeRealms.exe`.
+- Uses Gamescope for fullscreen when available and a desktop-sized Proton virtual desktop as the compatibility fallback.
+- Allows existing installations to change display mode immediately from the maintenance page without reinstalling.
+- Preserves the display-mode selection during repair and upgrade.
 - Detects an existing Sanctuary installation immediately and replaces the normal wizard with a locked maintenance page.
 - Adds **Launch Sanctuary**, **Repair / Upgrade**, **Uninstall**, **Open install folder**, **Open logs**, and **Export diagnostics** actions.
 - Displays the installed version and current desktop-shortcut state.
