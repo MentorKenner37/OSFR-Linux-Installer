@@ -1,4 +1,5 @@
 using Avalonia;
+using System.Diagnostics;
 using OSFR.Linux.Installer.Services;
 
 namespace OSFR.Linux.Installer;
