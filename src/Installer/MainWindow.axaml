@@ -91,7 +91,7 @@
                 <CheckBox x:Name="MaintenanceDesktopShortcutCheck" Content="Create a desktop shortcut" Click="MaintenanceShortcutChanged"/>
                 <StackPanel Spacing="6">
                   <TextBlock Text="Game display mode" Foreground="#777777" FontSize="11"/>
-                  <ComboBox x:Name="MaintenanceDisplayModeComboBox" SelectionChanged="MaintenanceDisplayModeChanged">
+                  <ComboBox x:Name="MaintenanceDisplayModeComboBox">
                     <ComboBoxItem Content="Fullscreen (desktop resolution) — Recommended"/>
                     <ComboBoxItem Content="Boxed window (1280 × 720)"/>
                   </ComboBox>
@@ -130,7 +130,7 @@
             </StackPanel>
             <StackPanel Spacing="8">
               <TextBlock Text="Game Display Mode" Foreground="#4CCF7A" FontWeight="SemiBold" FontSize="15"/>
-              <ComboBox x:Name="DisplayModeComboBox" SelectedIndex="0" SelectionChanged="DisplayModeSelectionChanged">
+              <ComboBox x:Name="DisplayModeComboBox" SelectedIndex="0">
                 <ComboBoxItem Content="Fullscreen (desktop resolution) — Recommended"/>
                 <ComboBoxItem Content="Boxed window (1280 × 720)"/>
               </ComboBox>
