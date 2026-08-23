@@ -1,30 +1,17 @@
-# Sanctuary Linux Installer 1.1.0-beta.5
+# Sanctuary Linux Installer 1.1.0-beta.6
 
-This hotfix beta replaces the incorrect blue Proton virtual-desktop fallback with real Gamescope fullscreen and a safe normal-window fallback.
+This beta makes Gamescope fullscreen setup available directly inside the installer.
 
 ## What changed
 
-- Removes Proton virtual-desktop launching from both display modes.
-- Uses Gamescope around Proton for real scaled fullscreen.
-- Launches Free Realms directly through Proton for normal windowed mode.
-- When Gamescope is missing, falls back to the normal game window and displays a clear launcher notification instead of opening a blue desktop.
-- Fixes a startup `NullReferenceException` caused by the display-mode event firing before Avalonia finished constructing the installer window.
-- Defers display-mode event subscriptions until after `InitializeComponent()` completes.
-- Adds **Fullscreen (desktop resolution)** as the default for new installations.
-- Adds a **Windowed (game default)** option that launches directly through Proton.
-- Applies the saved display mode every time the launcher starts Free Realms without modifying `FreeRealms.exe`.
-- Uses Gamescope for fullscreen and safely falls back to the normal game window when Gamescope is unavailable.
-- Allows existing installations to change display mode immediately from the maintenance page without reinstalling.
-- Preserves the display-mode selection during repair and upgrade.
-- Detects an existing Sanctuary installation immediately and replaces the normal wizard with a locked maintenance page.
-- Adds **Launch Sanctuary**, **Repair / Upgrade**, **Uninstall**, **Open install folder**, **Open logs**, and **Export diagnostics** actions.
-- Displays the installed version and current desktop-shortcut state.
-- Adds a **Create a desktop shortcut** choice while always preserving application-menu integration.
-- Adds a **Launch Sanctuary after installation** choice.
-- Preserves downloaded game files, launcher settings, logs, and user data during a normal uninstall.
-- Offers a separate explicit option to remove all Sanctuary user data.
-- Recognizes damaged installation metadata for repair, while keeping recursive uninstall disabled until ownership and the launcher hash verify again.
-- Exports a bounded diagnostic ZIP with credentials, authorization values, session IDs, cookies, passwords, and token query parameters redacted.
+- Detects Gamescope from PATH and the standard Linux binary locations `/usr/bin`, `/usr/games`, and `/usr/local/bin`.
+- When Gamescope is already installed, shows a checked, disabled **Gamescope — Already installed** option.
+- When Gamescope is missing, offers **Install Gamescope for real fullscreen**, enabled by default.
+- Supports administrator-approved installation of the official `gamescope` package through DNF/DNF5, APT, Pacman, or Zypper.
+- Uses fixed package-manager arguments, checks the package process exit code, and verifies the Gamescope executable after installation.
+- Exposes the same Gamescope option during both new installation and repair/upgrade.
+- Keeps normal windowed launching available and retains the safe fallback if Gamescope is unavailable.
+- Includes Gamescope detection details in the installer summary and exported diagnostics.
 
 ## Existing protections
 
