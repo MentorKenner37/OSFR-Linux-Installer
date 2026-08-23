@@ -9,7 +9,7 @@ internal static class DisplayModeConfig
     public const string FileName = "display-mode.txt";
 
     public static string DisplayName(string mode) => mode == Windowed
-        ? "Boxed window (1280 × 720)"
+        ? "Windowed (game default)"
         : "Fullscreen (desktop resolution)";
 
     public static DisplayModeSettings Read(string installRoot, int fallbackWidth = 1920, int fallbackHeight = 1080)
