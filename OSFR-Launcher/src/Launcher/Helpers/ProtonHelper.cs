@@ -81,13 +81,13 @@ public static class ProtonHelper
         }
 
         if (mode == "fullscreen")
-            Logger.Warn("Gamescope was not found; using a desktop-sized Proton virtual desktop for fullscreen mode.");
+            Logger.Warn("Gamescope was not found; safely falling back to Free Realms' normal windowed mode.");
         else
-            Logger.Info("Launching Free Realms in a boxed Proton virtual desktop at {width}x{height}.", width, height);
+            Logger.Info("Launching Free Realms in its normal windowed mode through Proton.");
 
         return new(
             protonPath,
-            $"run explorer /desktop=Sanctuary,{width}x{height} \"{executableName}\" {gameArguments}",
+            $"run \"{executableName}\" {gameArguments}",
             mode,
             width,
             height,

@@ -42,6 +42,7 @@ var protonConfig = Path.Combine(AppContext.BaseDirectory, "proton-path.txt");
 var displayConfig = Path.Combine(AppContext.BaseDirectory, "display-mode.txt");
 var graphicsConfig = Path.Combine(AppContext.BaseDirectory, "graphics-backend.txt");
 var fakeProton = Path.Combine(AppContext.BaseDirectory, "smoke-proton");
+var originalPath = Environment.GetEnvironmentVariable("PATH");
 try
 {
     File.WriteAllText(fakeProton, "stub");
@@ -61,8 +62,14 @@ try
     var boxedPlan = ProtonHelper.CreateGameLaunchPlan(fakeProton, "FreeRealms.exe", "Server=example");
     Assert(boxedPlan.Mode == "windowed" && boxedPlan.Width == 1280 && boxedPlan.Height == 720,
         "Boxed display mode must preserve its configured resolution.");
-    Assert(boxedPlan.FileName == fakeProton && boxedPlan.Arguments.Contains("explorer /desktop=Sanctuary,1280x720"),
-        "Boxed display mode must launch through a Proton virtual desktop.");
+    Assert(boxedPlan.FileName == fakeProton && boxedPlan.Arguments == "run \"FreeRealms.exe\" Server=example",
+        "Windowed display mode must launch directly through Proton without a virtual desktop.");
+
+    Environment.SetEnvironmentVariable("PATH", AppContext.BaseDirectory);
+    File.WriteAllText(displayConfig, "fullscreen:1920:1080\n");
+    var safeFallbackPlan = ProtonHelper.CreateGameLaunchPlan(fakeProton, "FreeRealms.exe", "Server=example");
+    Assert(!safeFallbackPlan.UsesGamescope && safeFallbackPlan.Arguments == "run \"FreeRealms.exe\" Server=example",
+        "Missing Gamescope must fall back to direct windowed Proton launch without a virtual desktop.");
 
     File.Delete(graphicsConfig);
     Environment.SetEnvironmentVariable("PROTON_USE_WINED3D", "1");
@@ -72,6 +79,7 @@ try
 }
 finally
 {
+    Environment.SetEnvironmentVariable("PATH", originalPath);
     File.Delete(graphicsConfig);
     File.Delete(protonConfig);
     File.Delete(displayConfig);

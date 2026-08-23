@@ -1,15 +1,19 @@
-# Sanctuary Linux Installer 1.1.0-beta.4
+# Sanctuary Linux Installer 1.1.0-beta.5
 
-This hotfix beta corrects the installer startup crash in beta.3 while retaining its selectable fullscreen and boxed-window game modes.
+This hotfix beta replaces the incorrect blue Proton virtual-desktop fallback with real Gamescope fullscreen and a safe normal-window fallback.
 
 ## What changed
 
+- Removes Proton virtual-desktop launching from both display modes.
+- Uses Gamescope around Proton for real scaled fullscreen.
+- Launches Free Realms directly through Proton for normal windowed mode.
+- When Gamescope is missing, falls back to the normal game window and displays a clear launcher notification instead of opening a blue desktop.
 - Fixes a startup `NullReferenceException` caused by the display-mode event firing before Avalonia finished constructing the installer window.
 - Defers display-mode event subscriptions until after `InitializeComponent()` completes.
 - Adds **Fullscreen (desktop resolution)** as the default for new installations.
-- Adds an isolated **Boxed window (1280 × 720)** option through Proton's virtual desktop.
+- Adds a **Windowed (game default)** option that launches directly through Proton.
 - Applies the saved display mode every time the launcher starts Free Realms without modifying `FreeRealms.exe`.
-- Uses Gamescope for fullscreen when available and a desktop-sized Proton virtual desktop as the compatibility fallback.
+- Uses Gamescope for fullscreen and safely falls back to the normal game window when Gamescope is unavailable.
 - Allows existing installations to change display mode immediately from the maintenance page without reinstalling.
 - Preserves the display-mode selection during repair and upgrade.
 - Detects an existing Sanctuary installation immediately and replaces the normal wizard with a locked maintenance page.

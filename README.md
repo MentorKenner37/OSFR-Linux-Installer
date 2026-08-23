@@ -4,7 +4,7 @@
 
 Sanctuary Linux Installer is a Linux-first installation and compatibility tool for **Sanctuary**, the Open Source Free Realms emulator. It finds Steam and Proton, prepares a dedicated Free Realms prefix, installs the patched OSFR launcher used to connect to Sanctuary, and handles the Linux-specific setup needed to get into the game.
 
-> **Version 1.1.0-beta.4** — Beta software tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
+> **Version 1.1.0-beta.5** — Beta software tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
 
 ## What the installer does
 
@@ -21,7 +21,7 @@ Sanctuary Linux Installer is a Linux-first installation and compatibility tool f
 - Detects Cinnamon + Wayland and emits a non-blocking warning for the currently known Shift/modifier input caveat
 - Surfaces runtime, graphics, Steam-type, hardware, OS, and compatibility details directly in the graphical installer
 - Installs the patched Open Source Free Realms launcher and isolates Free Realms in a dedicated Proton prefix
-- Offers desktop-resolution fullscreen or an isolated 1280 × 720 boxed Proton window, with fullscreen selected by default
+- Offers Gamescope-powered fullscreen or the game's normal windowed mode, with fullscreen selected by default and a safe windowed fallback when Gamescope is unavailable
 - Always creates application-menu integration and lets the user choose whether to create a desktop shortcut
 - Lets the user choose whether Sanctuary launches automatically when installation finishes
 - Detects existing installations and replaces the normal wizard with a locked maintenance page
