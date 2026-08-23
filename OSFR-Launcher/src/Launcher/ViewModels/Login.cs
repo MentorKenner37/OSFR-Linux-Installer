@@ -217,13 +217,15 @@ public partial class Login : Popup
 
         Directory.CreateDirectory(protonPrefix);
 
+        var launchPlan = ProtonHelper.CreateGameLaunchPlan(protonPath, Constants.ClientExecutableName, arguments);
+
         _server.Process = new Process
         {
             StartInfo =
             {
                 WorkingDirectory = workingDirectory,
-                FileName = protonPath,
-                Arguments = $"run \"{Constants.ClientExecutableName}\" {arguments}",
+                FileName = launchPlan.FileName,
+                Arguments = launchPlan.Arguments,
                 UseShellExecute = false
             },
             EnableRaisingEvents = true
@@ -236,7 +238,8 @@ public partial class Login : Popup
 
         try
         {
-            _logger.Info("Launching FreeRealms through Proton: {Proton} for server: {Name}.", protonPath, _server.Info.Name);
+            _logger.Info("Launching FreeRealms through Proton: {Proton} for server: {Name}; display={Mode}, resolution={Width}x{Height}, gamescope={Gamescope}.",
+                protonPath, _server.Info.Name, launchPlan.Mode, launchPlan.Width, launchPlan.Height, launchPlan.UsesGamescope);
             _server.Process.Start();
         }
         catch (Exception ex)

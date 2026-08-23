@@ -8,6 +8,9 @@ public static class ProtonHelper
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     private const string GraphicsBackendFileName = "graphics-backend.txt";
+    private const string DisplayModeFileName = "display-mode.txt";
+
+    public sealed record GameLaunchPlan(string FileName, string Arguments, string Mode, int Width, int Height, bool UsesGamescope);
 
     public static string GetConfiguredPath(string fileName)
     {
@@ -60,6 +63,62 @@ public static class ProtonHelper
             Logger.Error("Sanctuary was launched without a configured Proton path. Re-run Sanctuary Linux Installer to repair the installation.");
 
         return string.Empty;
+    }
+
+    public static GameLaunchPlan CreateGameLaunchPlan(string protonPath, string executableName, string gameArguments)
+    {
+        var (mode, width, height) = ReadDisplayMode();
+        if (mode == "fullscreen" && FindOnPath("gamescope") is { } gamescope)
+        {
+            Logger.Info("Launching Free Realms fullscreen through Gamescope and Proton at {width}x{height}.", width, height);
+            return new(
+                gamescope,
+                $"-f -W {width} -H {height} -- \"{protonPath}\" run \"{executableName}\" {gameArguments}",
+                mode,
+                width,
+                height,
+                true);
+        }
+
+        if (mode == "fullscreen")
+            Logger.Warn("Gamescope was not found; using a desktop-sized Proton virtual desktop for fullscreen mode.");
+        else
+            Logger.Info("Launching Free Realms in a boxed Proton virtual desktop at {width}x{height}.", width, height);
+
+        return new(
+            protonPath,
+            $"run explorer /desktop=Sanctuary,{width}x{height} \"{executableName}\" {gameArguments}",
+            mode,
+            width,
+            height,
+            false);
+    }
+
+    private static (string Mode, int Width, int Height) ReadDisplayMode()
+    {
+        var configured = GetConfiguredPath(DisplayModeFileName);
+        var parts = configured.Split(':');
+        if (parts.Length == 3 && parts[0] is "fullscreen" or "windowed" &&
+            int.TryParse(parts[1], out var width) && int.TryParse(parts[2], out var height) &&
+            width is >= 640 and <= 16384 && height is >= 480 and <= 16384)
+            return (parts[0], width, height);
+
+        if (!string.IsNullOrWhiteSpace(configured))
+            Logger.Warn("Invalid display mode configuration '{displayMode}'. Using fullscreen 1920x1080.", configured);
+        return ("fullscreen", 1920, 1080);
+    }
+
+    private static string? FindOnPath(string executable)
+    {
+        foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator))
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+                continue;
+            var candidate = Path.Combine(directory, executable);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+        return null;
     }
 
     private static void ApplyConfiguredGraphicsBackend()

@@ -39,6 +39,7 @@ Assert(!sanitized.Contains('/') && !sanitized.Contains('\\') && sanitized is not
     "Server names must be converted to safe single directory names.");
 
 var protonConfig = Path.Combine(AppContext.BaseDirectory, "proton-path.txt");
+var displayConfig = Path.Combine(AppContext.BaseDirectory, "display-mode.txt");
 var graphicsConfig = Path.Combine(AppContext.BaseDirectory, "graphics-backend.txt");
 var fakeProton = Path.Combine(AppContext.BaseDirectory, "smoke-proton");
 try
@@ -56,6 +57,13 @@ try
     Assert(Environment.GetEnvironmentVariable("PROTON_USE_WINED3D") == "0",
         "DXVK selection must explicitly disable PROTON_USE_WINED3D.");
 
+    File.WriteAllText(displayConfig, "windowed:1280:720\n");
+    var boxedPlan = ProtonHelper.CreateGameLaunchPlan(fakeProton, "FreeRealms.exe", "Server=example");
+    Assert(boxedPlan.Mode == "windowed" && boxedPlan.Width == 1280 && boxedPlan.Height == 720,
+        "Boxed display mode must preserve its configured resolution.");
+    Assert(boxedPlan.FileName == fakeProton && boxedPlan.Arguments.Contains("explorer /desktop=Sanctuary,1280x720"),
+        "Boxed display mode must launch through a Proton virtual desktop.");
+
     File.Delete(graphicsConfig);
     Environment.SetEnvironmentVariable("PROTON_USE_WINED3D", "1");
     _ = ProtonHelper.GetPath();
@@ -66,6 +74,7 @@ finally
 {
     File.Delete(graphicsConfig);
     File.Delete(protonConfig);
+    File.Delete(displayConfig);
     File.Delete(fakeProton);
 }
 
