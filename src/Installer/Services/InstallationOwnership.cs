@@ -105,6 +105,62 @@ public static class InstallationOwnership
         }
     }
 
+    public static string? GetInstalledVersion(string installRoot)
+    {
+        installRoot = InstallService.NormalizeInstallRoot(installRoot);
+        var marker = Path.Combine(installRoot, MarkerFileName);
+        if (!File.Exists(marker) || InstallService.IsSymbolicLink(marker))
+            return null;
+
+        try
+        {
+            var document = JsonSerializer.Deserialize<OwnershipDocument>(File.ReadAllText(marker));
+            return document?.Product == ProductId ? document.InstallerVersion : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            InstallerLog.Warn($"Could not read installed Sanctuary version: {ex.Message}");
+            return null;
+        }
+    }
+
+    public static bool HasRecognizableMetadata(string installRoot)
+    {
+        if (!Directory.Exists(installRoot) || InstallService.IsSymbolicLink(installRoot))
+            return false;
+
+        installRoot = InstallService.NormalizeInstallRoot(installRoot);
+        var marker = Path.Combine(installRoot, MarkerFileName);
+        var legacyInfo = Path.Combine(installRoot, LegacyInstallInfoFileName);
+        if (File.Exists(legacyInfo) && !InstallService.IsSymbolicLink(legacyInfo))
+        {
+            try
+            {
+                if (File.ReadAllText(legacyInfo).StartsWith("Sanctuary Linux Installation", StringComparison.Ordinal))
+                    return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                InstallerLog.Warn($"Could not inspect legacy installation metadata: {ex.Message}");
+            }
+        }
+
+        if (!File.Exists(marker) || InstallService.IsSymbolicLink(marker))
+            return false;
+        try
+        {
+            var document = JsonSerializer.Deserialize<OwnershipDocument>(File.ReadAllText(marker));
+            return document is not null &&
+                   document.Product == ProductId &&
+                   string.Equals(InstallService.NormalizeInstallRoot(document.InstallRoot), installRoot, StringComparison.Ordinal);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException)
+        {
+            InstallerLog.Warn($"Could not inspect installation metadata: {ex.Message}");
+            return false;
+        }
+    }
+
     private static bool IsValidDocument(OwnershipDocument document, string installRoot, string launcher)
     {
         if (!string.Equals(document.Product, ProductId, StringComparison.Ordinal) ||

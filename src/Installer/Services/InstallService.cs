@@ -6,6 +6,10 @@ using System.Reflection;
 namespace OSFR.Linux.Installer.Services;
 
 public sealed record InstallProgress(int Percent, string Message);
+public sealed record InstallOptions(bool CreateDesktopShortcut = true, bool RepairExisting = false);
+public sealed record UninstallOptions(bool RemoveUserData = false);
+public enum InstallationCondition { NotInstalled, Installed, NeedsRepair }
+public sealed record InstallationInfo(InstallationCondition Condition, string? Version, bool HasDesktopShortcut);
 
 public sealed class InstallService
 {
@@ -25,6 +29,9 @@ public sealed class InstallService
     public static string DesktopIconPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".local", "share", "icons", "hicolor", "256x256", "apps", $"{DesktopIconName}.png");
+
+    public static string DesktopShortcutPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop", DesktopFileName);
 
     public static string NormalizeInstallRoot(string path)
     {
@@ -102,19 +109,33 @@ public sealed class InstallService
         return owned;
     }
 
+    public InstallationInfo GetInstallationInfo(string installRoot)
+    {
+        installRoot = NormalizeInstallRoot(installRoot);
+        if (IsInstalled(installRoot))
+            return new(InstallationCondition.Installed, InstallationOwnership.GetInstalledVersion(installRoot), File.Exists(DesktopShortcutPath));
+
+        return InstallationOwnership.HasRecognizableMetadata(installRoot)
+            ? new(InstallationCondition.NeedsRepair, InstallationOwnership.GetInstalledVersion(installRoot), File.Exists(DesktopShortcutPath))
+            : new(InstallationCondition.NotInstalled, null, File.Exists(DesktopShortcutPath));
+    }
+
     public async Task InstallAsync(
         string installRoot,
         SystemState state,
         IProgress<InstallProgress> progress,
+        InstallOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        options ??= new InstallOptions();
         if (!state.Ready || state.SteamRoot is null || state.ProtonPath is null || !state.ProtonCompatible)
             throw new InvalidOperationException("Linux, x86_64, Steam and a compatible Proton runtime are required.");
 
         installRoot = NormalizeInstallRoot(installRoot);
         SafeFileSystem.RefuseSymbolicLinkAncestors(installRoot, "installation root");
         InstallationTransaction.RecoverIfNeeded(installRoot);
-        ValidateInstallDestination(installRoot);
+        if (!(options.RepairExisting && InstallationOwnership.HasRecognizableMetadata(installRoot)))
+            ValidateInstallDestination(installRoot);
 
         var hadExistingInstall = IsOwnedInstallRoot(installRoot);
         var launcherDir = Path.Combine(installRoot, "Launcher");
@@ -170,7 +191,7 @@ public sealed class InstallService
 
             progress.Report(new(70, "Creating desktop integration..."));
             await InstallDesktopIconAsync(cancellationToken);
-            CreateDesktopEntries(launcher);
+            CreateDesktopEntries(launcher, options.CreateDesktopShortcut);
             desktopTouched = true;
             RefreshDesktopIntegration();
 
@@ -247,8 +268,10 @@ public sealed class InstallService
     public Task UninstallAsync(
         string installRoot,
         IProgress<InstallProgress> progress,
+        UninstallOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        options ??= new UninstallOptions();
         installRoot = NormalizeInstallRoot(installRoot);
         SafeFileSystem.RefuseSymbolicLinkAncestors(installRoot, "installation root");
         InstallationTransaction.RecoverIfNeeded(installRoot);
@@ -264,19 +287,25 @@ public sealed class InstallService
             progress.Report(new(10, "Preparing Sanctuary removal..."));
 
             var home = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-            var targets = new[]
+            var targets = new List<(string Path, bool RequireHome)>
             {
                 (Path: installRoot, RequireHome: false),
                 (Path: Path.Combine(home, ".local", "share", "applications", DesktopFileName), RequireHome: true),
-                (Path: Path.Combine(home, "Desktop", DesktopFileName), RequireHome: true),
+                (Path: DesktopShortcutPath, RequireHome: true),
                 (Path: DesktopIconPath, RequireHome: true)
             };
 
-            for (var i = 0; i < targets.Length; i++)
+            if (options.RemoveUserData)
+            {
+                targets.Add((LauncherDataRoot, true));
+                targets.Add((InstallerState.StateDirectory, true));
+            }
+
+            for (var i = 0; i < targets.Count; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var target = targets[i];
-                var percent = 20 + (int)(70.0 * (i + 1) / targets.Length);
+                var percent = 20 + (int)(70.0 * (i + 1) / targets.Count);
                 progress.Report(new(percent, $"Removing {Path.GetFileName(target.Path)}..."));
 
                 if (target.RequireHome && !IsPathInside(target.Path, home))
@@ -315,6 +344,16 @@ public sealed class InstallService
             WorkingDirectory = Path.GetDirectoryName(launcher)!,
             UseShellExecute = false
         });
+    }
+
+    public void SetDesktopShortcut(string installRoot, bool enabled)
+    {
+        installRoot = NormalizeInstallRoot(installRoot);
+        if (!IsInstalled(installRoot))
+            throw new InvalidOperationException("A verified Sanctuary installation is required before changing its shortcut.");
+        var launcher = Path.Combine(installRoot, "Launcher", "OSFRLauncher");
+        CreateDesktopEntries(launcher, enabled);
+        RefreshDesktopIntegration();
     }
 
     public static bool IsPathInside(string path, string parent) => SafeFileSystem.IsPathInside(path, parent);
@@ -385,7 +424,7 @@ public sealed class InstallService
         await stream.CopyToAsync(output, cancellationToken);
     }
 
-    private static void CreateDesktopEntries(string launcher)
+    private static void CreateDesktopEntries(string launcher, bool createDesktopShortcut)
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var applications = Path.Combine(home, ".local", "share", "applications");
@@ -411,12 +450,13 @@ public sealed class InstallService
         SafeFileSystem.EnsureExecutable(applicationFile, "application-menu shortcut");
 
         var desktop = Path.Combine(home, "Desktop");
-        if (Directory.Exists(desktop) && !IsSymbolicLink(desktop))
+        if (createDesktopShortcut && Directory.Exists(desktop) && !IsSymbolicLink(desktop))
         {
-            var desktopFile = Path.Combine(desktop, DesktopFileName);
-            File.WriteAllText(desktopFile, desktopEntry);
-            SafeFileSystem.EnsureExecutable(desktopFile, "desktop shortcut");
+            File.WriteAllText(DesktopShortcutPath, desktopEntry);
+            SafeFileSystem.EnsureExecutable(DesktopShortcutPath, "desktop shortcut");
         }
+        else if (!createDesktopShortcut)
+            TryDeleteFile(DesktopShortcutPath);
     }
 
     private static void RemoveDesktopIntegration()
