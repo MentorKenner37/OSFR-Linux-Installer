@@ -81,6 +81,7 @@ public partial class Main : ObservableObject
         }
 
         UpdateDiscordActivity();
+        _ = UpdateService.CheckAsync(false);
     }
 
     public void UpdateDiscordActivity()
