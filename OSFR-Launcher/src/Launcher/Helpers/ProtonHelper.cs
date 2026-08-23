@@ -73,9 +73,16 @@ public static class ProtonHelper
         else
             Logger.Info("Launching Free Realms directly through Proton and preserving its native window controls.");
 
+        // Free Realms uses two command-line parsers: GNU-style switches followed by
+        // legacy key=value launch tokens. Keep --fullscreen before the first legacy
+        // token; the 2014 client may stop looking for switches after those tokens.
+        var clientArguments = mode == "fullscreen"
+            ? $"--fullscreen {gameArguments}"
+            : gameArguments;
+
         return new(
             protonPath,
-            $"run \"{executableName}\" {gameArguments}{(mode == "fullscreen" ? " --fullscreen" : string.Empty)}",
+            $"run \"{executableName}\" {clientArguments}",
             mode,
             width,
             height);
