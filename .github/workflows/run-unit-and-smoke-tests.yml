@@ -35,6 +35,9 @@ jobs:
       - name: Run xUnit suite
         run: dotnet test tests/Installer.UnitTests/Installer.UnitTests.csproj -c Release --no-restore --verbosity normal
 
+      - name: Build launcher demo
+        run: dotnet build src/LauncherDemo/LauncherDemo.csproj -c Release --verbosity normal
+
       - name: Run installer safety smoke tests
         run: dotnet run --project src/Installer.SmokeTests/Installer.SmokeTests.csproj -c Release
 
