@@ -23,6 +23,7 @@ public sealed record CompatibilitySnapshot(
     string? PackageGuidance)
 {
     public bool HasKnownRuntimeProblem => FreeType32 == ProbeState.Missing || OpenGl32 == ProbeState.Missing;
+    public bool RequiredRuntimeReady => FreeType32 != ProbeState.Missing && OpenGl32 != ProbeState.Missing;
 }
 
 public static class CompatibilityAdvisor
@@ -42,9 +43,11 @@ public static class CompatibilityAdvisor
         }
 
         if (freeType32 == ProbeState.Missing)
-            warnings.Add("32-bit FreeType was not detected. The 32-bit Free Realms client may fail to start.");
+            warnings.Add("REQUIRED: 32-bit FreeType was not detected. The 32-bit Free Realms client may fail to start.");
         if (openGl32 == ProbeState.Missing)
-            warnings.Add("32-bit OpenGL userspace was not detected. Proton/WineD3D and parts of the 32-bit graphics stack may fail to start.");
+            warnings.Add("REQUIRED: 32-bit OpenGL userspace was not detected. Proton/WineD3D and parts of the 32-bit graphics stack may fail to start.");
+        if (vulkan32 == ProbeState.Missing)
+            warnings.Add("OPTIONAL: 32-bit Vulkan was not detected. DXVK is unavailable, but WineD3D/OpenGL can still be used.");
 
         var (recommendedBackend, reason) = RecommendGraphicsBackend(vulkan32);
 
@@ -57,7 +60,7 @@ public static class CompatibilityAdvisor
             recommendedBackend,
             reason,
             warnings,
-            BuildPackageGuidance(state.OsName, freeType32, openGl32, vulkan32));
+            BuildPackageGuidance(state.OsName, state.Gpu, freeType32, openGl32, vulkan32));
     }
 
     public static ProtonCandidate? SelectPreferredProton(IEnumerable<ProtonCandidate> candidates)
@@ -101,6 +104,13 @@ public static class CompatibilityAdvisor
     public static bool NeedsCinnamonWaylandWarning(string desktop, string sessionType) =>
         desktop.Contains("cinnamon", StringComparison.OrdinalIgnoreCase) &&
         sessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsArchFamily(string osName) =>
+        osName.Contains("Arch", StringComparison.OrdinalIgnoreCase) ||
+        osName.Contains("CachyOS", StringComparison.OrdinalIgnoreCase) ||
+        osName.Contains("EndeavourOS", StringComparison.OrdinalIgnoreCase) ||
+        osName.Contains("Manjaro", StringComparison.OrdinalIgnoreCase) ||
+        osName.Contains("Garuda", StringComparison.OrdinalIgnoreCase);
 
     public static (string Backend, string Reason) RecommendGraphicsBackend(ProbeState vulkan32) => vulkan32 switch
     {
@@ -161,7 +171,7 @@ public static class CompatibilityAdvisor
         return any ? ProbeState.Missing : ProbeState.Missing;
     }
 
-    private static string? BuildPackageGuidance(string osName, ProbeState freeType32, ProbeState openGl32, ProbeState vulkan32)
+    private static string? BuildPackageGuidance(string osName, string gpu, ProbeState freeType32, ProbeState openGl32, ProbeState vulkan32)
     {
         if (freeType32 != ProbeState.Missing && openGl32 != ProbeState.Missing && vulkan32 != ProbeState.Missing)
             return null;
@@ -176,13 +186,22 @@ public static class CompatibilityAdvisor
         if (osName.Contains("Fedora", StringComparison.OrdinalIgnoreCase))
             return "Fedora: install the matching i686 FreeType/Mesa/Vulkan userspace packages for your GPU (for example freetype.i686 and vulkan-loader.i686).";
 
-        if (osName.Contains("Arch", StringComparison.OrdinalIgnoreCase))
-            return "Arch: enable multilib and install lib32-freetype2, lib32-mesa, lib32-vulkan-icd-loader, plus the matching 32-bit Vulkan driver for your GPU.";
+        if (IsArchFamily(osName))
+        {
+            var driver = gpu.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase)
+                ? "lib32-nvidia-utils"
+                : gpu.Contains("AMD", StringComparison.OrdinalIgnoreCase) || gpu.Contains("Radeon", StringComparison.OrdinalIgnoreCase)
+                    ? "lib32-vulkan-radeon"
+                    : gpu.Contains("Intel", StringComparison.OrdinalIgnoreCase)
+                        ? "lib32-vulkan-intel"
+                        : "the matching 32-bit Vulkan driver for your GPU (lib32-nvidia-utils, lib32-vulkan-radeon, or lib32-vulkan-intel)";
+            return $"Arch/CachyOS family: enable multilib and install lib32-freetype2 lib32-mesa lib32-vulkan-icd-loader plus {driver}. 32-bit FreeType/OpenGL are required; 32-bit Vulkan is preferred for DXVK but WineD3D/OpenGL remains available without it.";
+        }
 
         if (osName.Contains("openSUSE", StringComparison.OrdinalIgnoreCase) || osName.Contains("SUSE", StringComparison.OrdinalIgnoreCase))
             return "openSUSE: install the matching 32-bit FreeType, Mesa/OpenGL and Vulkan loader/driver packages for your GPU.";
 
-        return "Install the distribution's 32-bit FreeType, OpenGL/Mesa and Vulkan loader/driver packages required by 32-bit Proton applications.";
+        return "Install the distribution's required 32-bit FreeType and OpenGL/Mesa packages. Install the matching 32-bit Vulkan loader/driver for DXVK; Vulkan is preferred but not mandatory because WineD3D/OpenGL is available as a fallback.";
     }
 
     private static Dictionary<string, List<string>>? ReadLdConfig()
