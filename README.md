@@ -4,7 +4,7 @@
 
 Sanctuary Linux Installer is a Linux-first installation and compatibility tool for **Sanctuary**, the Open Source Free Realms emulator. It finds Steam and Proton, prepares a dedicated Free Realms prefix, installs the patched OSFR launcher used to connect to Sanctuary, and handles the Linux-specific setup needed to get into the game.
 
-> **Version 1.1.0-beta.9** — Beta software tested and playing on **Linux Mint**, **Debian 13**, and **Fedora Workstation** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
+> **Version 1.1.0-beta.9** — Beta software tested and playing on **Linux Mint**, **Debian 13**, **Fedora Workstation**, and **CachyOS** x86_64. Desktop/session details matter, so confirmed environments and caveats are documented below.
 
 ## What the installer does
 
@@ -116,6 +116,7 @@ These are operating-system dependencies and are not silently installed by Sanctu
 
 - Fedora Cinnamon on Wayland can lose Shift+movement walking behavior; Fedora GNOME Classic on Wayland is confirmed working.
 - One Debian tester experienced machine-specific extreme camera/relative-mouse behavior that was not reproduced on a second Debian 13 system.
+- CachyOS requires the normal Arch-family 32-bit runtime support for the 32-bit Free Realms client; a tester saw an immediate game exit before installing the required 32-bit libraries, then confirmed normal gameplay afterward.
 - `curl` is an optional verified fallback for servers that return a different body to the .NET HTTP client; ordinary downloads do not require it.
 
 | Distribution / environment | Result | Tested path |
@@ -124,12 +125,18 @@ These are operating-system dependencies and are not silently installed by Sanctu
 | **Debian 13 x86_64** | ✅ Confirmed working | Steam + Proton; launches and Shift-walk works with required 32-bit runtime libraries |
 | **Fedora Workstation x86_64 — GNOME Classic / Wayland** | ✅ Confirmed working | Proton 11 + DXVK/Vulkan; installer, launcher, gameplay, and Shift-walk confirmed |
 | **Fedora Workstation x86_64 — Cinnamon / Wayland** | ⚠️ Playable with input caveat | Proton 11 + DXVK/Vulkan launches and plays, but Shift + movement does not trigger walking |
+| **CachyOS x86_64 — KDE Plasma** | ✅ Confirmed working | Installer and game confirmed working after required Arch-family 32-bit runtime libraries were installed |
+| **CachyOS x86_64 — Hyprland / Wayland** | ✅ Confirmed working | Installer and game confirmed working after required Arch-family 32-bit runtime libraries were installed |
+
+> **Arch-family scope:** these CachyOS results confirm CachyOS only. Vanilla Arch Linux, EndeavourOS, Manjaro, Garuda, and other Arch-derived distributions remain separately untested until each has a real-machine validation result.
 
 ### Desktop/session compatibility
 
 Desktop environment and display session can matter independently of distribution. Fedora testing is particularly useful: **GNOME Classic on Wayland works correctly with Proton 11**, including Shift-walk, while **Cinnamon on Wayland on the same Fedora installation launches and plays but does not recognize Shift-walk correctly**. Therefore neither Wayland nor Proton 11 should be considered globally incompatible.
 
 Linux Mint has been confirmed working with **Cinnamon / X11**, so Cinnamon itself is not known to be generally incompatible. Fedora Cinnamon/X11 remains untested.
+
+CachyOS has now been confirmed working in both **KDE Plasma** and **Hyprland**. Hyprland is a Wayland compositor, which adds another successful Wayland data point, but it does not imply that every Wayland desktop/compositor or every Arch-derived distribution is automatically supported.
 
 The installer and diagnostics emit a **non-blocking Cinnamon + Wayland warning** when that specific combination is detected. It does not block installation and does not label Wayland globally incompatible.
 
@@ -165,6 +172,9 @@ Useful findings from real-machine testing:
 - Fedora GNOME Classic / Wayland + Proton 11 is confirmed working, including Shift-walk.
 - Fedora Cinnamon / Wayland + Proton 11 currently has a Shift-walk issue.
 - Linux Mint Cinnamon / X11 is confirmed working with normal controls.
+- CachyOS KDE Plasma is confirmed working after required 32-bit runtime support is present.
+- CachyOS Hyprland / Wayland is confirmed working after required 32-bit runtime support is present.
+- CachyOS validation does not yet count as validation of vanilla Arch Linux or other Arch derivatives.
 
 ## Testing and release safety
 
@@ -182,7 +192,7 @@ Release cleanup is handled by a dedicated prerelease cleanup workflow. Stable re
 
 The active work list is tracked in `TODO.md`. The code-side compatibility and diagnostics pass is now largely complete. The remaining work is primarily **real-machine validation**.
 
-That includes Arch, Ubuntu, openSUSE, SteamOS/Steam Deck, Fedora Cinnamon/X11, integrated graphics, more AMD/Intel/NVIDIA hardware, clean WineD3D/OpenGL validation, more desktop/session combinations, and broader outside-user testing.
+CachyOS now has confirmed KDE Plasma and Hyprland results. Remaining validation includes vanilla Arch Linux and other Arch-derived distributions, Ubuntu, openSUSE, SteamOS/Steam Deck, Fedora Cinnamon/X11, integrated graphics, more AMD/Intel/NVIDIA hardware, clean WineD3D/OpenGL validation, more desktop/session combinations, and broader outside-user testing.
 
 ## Building from source
 
