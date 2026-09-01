@@ -22,10 +22,19 @@
 - [x] Document installer licensing and bundled native-component provenance.
 - [x] Separate ordinary CI from tag-only release publishing.
 - [x] Detect curl through PATH and add regression coverage for the verified fallback.
+- [x] Recognize CachyOS, EndeavourOS, Manjaro, and Garuda as Arch-family systems for 32-bit package guidance.
+- [x] Mark 32-bit FreeType and OpenGL as required runtime components in compatibility diagnostics; keep 32-bit Vulkan optional with WineD3D/OpenGL fallback.
+- [x] Provide GPU-aware Arch-family Vulkan package guidance for NVIDIA, AMD/Radeon, and Intel graphics.
+- [ ] Block fresh installation/repair when 32-bit FreeType or 32-bit OpenGL is definitely missing; do not block when the probe is unknown, and do not require Vulkan.
 
 ## Real-machine validation
 
-- [ ] Arch-based distributions
+- [x] CachyOS — KDE Plasma (outside tester; installer and game confirmed working after required 32-bit runtime libraries were installed)
+- [x] CachyOS — Hyprland (outside tester; installer and game confirmed working after required 32-bit runtime libraries were installed)
+- [ ] Vanilla Arch Linux
+- [ ] EndeavourOS
+- [ ] Manjaro
+- [ ] Other Arch-based distributions
 - [ ] Ubuntu
 - [ ] openSUSE
 - [ ] SteamOS / Steam Deck
@@ -36,3 +45,10 @@
 - [ ] More desktop environments and Wayland/X11 combinations
 - [ ] More native/Flatpak/custom-library Steam layouts
 - [ ] Broader outside-user Beta testing
+
+## Compatibility notes from outside testing
+
+- CachyOS is confirmed working under both KDE Plasma and Hyprland.
+- The initial CachyOS game launch failed until the tester installed the required 32-bit runtime libraries; after that, gameplay was reported as working flawlessly.
+- This validates CachyOS only. It does **not** mark vanilla Arch Linux, EndeavourOS, Manjaro, or other Arch derivatives as tested.
+- The tester had to create a new character; because the client then ran normally, this is currently treated as a likely server/account/character-state issue rather than a CachyOS or desktop-environment compatibility failure.
