@@ -1,0 +1,108 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="OSFR.Linux.LauncherDemo.MainWindow"
+        Width="1040" Height="680"
+        MinWidth="900" MinHeight="620"
+        Title="Sanctuary Linux Launcher Demo">
+  <Grid ColumnDefinitions="250,*">
+    <Border Grid.Column="0" Background="#131313" BorderBrush="#292929" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="22">
+        <StackPanel Spacing="5">
+          <Image Source="avares://LauncherDemo/Assets/osfr-icon.png" Width="54" Height="54" HorizontalAlignment="Left" />
+          <TextBlock Text="SANCTUARY" FontSize="18" FontWeight="Bold" Foreground="#F4F4F4" />
+          <TextBlock Text="LINUX LAUNCHER" FontSize="12" FontWeight="SemiBold" Foreground="#55D27E" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,34,0,0" Spacing="8">
+          <Border Background="#1B241E" BorderBrush="#31533C" BorderThickness="1" CornerRadius="7" Padding="12,10">
+            <TextBlock Text="HOME" Foreground="#55D27E" FontWeight="SemiBold" />
+          </Border>
+          <Border Padding="12,10"><TextBlock Text="SERVERS" Foreground="#DADADA" /></Border>
+          <Border Padding="12,10"><TextBlock Text="SETTINGS" Foreground="#DADADA" /></Border>
+          <Border Padding="12,10"><TextBlock Text="ABOUT" Foreground="#DADADA" /></Border>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Spacing="10">
+          <Button Content="OPEN INSTALLER" HorizontalAlignment="Stretch" />
+          <Border BorderBrush="#2B2B2B" BorderThickness="0,1,0,0" Padding="0,12,0,0">
+            <StackPanel Spacing="3">
+              <TextBlock Text="NORTHFORGE" Foreground="#55D27E" FontWeight="Bold" />
+              <TextBlock Text="Launcher connectivity demo" FontSize="11" Foreground="#858585" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Column="1">
+      <StackPanel Margin="34,30" Spacing="22">
+        <StackPanel Spacing="4">
+          <TextBlock Text="SANCTUARY LAUNCHER DEMO" FontSize="25" FontWeight="Bold" Foreground="#F5F5F5" />
+          <TextBlock Text="Connect to a real Sanctuary server and read its existing v2 manifest." Foreground="#9E9E9E" />
+        </StackPanel>
+
+        <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="20">
+          <StackPanel Spacing="12">
+            <TextBlock Text="SERVER ADDRESS" FontSize="12" FontWeight="Bold" Foreground="#55D27E" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <TextBox x:Name="ServerUrlBox" Text="https://opensourcefreerealms.com" Watermark="https://server.example" />
+              <Button Grid.Column="1" x:Name="ConnectButton" Classes="primary" Content="CONNECT" Click="ConnectClicked" />
+            </Grid>
+            <TextBlock x:Name="ConnectionStatusText" Text="Ready to connect." Foreground="#A0A0A0" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="22">
+          <Grid ColumnDefinitions="100,*" ColumnSpacing="20">
+            <Border Width="92" Height="92" CornerRadius="12" Background="#202020" BorderBrush="#343434" BorderThickness="1">
+              <Grid>
+                <Image x:Name="ServerLogoImage" Stretch="UniformToFill" IsVisible="False" />
+                <TextBlock x:Name="ServerLogoFallback" Text="S" FontSize="38" FontWeight="Bold" Foreground="#55D27E" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="1" Spacing="7">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock x:Name="ServerNameText" Text="No server connected" FontSize="20" FontWeight="Bold" Foreground="#F4F4F4" />
+                <Border Grid.Column="1" Background="#17251B" BorderBrush="#31533C" BorderThickness="1" CornerRadius="12" Padding="10,4">
+                  <TextBlock x:Name="OnlineText" Text="OFFLINE" Foreground="#8D8D8D" FontSize="11" FontWeight="Bold" />
+                </Border>
+              </Grid>
+              <TextBlock x:Name="ServerDescriptionText" Text="Connect to a server to load its metadata." Foreground="#A6A6A6" TextWrapping="Wrap" />
+              <TextBlock x:Name="ManifestVersionText" Text="Manifest: —" Foreground="#55D27E" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+          <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="18">
+            <StackPanel Spacing="8">
+              <TextBlock Text="WEB API" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
+              <TextBlock x:Name="WebApiText" Text="—" Foreground="#E8E8E8" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="1" Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="18">
+            <StackPanel Spacing="8">
+              <TextBlock Text="LOGIN SERVER" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
+              <TextBlock x:Name="LoginServerText" Text="—" Foreground="#E8E8E8" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Border Background="#111B14" BorderBrush="#31533C" BorderThickness="1" CornerRadius="10" Padding="18">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+            <StackPanel Spacing="4">
+              <TextBlock Text="CLIENT STATUS" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
+              <TextBlock x:Name="ClientStatusText" Text="Demo mode — manifest connectivity only." Foreground="#DADADA" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="VERIFY FILES" IsEnabled="False" />
+          </Grid>
+        </Border>
+
+        <Button x:Name="LaunchButton" Classes="primary" Content="LAUNCH SANCTUARY" HorizontalAlignment="Stretch" Height="54" IsEnabled="False" />
+
+        <TextBlock Text="Demo intentionally does not modify the existing server manifest. Standard v2 servers work unchanged; optional servericon.png / LogoUrl support is launcher-side only." FontSize="11" Foreground="#717171" TextWrapping="Wrap" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Window>
