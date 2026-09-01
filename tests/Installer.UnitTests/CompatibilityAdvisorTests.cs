@@ -31,6 +31,19 @@ public sealed class CompatibilityAdvisorTests
         Assert.Equal(expected, CompatibilityAdvisor.NeedsCinnamonWaylandWarning(desktop, session));
     }
 
+    [Theory]
+    [InlineData("Arch Linux", true)]
+    [InlineData("CachyOS", true)]
+    [InlineData("EndeavourOS", true)]
+    [InlineData("Manjaro Linux", true)]
+    [InlineData("Garuda Linux", true)]
+    [InlineData("Debian GNU/Linux 13", false)]
+    [InlineData("Fedora Linux 44", false)]
+    public void ArchFamilyDetection_RecognizesDerivatives(string osName, bool expected)
+    {
+        Assert.Equal(expected, CompatibilityAdvisor.IsArchFamily(osName));
+    }
+
     [Fact]
     public void Missing32BitVulkan_RecommendsWineD3D()
     {
@@ -51,6 +64,26 @@ public sealed class CompatibilityAdvisorTests
         var recommendation = CompatibilityAdvisor.RecommendGraphicsBackend(ProbeState.Unknown);
         Assert.Equal(GraphicsBackendConfig.Dxvk, recommendation.Backend);
         Assert.True(recommendation.Reason.Contains("could not be verified", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void RequiredRuntimeReady_IsFalseWhenFreeTypeOrOpenGlIsMissing()
+    {
+        var missingFreeType = Snapshot(ProbeState.Missing, ProbeState.Available, ProbeState.Available);
+        var missingOpenGl = Snapshot(ProbeState.Available, ProbeState.Missing, ProbeState.Available);
+
+        Assert.False(missingFreeType.RequiredRuntimeReady);
+        Assert.False(missingOpenGl.RequiredRuntimeReady);
+        Assert.True(missingFreeType.HasKnownRuntimeProblem);
+        Assert.True(missingOpenGl.HasKnownRuntimeProblem);
+    }
+
+    [Fact]
+    public void RequiredRuntimeReady_DoesNotRequireVulkan()
+    {
+        var snapshot = Snapshot(ProbeState.Available, ProbeState.Available, ProbeState.Missing);
+        Assert.True(snapshot.RequiredRuntimeReady);
+        Assert.False(snapshot.HasKnownRuntimeProblem);
     }
 
     [Fact]
@@ -139,6 +172,9 @@ public sealed class CompatibilityAdvisorTests
             Directory.Delete(root, true);
         }
     }
+
+    private static CompatibilitySnapshot Snapshot(ProbeState freeType, ProbeState openGl, ProbeState vulkan32) =>
+        new("Native Steam", freeType, openGl, ProbeState.Available, vulkan32, GraphicsBackendConfig.Dxvk, "test", [], null);
 
     private static byte[] ElfHeader(byte elfClass) =>
     [
