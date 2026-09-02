@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 
 namespace OSFR.Linux.LauncherDemo;
 
@@ -16,7 +17,7 @@ public partial class MainWindow
 
     private string PreferencesPath => Path.Combine(_launcherStateDirectory, "preferences.json");
 
-    private void WindowOpened(object? sender, EventArgs e)
+    private async void WindowOpened(object? sender, EventArgs e)
     {
         Directory.CreateDirectory(_launcherStateDirectory);
         LoadPreferences();
@@ -27,7 +28,7 @@ public partial class MainWindow
             SavePreferences();
         }
 
-        RefreshServerList();
+        await RefreshServerListAsync();
         RefreshSettingsPage();
         LoadRememberedForCurrentServer();
         ShowPage(HomePage);
@@ -35,10 +36,10 @@ public partial class MainWindow
 
     private void HomeClicked(object? sender, RoutedEventArgs e) => ShowPage(HomePage);
 
-    private void ServersClicked(object? sender, RoutedEventArgs e)
+    private async void ServersClicked(object? sender, RoutedEventArgs e)
     {
-        RefreshServerList();
         ShowPage(ServersPage);
+        await RefreshServerListAsync();
     }
 
     private void SettingsClicked(object? sender, RoutedEventArgs e)
@@ -69,11 +70,22 @@ public partial class MainWindow
         LaunchClicked(sender, e);
     }
 
-    private void AddServerClicked(object? sender, RoutedEventArgs e)
+    private async void AddServerClicked(object? sender, RoutedEventArgs e)
     {
         if (!TryNormalizeServerUrl(NewServerUrlBox.Text, out var uri, out var error))
         {
             ServersStatusText.Text = error;
+            ServersStatusText.Foreground = Bad;
+            return;
+        }
+
+        ServersStatusText.Text = "Checking server…";
+        ServersStatusText.Foreground = Muted;
+
+        var probe = await ProbeSavedServerAsync(uri.AbsoluteUri);
+        if (!probe.Online)
+        {
+            ServersStatusText.Text = $"Server was not added. It must be online, HTTPS, and provide a valid Sanctuary manifest. {probe.Error}".Trim();
             ServersStatusText.Foreground = Bad;
             return;
         }
@@ -84,45 +96,104 @@ public partial class MainWindow
             _preferences.Servers.Add(normalized);
             _preferences.Servers.Sort(StringComparer.OrdinalIgnoreCase);
             SavePreferences();
+            ServersStatusText.Text = $"Added {probe.DisplayName}.";
+        }
+        else
+        {
+            ServersStatusText.Text = $"{probe.DisplayName} is already saved.";
         }
 
-        NewServerUrlBox.Text = string.Empty;
-        RefreshServerList();
-        ServersStatusText.Text = "Server saved.";
         ServersStatusText.Foreground = Good;
+        NewServerUrlBox.Text = string.Empty;
+        await RefreshServerListAsync();
     }
 
-    private void UseServerClicked(object? sender, RoutedEventArgs e)
+    private async void UseServerClicked(object? sender, RoutedEventArgs e)
     {
-        if (SavedServersList.SelectedItem is not string selected)
+        if (SavedServersList.SelectedItem is not SavedServerListItem selected)
         {
             ServersStatusText.Text = "Select a server first.";
             ServersStatusText.Foreground = Bad;
             return;
         }
 
-        ServerUrlBox.Text = selected;
+        if (!selected.Online)
+        {
+            ServersStatusText.Text = "That server is currently offline. Refresh the list and try again when it is online.";
+            ServersStatusText.Foreground = Bad;
+            return;
+        }
+
+        ServerUrlBox.Text = selected.Url;
         LoadRememberedForCurrentServer();
         ShowPage(HomePage);
-        ConnectClicked(sender, e);
+        await JoinCurrentServerAsync();
     }
 
-    private void RemoveServerClicked(object? sender, RoutedEventArgs e)
+    private async void RemoveServerClicked(object? sender, RoutedEventArgs e)
     {
-        if (SavedServersList.SelectedItem is not string selected)
+        if (SavedServersList.SelectedItem is not SavedServerListItem selected)
         {
             ServersStatusText.Text = "Select a server first.";
             ServersStatusText.Foreground = Bad;
             return;
         }
 
-        _preferences.Servers.RemoveAll(x => string.Equals(x, selected, StringComparison.OrdinalIgnoreCase));
-        _preferences.Profiles.Remove(ProfileKey(selected));
-        TryClearSecret(selected);
+        _preferences.Servers.RemoveAll(x => string.Equals(x, selected.Url, StringComparison.OrdinalIgnoreCase));
+        _preferences.Profiles.Remove(ProfileKey(selected.Url));
+        TryClearSecret(selected.Url);
         SavePreferences();
-        RefreshServerList();
+        await RefreshServerListAsync();
         ServersStatusText.Text = "Server removed from the launcher.";
         ServersStatusText.Foreground = Muted;
+    }
+
+    private async Task RefreshServerListAsync()
+    {
+        SavedServerCountText.Text = $"{_preferences.Servers.Count} saved server{(_preferences.Servers.Count == 1 ? string.Empty : "s")}";
+
+        var checking = _preferences.Servers
+            .Select(url => new SavedServerListItem(url, FriendlyHost(url), "CHECKING…", Muted, false))
+            .ToArray();
+        SavedServersList.ItemsSource = checking;
+
+        var probes = await Task.WhenAll(_preferences.Servers.Select(ProbeSavedServerAsync));
+        SavedServersList.ItemsSource = probes
+            .Select(probe => new SavedServerListItem(
+                probe.Url,
+                probe.DisplayName,
+                probe.Online ? "ONLINE" : "OFFLINE",
+                probe.Online ? Good : Bad,
+                probe.Online))
+            .ToArray();
+    }
+
+    private async Task<ServerProbeResult> ProbeSavedServerAsync(string serverUrl)
+    {
+        if (!TryNormalizeServerUrl(serverUrl, out var baseUri, out var normalizeError))
+            return new ServerProbeResult(serverUrl, FriendlyHost(serverUrl), false, normalizeError);
+
+        try
+        {
+            var xml = await DownloadTextLimitedAsync(new Uri(baseUri, "servermanifest.xml"), MaxManifestBytes);
+            var manifest = ParseServerManifest(xml);
+
+            if (!Uri.TryCreate(manifest.WebApiUrl, UriKind.Absolute, out var apiUri) || apiUri.Scheme != Uri.UriSchemeHttps)
+                return new ServerProbeResult(baseUri.AbsoluteUri, manifest.Name, false, "The server manifest does not advertise an HTTPS Web API.");
+
+            return new ServerProbeResult(baseUri.AbsoluteUri, manifest.Name, true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return new ServerProbeResult(baseUri.AbsoluteUri, FriendlyHost(baseUri.AbsoluteUri), false, ex.Message);
+        }
+    }
+
+    private static string FriendlyHost(string serverUrl)
+    {
+        return Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host)
+            ? uri.Host
+            : serverUrl;
     }
 
     private void SaveRememberedForCurrentServer()
@@ -182,13 +253,6 @@ public partial class MainWindow
             ? "Username remembered for this server."
             : "Remembered credentials loaded for this server.";
         RememberStatusText.Foreground = Good;
-    }
-
-    private void RefreshServerList()
-    {
-        SavedServersList.ItemsSource = null;
-        SavedServersList.ItemsSource = _preferences.Servers.ToArray();
-        SavedServerCountText.Text = $"{_preferences.Servers.Count} saved server{(_preferences.Servers.Count == 1 ? string.Empty : "s")}";
     }
 
     private void RefreshSettingsPage()
@@ -374,6 +438,26 @@ public partial class MainWindow
             // Credential cleanup should never prevent normal launcher use.
         }
     }
+
+    public sealed class SavedServerListItem
+    {
+        public SavedServerListItem(string url, string displayName, string status, IBrush statusBrush, bool online)
+        {
+            Url = url;
+            DisplayName = displayName;
+            Status = status;
+            StatusBrush = statusBrush;
+            Online = online;
+        }
+
+        public string Url { get; }
+        public string DisplayName { get; }
+        public string Status { get; }
+        public IBrush StatusBrush { get; }
+        public bool Online { get; }
+    }
+
+    private sealed record ServerProbeResult(string Url, string DisplayName, bool Online, string Error);
 
     private sealed class LauncherPreferences
     {
