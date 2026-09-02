@@ -8,7 +8,7 @@ namespace OSFR.Linux.LauncherDemo;
 public partial class MainWindow
 {
     private Control? _serverPlayPanel;
-    private Window? _serverPlayWindow;
+    private bool _serverPlayPanelAttached;
     private bool _newsInitialized;
 
     protected override void OnOpened(EventArgs e)
@@ -19,10 +19,26 @@ public partial class MainWindow
 
     private void InitializeNewsHome()
     {
-        if (_newsInitialized || HomePage.Content is not Control oldHome)
+        if (_newsInitialized || HomePage.Content is not StackPanel oldHome)
             return;
 
         _newsInitialized = true;
+
+        // The old Home page contains:
+        // 0 header, 1 server-address tile, 2 server metadata tile,
+        // 3 account tile, 4 launch button, 5 launch status.
+        // Keep only the account/launch controls for the inline Servers flow.
+        while (oldHome.Children.Count > 6)
+            oldHome.Children.RemoveAt(oldHome.Children.Count - 1);
+
+        if (oldHome.Children.Count >= 3)
+        {
+            oldHome.Children.RemoveAt(2);
+            oldHome.Children.RemoveAt(1);
+            oldHome.Children.RemoveAt(0);
+        }
+
+        oldHome.Margin = new Thickness(0, 8, 0, 0);
         _serverPlayPanel = oldHome;
         HomePage.Content = BuildNewsPage();
 
@@ -60,7 +76,7 @@ public partial class MainWindow
         });
         welcome.Children.Add(new TextBlock
         {
-            Text = "Launcher announcements, release notes, Linux compatibility notices, and other project updates will live here. Server login and launch controls now open from the Servers page.",
+            Text = "Launcher announcements, release notes, Linux compatibility notices, and other project updates will live here. Server accounts and launch controls stay inside the Servers page.",
             Foreground = Brushes.LightGray,
             TextWrapping = TextWrapping.Wrap
         });
@@ -90,37 +106,41 @@ public partial class MainWindow
         if (_serverPlayPanel is null)
             return;
 
-        if (_serverPlayWindow is not null)
-        {
-            _serverPlayWindow.Activate();
-            return;
-        }
-
         ServerUrlBox.Text = selected.Url;
         LoadRememberedForCurrentServer();
 
-        var host = new Grid();
-        host.Children.Add(_serverPlayPanel);
-
-        var popup = new Window
+        if (!_serverPlayPanelAttached && ServersPage.Content is StackPanel serversRoot)
         {
-            Title = $"{selected.DisplayName} — Sanctuary Linux Launcher",
-            Width = 820,
-            Height = 720,
-            MinWidth = 700,
-            MinHeight = 620,
-            Content = new ScrollViewer { Content = host }
-        };
-        _serverPlayWindow = popup;
-        popup.Closed += (_, _) =>
-        {
-            if (popup.Content is ScrollViewer scroll)
-                scroll.Content = null;
-            host.Children.Clear();
-            _serverPlayWindow = null;
-        };
+            var accountSection = new StackPanel { Spacing = 8 };
+            accountSection.Children.Add(new TextBlock
+            {
+                Text = "SERVER ACCOUNT",
+                FontSize = 12,
+                FontWeight = FontWeight.Bold,
+                Foreground = Good
+            });
+            accountSection.Children.Add(new TextBlock
+            {
+                Text = "Sign in to the selected server, then launch Sanctuary.",
+                Foreground = Muted,
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap
+            });
+            accountSection.Children.Add(_serverPlayPanel);
 
+            serversRoot.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.Parse("#151515")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#303030")),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(20),
+                Child = accountSection
+            });
+            _serverPlayPanelAttached = true;
+        }
+
+        ShowPage(ServersPage);
         await JoinCurrentServerAsync();
-        await popup.ShowDialog(this);
     }
 }
