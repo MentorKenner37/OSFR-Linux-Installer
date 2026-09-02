@@ -47,6 +47,16 @@ public partial class MainWindow
             if (string.Equals(text.Text, "HOME", StringComparison.Ordinal))
                 text.Text = "NEWS";
         }
+
+        // About is no longer a launcher tab. Keep the old page object hidden only
+        // for compatibility with the existing partial class until that code is cleaned up.
+        foreach (var button in this.GetVisualDescendants().OfType<Button>())
+        {
+            var label = button.GetVisualDescendants().OfType<TextBlock>()
+                .FirstOrDefault(text => string.Equals(text.Text, "ABOUT", StringComparison.Ordinal));
+            if (label is not null)
+                button.IsVisible = false;
+        }
     }
 
     private Control BuildNewsPage()
