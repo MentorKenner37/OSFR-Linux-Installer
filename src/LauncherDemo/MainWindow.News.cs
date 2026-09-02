@@ -1,8 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
-using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 
 namespace OSFR.Linux.LauncherDemo;
 
@@ -10,14 +9,28 @@ public partial class MainWindow
 {
     private Control? _serverPlayPanel;
     private Window? _serverPlayWindow;
+    private bool _newsInitialized;
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        InitializeNewsHome();
+    }
 
     private void InitializeNewsHome()
     {
-        if (HomePage.Content is not Control oldHome)
+        if (_newsInitialized || HomePage.Content is not Control oldHome)
             return;
 
+        _newsInitialized = true;
         _serverPlayPanel = oldHome;
         HomePage.Content = BuildNewsPage();
+
+        foreach (var text in this.GetVisualDescendants().OfType<TextBlock>())
+        {
+            if (string.Equals(text.Text, "HOME", StringComparison.Ordinal))
+                text.Text = "NEWS";
+        }
     }
 
     private Control BuildNewsPage()
@@ -53,7 +66,7 @@ public partial class MainWindow
         });
         welcome.Children.Add(new TextBlock
         {
-            Text = "News delivery is not wired to a remote feed yet. This page is intentionally ready for that next step.",
+            Text = "News delivery is not wired to a remote feed yet. This page is ready for that next step.",
             Foreground = Muted,
             FontSize = 11,
             TextWrapping = TextWrapping.Wrap
@@ -107,6 +120,7 @@ public partial class MainWindow
             _serverPlayWindow = null;
         };
 
+        await JoinCurrentServerAsync();
         await popup.ShowDialog(this);
     }
 }
