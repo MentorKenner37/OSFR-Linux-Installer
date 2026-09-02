@@ -49,6 +49,12 @@ jobs:
               raise SystemExit('Expected launcher compile guard was not found')
           text = text.replace(old, new, 1)
 
+          old = '''        var displayMode = ReadRuntimeConfig("display-mode.txt");\n        if (displayMode.StartsWith("fullscreen", StringComparison.OrdinalIgnoreCase))\n            tokens.Add("--fullscreen");\n'''
+          new = '''        var displayMode = ReadRuntimeConfig("display-mode.txt");\n        // Free Realms uses a fragile legacy command-line parser. Passing --fullscreen\n        // before Server=/SessionId= causes the client to ignore the login arguments.\n        // Keep display handling separate from the game authentication command line.\n'''
+          if old not in text:
+              raise SystemExit('Expected legacy fullscreen launch block was not found')
+          text = text.replace(old, new, 1)
+
           old = '                UseShellExecute = false\n'
           new = '                UseShellExecute = false,\n                RedirectStandardOutput = true,\n                RedirectStandardError = true\n'
           if old not in text:
