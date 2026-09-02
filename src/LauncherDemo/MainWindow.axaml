@@ -46,7 +46,7 @@
         <StackPanel Margin="34,30" Spacing="18">
           <StackPanel Spacing="4">
             <TextBlock Text="SANCTUARY LINUX LAUNCHER" FontSize="25" FontWeight="Bold" Foreground="#F5F5F5" />
-            <TextBlock Text="Connect, verify/update the Free Realms client, sign in, and launch through the installer-configured Proton runtime." Foreground="#9E9E9E" TextWrapping="Wrap" />
+            <TextBlock Text="Choose a server, sign in, and launch. Client verification and updates happen automatically when you join a server." Foreground="#9E9E9E" TextWrapping="Wrap" />
           </StackPanel>
 
           <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="20">
@@ -54,9 +54,9 @@
               <TextBlock Text="SERVER ADDRESS" FontSize="12" FontWeight="Bold" Foreground="#55D27E" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <TextBox x:Name="ServerUrlBox" Text="https://opensourcefreerealms.com" Watermark="https://server.example" />
-                <Button Grid.Column="1" x:Name="ConnectButton" Classes="primary" Content="CONNECT" Click="ConnectRememberClicked" />
+                <Button Grid.Column="1" x:Name="ConnectButton" Classes="primary" Content="JOIN SERVER" Click="ConnectRememberClicked" />
               </Grid>
-              <TextBlock x:Name="ConnectionStatusText" Text="Ready to connect." Foreground="#A0A0A0" TextWrapping="Wrap" />
+              <TextBlock x:Name="ConnectionStatusText" Text="Ready to join a server." Foreground="#A0A0A0" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
 
@@ -76,36 +76,18 @@
                     <TextBlock x:Name="OnlineText" Text="OFFLINE" Foreground="#8D8D8D" FontSize="11" FontWeight="Bold" />
                   </Border>
                 </Grid>
-                <TextBlock x:Name="ServerDescriptionText" Text="Connect to a server to load its metadata." Foreground="#A6A6A6" TextWrapping="Wrap" />
+                <TextBlock x:Name="ServerDescriptionText" Text="Join a server to load its metadata." Foreground="#A6A6A6" TextWrapping="Wrap" />
                 <TextBlock x:Name="ManifestVersionText" Text="Manifest: —" Foreground="#55D27E" />
               </StackPanel>
             </Grid>
           </Border>
 
-          <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
-            <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="18">
-              <StackPanel Spacing="8">
-                <TextBlock Text="WEB API" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
-                <TextBlock x:Name="WebApiText" Text="—" Foreground="#E8E8E8" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1" Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="18">
-              <StackPanel Spacing="8">
-                <TextBlock Text="LOGIN SERVER" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
-                <TextBlock x:Name="LoginServerText" Text="—" Foreground="#E8E8E8" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-          </Grid>
-
           <Border Background="#111B14" BorderBrush="#31533C" BorderThickness="1" CornerRadius="10" Padding="18">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
-              <StackPanel Spacing="4">
-                <TextBlock Text="CLIENT STATUS" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
-                <TextBlock x:Name="ClientStatusText" Text="Connect to a server to verify client files." Foreground="#DADADA" TextWrapping="Wrap" />
-                <ProgressBar x:Name="ClientProgress" Minimum="0" Maximum="100" Value="0" Height="7" IsVisible="False" />
-              </StackPanel>
-              <Button Grid.Column="1" x:Name="VerifyButton" Content="VERIFY FILES" IsEnabled="False" Click="VerifyClicked" />
-            </Grid>
+            <StackPanel Spacing="4">
+              <TextBlock Text="CLIENT STATUS" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
+              <TextBlock x:Name="ClientStatusText" Text="Client files will be checked automatically when you join a server." Foreground="#DADADA" TextWrapping="Wrap" />
+              <ProgressBar x:Name="ClientProgress" Minimum="0" Maximum="100" Value="0" Height="7" IsVisible="False" />
+            </StackPanel>
           </Border>
 
           <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="18">
@@ -130,8 +112,6 @@
 
           <Button x:Name="LaunchButton" Classes="primary" Content="LAUNCH SANCTUARY" HorizontalAlignment="Stretch" Height="54" IsEnabled="False" Click="LaunchRememberClicked" />
           <TextBlock x:Name="LaunchStatusText" Text="" FontSize="12" Foreground="#A0A0A0" TextWrapping="Wrap" />
-
-          <TextBlock Text="Server manifest v2 remains the compatibility baseline. Optional branding is launcher-side only; existing v2 servers do not need to change." FontSize="11" Foreground="#717171" TextWrapping="Wrap" />
         </StackPanel>
       </ScrollViewer>
 
@@ -150,7 +130,7 @@
               </Grid>
               <ListBox x:Name="SavedServersList" MinHeight="190" />
               <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-                <Button Grid.Column="1" Content="USE SERVER" Classes="primary" Click="UseServerClicked" />
+                <Button Grid.Column="1" Content="JOIN SERVER" Classes="primary" Click="UseServerClicked" />
                 <Button Grid.Column="2" Content="REMOVE" Click="RemoveServerClicked" />
               </Grid>
             </StackPanel>
@@ -163,7 +143,7 @@
                 <TextBox x:Name="NewServerUrlBox" Watermark="https://server.example" />
                 <Button Grid.Column="1" Content="ADD" Classes="primary" Click="AddServerClicked" />
               </Grid>
-              <TextBlock Text="Servers must use HTTPS. The launcher will fetch servermanifest.xml when you select and connect to one." Foreground="#747474" FontSize="11" TextWrapping="Wrap" />
+              <TextBlock Text="Servers must use HTTPS. Joining a saved server automatically loads its manifest and verifies/updates its client files." Foreground="#747474" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <TextBlock x:Name="ServersStatusText" Foreground="#A0A0A0" TextWrapping="Wrap" />
@@ -197,7 +177,7 @@
                 </StackPanel>
               </Grid>
               <Button Content="OPEN INSTALLER FOLDER" HorizontalAlignment="Left" Click="OpenInstallerFolderClicked" />
-              <TextBlock Text="Important: the launcher no longer forwards the old --fullscreen switch to Free Realms because it breaks the client's legacy Server/SessionId argument parsing. Display handling stays separate from the login arguments." Foreground="#55D27E" FontSize="11" TextWrapping="Wrap" />
+              <TextBlock Text="The launcher does not forward the old --fullscreen switch to Free Realms because it breaks the client's legacy Server/SessionId argument parsing." Foreground="#55D27E" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <TextBlock x:Name="SettingsStatusText" Foreground="#A0A0A0" TextWrapping="Wrap" />
@@ -214,7 +194,7 @@
           <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="22">
             <StackPanel Spacing="12">
               <TextBlock Text="FUNCTIONAL DEMO" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
-              <TextBlock Text="An independent Linux launcher prototype for Sanctuary-compatible Free Realms servers. It reads existing servermanifest.xml/clientmanifest.xml data, verifies client files, signs in through each server's Web API, and launches the client through the Proton runtime configured by the Sanctuary Linux Installer." Foreground="#D0D0D0" TextWrapping="Wrap" />
+              <TextBlock Text="An independent Linux launcher prototype for Sanctuary-compatible Free Realms servers. It reads existing servermanifest.xml/clientmanifest.xml data, automatically verifies client files when a server is joined, signs in through that server's Web API, and launches through the Proton runtime configured by the Sanctuary Linux Installer." Foreground="#D0D0D0" TextWrapping="Wrap" />
               <TextBlock Text="Compatibility baseline: ServerManifest v1/v2 • ClientManifest v1 • HTTPS server URLs • Proton runtime supplied by installer" Foreground="#9E9E9E" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
