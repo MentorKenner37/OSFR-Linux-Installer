@@ -12,14 +12,21 @@ public partial class MainWindow
 
     private async void JoinSavedServerClicked(object? sender, RoutedEventArgs e)
     {
-        if (SavedServersList.SelectedItem is not string selected)
+        if (SavedServersList.SelectedItem is not SavedServerListItem selected)
         {
             ServersStatusText.Text = "Select a server first.";
             ServersStatusText.Foreground = Bad;
             return;
         }
 
-        ServerUrlBox.Text = selected;
+        if (!selected.Online)
+        {
+            ServersStatusText.Text = "That server is currently offline.";
+            ServersStatusText.Foreground = Bad;
+            return;
+        }
+
+        ServerUrlBox.Text = selected.Url;
         LoadRememberedForCurrentServer();
         ShowPage(HomePage);
         await JoinCurrentServerAsync();
@@ -59,7 +66,6 @@ public partial class MainWindow
             ServerDescriptionText.Text = manifest.Description;
             ManifestVersionText.Text = $"Manifest: v{manifest.Version} (v2 compatible)";
 
-            // Kept only as hidden compatibility controls for the original demo code-behind.
             WebApiText.Text = manifest.WebApiUrl;
             LoginServerText.Text = manifest.LoginServer;
 
@@ -79,7 +85,7 @@ public partial class MainWindow
             {
                 ClientStatusText.Text = $"Automatic client preparation failed: {ex.Message}";
                 ClientStatusText.Foreground = Bad;
-                SetConnectionState($"Connected to {manifest.Name}, but the client is not ready.", false);
+                SetConnectionState($"Connected to {manifest.Name}, but the client is not ready: {ex.Message}", false);
             }
         }
         catch (Exception ex)
