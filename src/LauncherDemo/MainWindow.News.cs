@@ -49,8 +49,6 @@ public partial class MainWindow
                 text.Text = "NEWS";
         }
 
-        // About is no longer a launcher tab. Keep the old page object hidden only
-        // for compatibility with the existing partial class until that code is cleaned up.
         foreach (var button in this.GetVisualDescendants().OfType<Button>())
         {
             var label = button.GetVisualDescendants().OfType<TextBlock>()
@@ -114,6 +112,9 @@ public partial class MainWindow
 
     private async Task OpenServerPlayPopupAsync(SavedServerListItem selected)
     {
+        // The Window root is a two-column Grid (sidebar + main content). Put the modal
+        // in column 1 so it centers over the actual launcher content rather than being
+        // measured as another child of the sidebar column.
         if (_serverPlayPanel is null || Content is not Grid windowRoot)
             return;
 
@@ -182,9 +183,6 @@ public partial class MainWindow
             Child = modalCard
         };
 
-        // This is a modal layer inside the existing launcher window. The translucent
-        // backdrop disables the visual focus of the server list without creating a
-        // second OS window.
         var overlay = new Grid
         {
             Background = new SolidColorBrush(Color.FromArgb(205, 0, 0, 0)),
@@ -192,6 +190,7 @@ public partial class MainWindow
             VerticalAlignment = VerticalAlignment.Stretch,
             ZIndex = 1000
         };
+        Grid.SetColumn(overlay, 1);
         overlay.Children.Add(cardBorder);
         _serverLoginOverlay = overlay;
         windowRoot.Children.Add(overlay);
@@ -215,7 +214,6 @@ public partial class MainWindow
         catch
         {
             // JoinCurrentServerAsync already reports its own user-facing status.
-            // Keep the modal open so the user can correct credentials or close it.
         }
     }
 }
