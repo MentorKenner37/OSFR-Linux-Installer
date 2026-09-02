@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 
@@ -8,7 +9,7 @@ namespace OSFR.Linux.LauncherDemo;
 public partial class MainWindow
 {
     private Control? _serverPlayPanel;
-    private bool _serverPlayPanelAttached;
+    private Grid? _serverLoginOverlay;
     private bool _newsInitialized;
 
     protected override void OnOpened(EventArgs e)
@@ -27,7 +28,7 @@ public partial class MainWindow
         // The old Home page contains:
         // 0 header, 1 server-address tile, 2 server metadata tile,
         // 3 account tile, 4 launch button, 5 launch status.
-        // Keep only the account/launch controls for the inline Servers flow.
+        // Keep only the account/launch controls for the modal server-login flow.
         while (oldHome.Children.Count > 6)
             oldHome.Children.RemoveAt(oldHome.Children.Count - 1);
 
@@ -38,7 +39,7 @@ public partial class MainWindow
             oldHome.Children.RemoveAt(0);
         }
 
-        oldHome.Margin = new Thickness(0, 8, 0, 0);
+        oldHome.Margin = new Thickness(0);
         _serverPlayPanel = oldHome;
         HomePage.Content = BuildNewsPage();
 
@@ -86,7 +87,7 @@ public partial class MainWindow
         });
         welcome.Children.Add(new TextBlock
         {
-            Text = "Launcher announcements, release notes, Linux compatibility notices, and other project updates will live here. Server accounts and launch controls stay inside the Servers page.",
+            Text = "Launcher announcements, release notes, Linux compatibility notices, and other project updates will live here. Server login opens as an in-launcher overlay from the Servers page.",
             Foreground = Brushes.LightGray,
             TextWrapping = TextWrapping.Wrap
         });
@@ -113,44 +114,108 @@ public partial class MainWindow
 
     private async Task OpenServerPlayPopupAsync(SavedServerListItem selected)
     {
-        if (_serverPlayPanel is null)
+        if (_serverPlayPanel is null || Content is not Grid windowRoot)
             return;
 
         ServerUrlBox.Text = selected.Url;
         LoadRememberedForCurrentServer();
+        ShowPage(ServersPage);
 
-        if (!_serverPlayPanelAttached && ServersPage.Content is StackPanel serversRoot)
+        if (_serverLoginOverlay is not null)
         {
-            var accountSection = new StackPanel { Spacing = 8 };
-            accountSection.Children.Add(new TextBlock
-            {
-                Text = "SERVER ACCOUNT",
-                FontSize = 12,
-                FontWeight = FontWeight.Bold,
-                Foreground = Good
-            });
-            accountSection.Children.Add(new TextBlock
-            {
-                Text = "Sign in to the selected server, then launch Sanctuary.",
-                Foreground = Muted,
-                FontSize = 11,
-                TextWrapping = TextWrapping.Wrap
-            });
-            accountSection.Children.Add(_serverPlayPanel);
-
-            serversRoot.Children.Add(new Border
-            {
-                Background = new SolidColorBrush(Color.Parse("#151515")),
-                BorderBrush = new SolidColorBrush(Color.Parse("#303030")),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(20),
-                Child = accountSection
-            });
-            _serverPlayPanelAttached = true;
+            await JoinCurrentServerAsync();
+            return;
         }
 
-        ShowPage(ServersPage);
-        await JoinCurrentServerAsync();
+        var modalCard = new StackPanel
+        {
+            Spacing = 16,
+            MaxWidth = 620
+        };
+
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        header.Children.Add(new StackPanel
+        {
+            Spacing = 3,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = selected.DisplayName,
+                    FontSize = 20,
+                    FontWeight = FontWeight.Bold,
+                    Foreground = Brushes.White
+                },
+                new TextBlock
+                {
+                    Text = "SIGN IN TO PLAY",
+                    FontSize = 11,
+                    FontWeight = FontWeight.Bold,
+                    Foreground = Good
+                }
+            }
+        });
+
+        var closeButton = new Button
+        {
+            Content = "CLOSE",
+            Padding = new Thickness(12, 7),
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        Grid.SetColumn(closeButton, 1);
+        header.Children.Add(closeButton);
+
+        modalCard.Children.Add(header);
+        modalCard.Children.Add(_serverPlayPanel);
+
+        var cardBorder = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#171717")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#3A3A3A")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(24),
+            Width = 620,
+            MaxWidth = 620,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = modalCard
+        };
+
+        // This is a modal layer inside the existing launcher window. The translucent
+        // backdrop disables the visual focus of the server list without creating a
+        // second OS window.
+        var overlay = new Grid
+        {
+            Background = new SolidColorBrush(Color.FromArgb(205, 0, 0, 0)),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            ZIndex = 1000
+        };
+        overlay.Children.Add(cardBorder);
+        _serverLoginOverlay = overlay;
+        windowRoot.Children.Add(overlay);
+
+        void CloseOverlay()
+        {
+            if (_serverLoginOverlay is null)
+                return;
+
+            modalCard.Children.Remove(_serverPlayPanel);
+            windowRoot.Children.Remove(_serverLoginOverlay);
+            _serverLoginOverlay = null;
+        }
+
+        closeButton.Click += (_, _) => CloseOverlay();
+
+        try
+        {
+            await JoinCurrentServerAsync();
+        }
+        catch
+        {
+            // JoinCurrentServerAsync already reports its own user-facing status.
+            // Keep the modal open so the user can correct credentials or close it.
+        }
     }
 }
