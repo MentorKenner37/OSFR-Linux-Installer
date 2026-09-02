@@ -42,6 +42,12 @@
     </Border>
 
     <Grid Grid.Column="1">
+      <StackPanel IsVisible="False">
+        <TextBlock x:Name="WebApiText" />
+        <TextBlock x:Name="LoginServerText" />
+        <Button x:Name="VerifyButton" />
+      </StackPanel>
+
       <ScrollViewer x:Name="HomePage">
         <StackPanel Margin="34,30" Spacing="18">
           <StackPanel Spacing="4">
@@ -54,7 +60,7 @@
               <TextBlock Text="SERVER ADDRESS" FontSize="12" FontWeight="Bold" Foreground="#55D27E" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <TextBox x:Name="ServerUrlBox" Text="https://opensourcefreerealms.com" Watermark="https://server.example" />
-                <Button Grid.Column="1" x:Name="ConnectButton" Classes="primary" Content="JOIN SERVER" Click="ConnectRememberClicked" />
+                <Button Grid.Column="1" x:Name="ConnectButton" Classes="primary" Content="JOIN SERVER" Click="JoinServerClicked" />
               </Grid>
               <TextBlock x:Name="ConnectionStatusText" Text="Ready to join a server." Foreground="#A0A0A0" TextWrapping="Wrap" />
             </StackPanel>
@@ -130,7 +136,7 @@
               </Grid>
               <ListBox x:Name="SavedServersList" MinHeight="190" />
               <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-                <Button Grid.Column="1" Content="JOIN SERVER" Classes="primary" Click="UseServerClicked" />
+                <Button Grid.Column="1" Content="JOIN SERVER" Classes="primary" Click="JoinSavedServerClicked" />
                 <Button Grid.Column="2" Content="REMOVE" Click="RemoveServerClicked" />
               </Grid>
             </StackPanel>
