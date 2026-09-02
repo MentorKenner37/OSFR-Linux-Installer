@@ -45,6 +45,8 @@
       <StackPanel IsVisible="False">
         <TextBlock x:Name="WebApiText" />
         <TextBlock x:Name="LoginServerText" />
+        <TextBlock x:Name="ClientStatusText" />
+        <ProgressBar x:Name="ClientProgress" />
         <Button x:Name="VerifyButton" />
       </StackPanel>
 
@@ -88,14 +90,6 @@
             </Grid>
           </Border>
 
-          <Border Background="#111B14" BorderBrush="#31533C" BorderThickness="1" CornerRadius="10" Padding="18">
-            <StackPanel Spacing="4">
-              <TextBlock Text="CLIENT STATUS" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
-              <TextBlock x:Name="ClientStatusText" Text="Client files will be checked automatically when you join a server." Foreground="#DADADA" TextWrapping="Wrap" />
-              <ProgressBar x:Name="ClientProgress" Minimum="0" Maximum="100" Value="0" Height="7" IsVisible="False" />
-            </StackPanel>
-          </Border>
-
           <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="18">
             <StackPanel Spacing="12">
               <Grid ColumnDefinitions="*,Auto">
@@ -125,7 +119,7 @@
         <StackPanel Margin="34,30" Spacing="18">
           <StackPanel Spacing="4">
             <TextBlock Text="SERVERS" FontSize="25" FontWeight="Bold" Foreground="#F5F5F5" />
-            <TextBlock Text="Save multiple Sanctuary servers and switch between them without retyping addresses." Foreground="#9E9E9E" TextWrapping="Wrap" />
+            <TextBlock Text="Saved servers are checked automatically so you can see which ones are online before joining." Foreground="#9E9E9E" TextWrapping="Wrap" />
           </StackPanel>
 
           <Border Background="#151515" BorderBrush="#303030" BorderThickness="1" CornerRadius="10" Padding="20">
@@ -134,7 +128,23 @@
                 <TextBlock Text="SAVED SERVERS" Foreground="#55D27E" FontWeight="Bold" FontSize="12" />
                 <TextBlock Grid.Column="1" x:Name="SavedServerCountText" Text="0 saved servers" Foreground="#8D8D8D" FontSize="11" />
               </Grid>
-              <ListBox x:Name="SavedServersList" MinHeight="190" />
+              <ListBox x:Name="SavedServersList" MinHeight="210">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="#191919" BorderBrush="#303030" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,4">
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel Spacing="3">
+                          <TextBlock Text="{Binding DisplayName}" Foreground="#F0F0F0" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Url}" Foreground="#858585" FontSize="11" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Background="#171717" BorderBrush="#343434" BorderThickness="1" CornerRadius="12" Padding="10,4" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Status}" Foreground="{Binding StatusBrush}" FontSize="11" FontWeight="Bold" />
+                        </Border>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
               <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
                 <Button Grid.Column="1" Content="JOIN SERVER" Classes="primary" Click="JoinSavedServerClicked" />
                 <Button Grid.Column="2" Content="REMOVE" Click="RemoveServerClicked" />
@@ -149,7 +159,7 @@
                 <TextBox x:Name="NewServerUrlBox" Watermark="https://server.example" />
                 <Button Grid.Column="1" Content="ADD" Classes="primary" Click="AddServerClicked" />
               </Grid>
-              <TextBlock Text="Servers must use HTTPS. Joining a saved server automatically loads its manifest and verifies/updates its client files." Foreground="#747474" FontSize="11" TextWrapping="Wrap" />
+              <TextBlock Text="A server can only be added if it uses HTTPS, is currently online, and returns a valid Sanctuary server manifest with an HTTPS Web API." Foreground="#747474" FontSize="11" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <TextBlock x:Name="ServersStatusText" Foreground="#A0A0A0" TextWrapping="Wrap" />
