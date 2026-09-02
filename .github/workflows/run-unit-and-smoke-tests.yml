@@ -35,17 +35,45 @@ jobs:
       - name: Run xUnit suite
         run: dotnet test tests/Installer.UnitTests/Installer.UnitTests.csproj -c Release --no-restore --verbosity normal
 
-      - name: Patch launcher demo compile guard
+      - name: Patch launcher demo compile guard and diagnostics
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
           path = Path('src/LauncherDemo/MainWindow.axaml.cs')
           text = path.read_text()
+
           old = 'if (response.Content.Headers.ContentLength is > maxBytes)'
           new = 'if (response.Content.Headers.ContentLength is long contentLength && contentLength > maxBytes)'
           if old not in text:
               raise SystemExit('Expected launcher compile guard was not found')
-          path.write_text(text.replace(old, new, 1))
+          text = text.replace(old, new, 1)
+
+          old = '                UseShellExecute = false\n'
+          new = '                UseShellExecute = false,\n                RedirectStandardOutput = true,\n                RedirectStandardError = true\n'
+          if old not in text:
+              raise SystemExit('Expected ProcessStartInfo shell setting was not found')
+          text = text.replace(old, new, 1)
+
+          old = '        process.StartInfo.Environment["PROTON_LOG"] = "0";\n'
+          new = '        process.StartInfo.Environment["PROTON_LOG"] = "1";\n'
+          if old not in text:
+              raise SystemExit('Expected PROTON_LOG setting was not found')
+          text = text.replace(old, new, 1)
+
+          old = '''        process.Exited += (_, _) => Dispatcher.UIThread.Post(() =>\n        {\n            process.Dispose();\n            if (ReferenceEquals(_gameProcess, process))\n                _gameProcess = null;\n            LaunchButton.IsEnabled = _serverManifest is not null;\n            LaunchStatusText.Text = "Free Realms exited.";\n            LaunchStatusText.Foreground = Muted;\n        });\n'''
+          new = '''        var logDirectory = Path.Combine(\n            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),\n            ".local", "share", "OSFR-Linux", "Logs");\n        Directory.CreateDirectory(logDirectory);\n        var stdoutLogPath = Path.Combine(logDirectory, "launcher-demo-proton-stdout.log");\n        var stderrLogPath = Path.Combine(logDirectory, "launcher-demo-proton-stderr.log");\n\n        process.Exited += (_, _) => Dispatcher.UIThread.Post(() =>\n        {\n            if (ReferenceEquals(_gameProcess, process))\n                _gameProcess = null;\n            LaunchButton.IsEnabled = _serverManifest is not null;\n            LaunchStatusText.Text = $"Free Realms exited. Logs: {logDirectory}";\n            LaunchStatusText.Foreground = Muted;\n        });\n'''
+          if old not in text:
+              raise SystemExit('Expected process exit handler was not found')
+          text = text.replace(old, new, 1)
+
+          old = '''        if (!process.Start())\n        {\n            process.Dispose();\n            throw new InvalidOperationException("Proton process could not be started.");\n        }\n\n        _gameProcess = process;\n'''
+          new = '''        if (!process.Start())\n        {\n            process.Dispose();\n            throw new InvalidOperationException("Proton process could not be started.");\n        }\n\n        var stdoutTask = process.StandardOutput.ReadToEndAsync();\n        var stderrTask = process.StandardError.ReadToEndAsync();\n        _ = Task.Run(async () =>\n        {\n            try\n            {\n                var stdout = await stdoutTask;\n                var stderr = await stderrTask;\n                await File.WriteAllTextAsync(stdoutLogPath, stdout);\n                await File.WriteAllTextAsync(stderrLogPath, stderr);\n            }\n            catch (Exception ex)\n            {\n                try\n                {\n                    await File.WriteAllTextAsync(stderrLogPath, $"Launcher failed to capture Proton output: {ex}");\n                }\n                catch\n                {\n                    // Diagnostics must never crash the launcher.\n                }\n            }\n            finally\n            {\n                process.Dispose();\n            }\n        });\n\n        _gameProcess = process;\n'''
+          if old not in text:
+              raise SystemExit('Expected process start block was not found')
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
           PY
 
       - name: Build launcher demo
