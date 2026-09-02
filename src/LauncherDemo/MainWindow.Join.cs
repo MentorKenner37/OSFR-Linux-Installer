@@ -26,10 +26,9 @@ public partial class MainWindow
             return;
         }
 
-        ServerUrlBox.Text = selected.Url;
-        LoadRememberedForCurrentServer();
-        ShowPage(HomePage);
-        await JoinCurrentServerAsync();
+        ServersStatusText.Text = $"Opening {selected.DisplayName}…";
+        ServersStatusText.Foreground = Good;
+        await OpenServerPlayPopupAsync(selected);
     }
 
     private async Task JoinCurrentServerAsync()
@@ -65,7 +64,6 @@ public partial class MainWindow
             ServerNameText.Text = manifest.Name;
             ServerDescriptionText.Text = manifest.Description;
             ManifestVersionText.Text = $"Manifest: v{manifest.Version} (v2 compatible)";
-
             WebApiText.Text = manifest.WebApiUrl;
             LoginServerText.Text = manifest.LoginServer;
 
